@@ -2,9 +2,12 @@
 // products/stock_out.php
 session_start();
 require_once "../config/database.php";
+require_once "../models/AuditLog.php";
+require_once "../config/auth.php";
 
 $database = new Database();
 $db = $database->getConnection();
+$audit = new AuditLog($db);
 
 // Get all products for selection
 $query = "SELECT id, sku, name, quantity FROM products WHERE quantity > 0 ORDER BY name ASC";
@@ -58,6 +61,12 @@ if ($_POST) {
             if ($movement_stmt->execute()) {
                 $message = "Stock removed successfully!";
                 $message_type = "success";
+                
+                // Log to AuditLog
+                if (Auth::isLoggedIn()) {
+                    $user = Auth::getCurrentUser();
+                    $audit->log($user['id'], "STOCK_OUT", "Removed $quantity from product ID $product_id. Reason: $reason");
+                }
                 
                 // Refresh product list
                 $stmt = $db->prepare($query);

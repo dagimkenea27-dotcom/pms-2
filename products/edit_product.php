@@ -2,9 +2,20 @@
 // products/edit_product.php
 session_start();
 require_once "../config/database.php";
+require_once "../models/AuditLog.php";
+require_once "../config/auth.php";
+
+// Ensure user is logged in
+Auth::requireLogin();
 
 $database = new Database();
 $db = $database->getConnection();
+$audit = new AuditLog($db);
+
+// Get categories, brands, suppliers for dropdowns
+$categories = $db->query("SELECT id, name FROM categories ORDER BY name ASC");
+$brands = $db->query("SELECT id, name FROM brands ORDER BY name ASC");
+$suppliers = $db->query("SELECT id, name FROM suppliers ORDER BY name ASC");
 
 $message = '';
 $message_type = '';
@@ -29,15 +40,34 @@ if (!$product) {
 // Handle form submission
 if ($_POST) {
     try {
+        $category_id = !empty($_POST['category_id']) ? $_POST['category_id'] : null;
+        $brand_id = !empty($_POST['brand_id']) ? $_POST['brand_id'] : null;
+        $supplier_id = !empty($_POST['supplier_id']) ? $_POST['supplier_id'] : null;
+        
+        // Helper to get name from ID
+        function getName($db, $table, $id) {
+            if (!$id) return null;
+            $stmt = $db->prepare("SELECT name FROM $table WHERE id = ?");
+            $stmt->execute([$id]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ? $row['name'] : null;
+        }
+
+        $category_name = getName($db, 'categories', $category_id);
+        $supplier_name = getName($db, 'suppliers', $supplier_id);
+
         $query = "UPDATE products SET 
                   sku = :sku, 
                   name = :name, 
                   description = :description, 
                   category = :category, 
+                  category_id = :category_id,
+                  brand_id = :brand_id,
                   price = :price, 
                   cost_price = :cost_price, 
                   min_stock = :min_stock, 
                   supplier = :supplier, 
+                  supplier_id = :supplier_id,
                   location = :location 
                   WHERE id = :id";
         
@@ -46,17 +76,27 @@ if ($_POST) {
         $stmt->bindParam(":sku", $_POST['sku']);
         $stmt->bindParam(":name", $_POST['name']);
         $stmt->bindParam(":description", $_POST['description']);
-        $stmt->bindParam(":category", $_POST['category']);
+        $stmt->bindParam(":category", $category_name);
+        $stmt->bindParam(":category_id", $category_id);
+        $stmt->bindParam(":brand_id", $brand_id);
         $stmt->bindParam(":price", $_POST['price']);
         $stmt->bindParam(":cost_price", $_POST['cost_price']);
         $stmt->bindParam(":min_stock", $_POST['min_stock']);
-        $stmt->bindParam(":supplier", $_POST['supplier']);
+        $stmt->bindParam(":supplier", $supplier_name);
+        $stmt->bindParam(":supplier_id", $supplier_id);
         $stmt->bindParam(":location", $_POST['location']);
         $stmt->bindParam(":id", $product['id']);
         
         if ($stmt->execute()) {
             $message = "Product updated successfully!";
             $message_type = "success";
+            
+            // Log to AuditLog
+            if (Auth::isLoggedIn()) {
+                $user = Auth::getCurrentUser();
+                $audit->log($user['id'], "PRODUCT_UPDATE", "Updated product: " . $_POST['name'] . " (ID: " . $product['id'] . ")");
+            }
+            
             // Refresh product data
             $stmt = $db->prepare("SELECT * FROM products WHERE id = :id");
             $stmt->bindParam(":id", $product['id']);
@@ -110,16 +150,42 @@ require_once "../includes/header.php";
                             </div>
                             
                             <div class="mb-3">
-                                <label for="category" class="form-label">Category</label>
-                                <select class="form-select" id="category" name="category">
-                                    <option value="">Select Category</option>
-                                    <option value="Electronics" <?php echo $product['category'] == 'Electronics' ? 'selected' : ''; ?>>Electronics</option>
-                                    <option value="Computers" <?php echo $product['category'] == 'Computers' ? 'selected' : ''; ?>>Computers</option>
-                                    <option value="Accessories" <?php echo $product['category'] == 'Accessories' ? 'selected' : ''; ?>>Accessories</option>
-                                    <option value="Office Supplies" <?php echo $product['category'] == 'Office Supplies' ? 'selected' : ''; ?>>Office Supplies</option>
-                                    <option value="Furniture" <?php echo $product['category'] == 'Furniture' ? 'selected' : ''; ?>>Furniture</option>
-                                    <option value="Other" <?php echo $product['category'] == 'Other' ? 'selected' : ''; ?>>Other</option>
-                                </select>
+                                <label for="category_id" class="form-label">Category</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="category_id" name="category_id">
+                                        <option value="">Select Category</option>
+                                        <?php 
+                                        // Reset pointer
+                                        $categories->execute();
+                                        while ($row = $categories->fetch(PDO::FETCH_ASSOC)): 
+                                            $selected = ($product['category_id'] == $row['id']) ? 'selected' : '';
+                                            // Fallback: if category_id is null but name matches
+                                            if (!$selected && empty($product['category_id']) && $product['category'] == $row['name']) {
+                                                $selected = 'selected';
+                                            }
+                                        ?>
+                                            <option value="<?php echo $row['id']; ?>" <?php echo $selected; ?>><?php echo htmlspecialchars($row['name']); ?></option>
+                                        <?php endwhile; ?>
+                                    </select>
+                                    <a href="../categories/add.php" class="btn btn-outline-secondary" title="Add New Category"><i class="fas fa-plus"></i></a>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="brand_id" class="form-label">Brand</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="brand_id" name="brand_id">
+                                        <option value="">Select Brand</option>
+                                        <?php 
+                                        $brands->execute();
+                                        while ($row = $brands->fetch(PDO::FETCH_ASSOC)): 
+                                            $selected = ($product['brand_id'] == $row['id']) ? 'selected' : '';
+                                        ?>
+                                            <option value="<?php echo $row['id']; ?>" <?php echo $selected; ?>><?php echo htmlspecialchars($row['name']); ?></option>
+                                        <?php endwhile; ?>
+                                    </select>
+                                    <a href="../brands/add.php" class="btn btn-outline-secondary" title="Add New Brand"><i class="fas fa-plus"></i></a>
+                                </div>
                             </div>
                             
                             <div class="mb-3">
@@ -150,9 +216,24 @@ require_once "../includes/header.php";
                             </div>
                             
                             <div class="mb-3">
-                                <label for="supplier" class="form-label">Supplier</label>
-                                <input type="text" class="form-control" id="supplier" name="supplier" 
-                                       value="<?php echo htmlspecialchars($product['supplier']); ?>">
+                                <label for="supplier_id" class="form-label">Supplier</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="supplier_id" name="supplier_id">
+                                        <option value="">Select Supplier</option>
+                                        <?php 
+                                        $suppliers->execute();
+                                        while ($row = $suppliers->fetch(PDO::FETCH_ASSOC)): 
+                                            $selected = ($product['supplier_id'] == $row['id']) ? 'selected' : '';
+                                            // Fallback
+                                            if (!$selected && empty($product['supplier_id']) && $product['supplier'] == $row['name']) {
+                                                $selected = 'selected';
+                                            }
+                                        ?>
+                                            <option value="<?php echo $row['id']; ?>" <?php echo $selected; ?>><?php echo htmlspecialchars($row['name']); ?></option>
+                                        <?php endwhile; ?>
+                                    </select>
+                                    <a href="../suppliers/add_supplier.php" class="btn btn-outline-secondary" title="Add New Supplier"><i class="fas fa-plus"></i></a>
+                                </div>
                             </div>
                             
                             <div class="mb-3">

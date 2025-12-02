@@ -2,9 +2,20 @@
 // products/add_product.php
 session_start();
 require_once "../config/database.php";
+require_once "../models/AuditLog.php";
+require_once "../config/auth.php";
+
+// Ensure user is logged in
+Auth::requireLogin();
 
 $database = new Database();
 $db = $database->getConnection();
+$audit = new AuditLog($db);
+
+// Get categories, brands, suppliers for dropdowns
+$categories = $db->query("SELECT id, name FROM categories ORDER BY name ASC");
+$brands = $db->query("SELECT id, name FROM brands ORDER BY name ASC");
+$suppliers = $db->query("SELECT id, name FROM suppliers ORDER BY name ASC");
 
 $message = '';
 $message_type = '';
@@ -12,22 +23,46 @@ $message_type = '';
 // Handle form submission
 if ($_POST) {
     try {
+        // Get names for backward compatibility (optional, but good for now)
+        // We can look them up or just store the IDs. 
+        // The schema has `category` (text) and `supplier` (text).
+        // Let's try to find the names from the selected IDs.
+        
+        $category_id = !empty($_POST['category_id']) ? $_POST['category_id'] : null;
+        $brand_id = !empty($_POST['brand_id']) ? $_POST['brand_id'] : null;
+        $supplier_id = !empty($_POST['supplier_id']) ? $_POST['supplier_id'] : null;
+        
+        // Helper to get name from ID (simple query)
+        function getName($db, $table, $id) {
+            if (!$id) return null;
+            $stmt = $db->prepare("SELECT name FROM $table WHERE id = ?");
+            $stmt->execute([$id]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ? $row['name'] : null;
+        }
+
+        $category_name = getName($db, 'categories', $category_id);
+        $supplier_name = getName($db, 'suppliers', $supplier_id);
+
         $query = "INSERT INTO products 
-                  (sku, name, description, category, quantity, price, cost_price, min_stock, supplier, location) 
+                  (sku, name, description, category, category_id, brand_id, quantity, price, cost_price, min_stock, supplier, supplier_id, location) 
                   VALUES 
-                  (:sku, :name, :description, :category, :quantity, :price, :cost_price, :min_stock, :supplier, :location)";
+                  (:sku, :name, :description, :category, :category_id, :brand_id, :quantity, :price, :cost_price, :min_stock, :supplier, :supplier_id, :location)";
         
         $stmt = $db->prepare($query);
         
         $stmt->bindParam(":sku", $_POST['sku']);
         $stmt->bindParam(":name", $_POST['name']);
         $stmt->bindParam(":description", $_POST['description']);
-        $stmt->bindParam(":category", $_POST['category']);
+        $stmt->bindParam(":category", $category_name);
+        $stmt->bindParam(":category_id", $category_id);
+        $stmt->bindParam(":brand_id", $brand_id);
         $stmt->bindParam(":quantity", $_POST['quantity']);
         $stmt->bindParam(":price", $_POST['price']);
         $stmt->bindParam(":cost_price", $_POST['cost_price']);
         $stmt->bindParam(":min_stock", $_POST['min_stock']);
-        $stmt->bindParam(":supplier", $_POST['supplier']);
+        $stmt->bindParam(":supplier", $supplier_name);
+        $stmt->bindParam(":supplier_id", $supplier_id);
         $stmt->bindParam(":location", $_POST['location']);
         
         if ($stmt->execute()) {
@@ -36,12 +71,19 @@ if ($_POST) {
             
             // Log the initial stock movement
             $product_id = $db->lastInsertId();
-            $movement_query = "INSERT INTO stock_movements (product_id, movement_type, quantity, reason) 
-                              VALUES (:product_id, 'IN', :quantity, 'Initial stock')";
+            $movement_query = "INSERT INTO stock_movements (product_id, movement_type, quantity, reason, supplier_id) 
+                              VALUES (:product_id, 'IN', :quantity, 'Initial stock', :supplier_id)";
             $movement_stmt = $db->prepare($movement_query);
             $movement_stmt->bindParam(":product_id", $product_id);
             $movement_stmt->bindParam(":quantity", $_POST['quantity']);
+            $movement_stmt->bindParam(":supplier_id", $supplier_id);
             $movement_stmt->execute();
+            
+            // Log to AuditLog
+            if (Auth::isLoggedIn()) {
+                $user = Auth::getCurrentUser();
+                $audit->log($user['id'], "PRODUCT_ADD", "Added product: " . $_POST['name'] . " (SKU: " . $_POST['sku'] . ")");
+            }
             
         } else {
             $message = "Error adding product.";
@@ -95,16 +137,29 @@ require_once "../includes/header.php";
                     </div>
                     
                     <div class="mb-3">
-                        <label for="category" class="form-label">Category</label>
-                        <select class="form-select" id="category" name="category">
-                            <option value="">Select Category</option>
-                            <option value="Electronics">Electronics</option>
-                            <option value="Computers">Computers</option>
-                            <option value="Accessories">Accessories</option>
-                            <option value="Office Supplies">Office Supplies</option>
-                            <option value="Furniture">Furniture</option>
-                            <option value="Other">Other</option>
-                        </select>
+                        <label for="category_id" class="form-label">Category</label>
+                        <div class="input-group">
+                            <select class="form-select" id="category_id" name="category_id">
+                                <option value="">Select Category</option>
+                                <?php while ($row = $categories->fetch(PDO::FETCH_ASSOC)): ?>
+                                    <option value="<?php echo $row['id']; ?>"><?php echo htmlspecialchars($row['name']); ?></option>
+                                <?php endwhile; ?>
+                            </select>
+                            <a href="../categories/add.php" class="btn btn-outline-secondary" title="Add New Category"><i class="fas fa-plus"></i></a>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="brand_id" class="form-label">Brand</label>
+                        <div class="input-group">
+                            <select class="form-select" id="brand_id" name="brand_id">
+                                <option value="">Select Brand</option>
+                                <?php while ($row = $brands->fetch(PDO::FETCH_ASSOC)): ?>
+                                    <option value="<?php echo $row['id']; ?>"><?php echo htmlspecialchars($row['name']); ?></option>
+                                <?php endwhile; ?>
+                            </select>
+                            <a href="../brands/add.php" class="btn btn-outline-secondary" title="Add New Brand"><i class="fas fa-plus"></i></a>
+                        </div>
                     </div>
                     
                     <div class="mb-3">
@@ -141,9 +196,16 @@ require_once "../includes/header.php";
                     </div>
                     
                     <div class="mb-3">
-                        <label for="supplier" class="form-label">Supplier</label>
-                        <input type="text" class="form-control" id="supplier" name="supplier" 
-                               placeholder="Supplier name">
+                        <label for="supplier_id" class="form-label">Supplier</label>
+                        <div class="input-group">
+                            <select class="form-select" id="supplier_id" name="supplier_id">
+                                <option value="">Select Supplier</option>
+                                <?php while ($row = $suppliers->fetch(PDO::FETCH_ASSOC)): ?>
+                                    <option value="<?php echo $row['id']; ?>"><?php echo htmlspecialchars($row['name']); ?></option>
+                                <?php endwhile; ?>
+                            </select>
+                            <a href="../suppliers/add_supplier.php" class="btn btn-outline-secondary" title="Add New Supplier"><i class="fas fa-plus"></i></a>
+                        </div>
                     </div>
                     
                     <div class="mb-3">

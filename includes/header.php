@@ -49,15 +49,22 @@ Auth::startSession();
             <!-- Nav Item - Products -->
             <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], '../products/view_products.php') !== false && strpos($_SERVER['REQUEST_URI'], 'stock_') === false ? 'active' : ''; ?>">
                 <a class="nav-link" href="<?php echo BASE_URL; ?>products/view_products.php">
-                    <i class="fas fa-fw fa-list"></i>
-                    <span>View Products</span>
+                    <i class="fas fa-fw fa-box"></i>
+                    <span>Products</span>
+                </a>
+            </li>
+            
+            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'categories/') !== false ? 'active' : ''; ?>">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>categories/">
+                    <i class="fas fa-fw fa-folder"></i>
+                    <span>Categories</span>
                 </a>
             </li>
 
-            <li class="nav-item">
-                <a class="nav-link" href="<?php echo BASE_URL; ?>products/add_product.php">
-                    <i class="fas fa-fw fa-plus"></i>
-                    <span>Add Product</span>
+            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'brands/') !== false ? 'active' : ''; ?>">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>brands/">
+                    <i class="fas fa-fw fa-tags"></i>
+                    <span>Brands</span>
                 </a>
             </li>
 
@@ -151,6 +158,12 @@ Auth::startSession();
                 <a class="nav-link" href="<?php echo BASE_URL; ?>users/view_users.php">
                     <i class="fas fa-fw fa-users"></i>
                     <span>User Management</span>
+                </a>
+            </li>
+            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'admin/audit_logs.php') !== false ? 'active' : ''; ?>">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>admin/audit_logs.php">
+                    <i class="fas fa-fw fa-history"></i>
+                    <span>Audit Logs</span>
                 </a>
             </li>
             <?php endif; ?>
