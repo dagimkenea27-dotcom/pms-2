@@ -196,20 +196,34 @@ Auth::startSession();
                             $current_user = Auth::getCurrentUser();
                         ?>
                         <li class="nav-item dropdown no-arrow">
-                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button"
                                 data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <span class="mr-2 d-none d-lg-inline text-gray-600 small">
-                                    <?php echo htmlspecialchars($current_user['full_name']); ?>
-                                </span>
+                                <div class="d-flex flex-column align-items-end mr-3 d-none d-sm-block">
+                                    <span class="text-gray-800 font-weight-bold" style="font-size: 0.9rem;">
+                                        <?php echo htmlspecialchars($current_user['full_name']); ?>
+                                    </span>
+                                    <span class="badge badge-<?php echo $current_user['role'] == 'admin' ? 'primary' : 'secondary'; ?> badge-sm">
+                                        <?php echo ucfirst($current_user['role']); ?>
+                                    </span>
+                                </div>
                                 <img class="img-profile rounded-circle"
-                                    src="https://ui-avatars.com/api/?name=<?php echo urlencode($current_user['full_name']); ?>&background=random">
+                                    src="https://ui-avatars.com/api/?name=<?php echo urlencode($current_user['full_name']); ?>&background=4e73df&color=fff&size=128">
                             </a>
                             <!-- Dropdown - User Information -->
                             <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
                                 aria-labelledby="userDropdown">
+                                <div class="dropdown-header">
+                                    <strong><?php echo htmlspecialchars($current_user['full_name']); ?></strong>
+                                    <div class="small text-muted"><?php echo htmlspecialchars($current_user['email']); ?></div>
+                                </div>
+                                <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="#">
                                     <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
                                     Profile
+                                </a>
+                                <a class="dropdown-item" href="#">
+                                    <i class="fas fa-cog fa-sm fa-fw mr-2 text-gray-400"></i>
+                                    Settings
                                 </a>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="<?php echo BASE_URL; ?>logout.php">
