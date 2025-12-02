@@ -60,8 +60,11 @@ if ($_POST) {
 require_once "../includes/header.php";
 ?>
 
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2"><i class="fas fa-plus"></i> Add New Product</h1>
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-plus"></i> Add New Product</h1>
+    <a href="view_products.php" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+        <i class="fas fa-arrow-left fa-sm text-white-50"></i> Back to Products
+    </a>
 </div>
 
 <?php if ($message): ?>
@@ -71,7 +74,10 @@ require_once "../includes/header.php";
 </div>
 <?php endif; ?>
 
-<div class="card">
+<div class="card dashboard-card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Product Details</h6>
+    </div>
     <div class="card-body">
         <form method="POST" action="">
             <div class="row">
@@ -154,7 +160,7 @@ require_once "../includes/header.php";
                         <i class="fas fa-save"></i> Add Product
                     </button>
                     <a href="view_products.php" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to Products
+                        <i class="fas fa-times"></i> Cancel
                     </a>
                 </div>
             </div>

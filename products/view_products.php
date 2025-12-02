@@ -53,56 +53,57 @@ if (isset($_SESSION['message'])) {
 }
 ?>
 
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2"><i class="fas fa-list"></i> Product List</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="add_product.php" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Add New Product
-        </a>
-    </div>
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-list"></i> Product List</h1>
+    <a href="add_product.php" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+        <i class="fas fa-plus fa-sm text-white-50"></i> Add New Product
+    </a>
 </div>
 
 <!-- Summary Cards -->
 <div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card">
+    <div class="col-md-4">
+        <div class="card dashboard-card border-left-primary shadow h-100 py-2">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="mb-0"><?php echo count($products); ?></h4>
-                        <small class="text-muted">Total Products</small>
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Products</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo count($products); ?></div>
                     </div>
-                    <div class="align-self-center">
+                    <div class="col-auto">
                         <i class="fas fa-box text-primary fa-2x"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card">
+    <div class="col-md-4">
+        <div class="card dashboard-card border-left-warning shadow h-100 py-2">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="mb-0"><?php echo $low_stock_count['count']; ?></h4>
-                        <small class="text-muted">Low Stock</small>
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Low Stock</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $low_stock_count['count']; ?></div>
                     </div>
-                    <div class="align-self-center">
+                    <div class="col-auto">
                         <i class="fas fa-exclamation-triangle text-warning fa-2x"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card">
+    <div class="col-md-4">
+        <div class="card dashboard-card border-left-danger shadow h-100 py-2">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="mb-0"><?php echo $out_of_stock_count['count']; ?></h4>
-                        <small class="text-muted">Out of Stock</small>
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                            Out of Stock</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $out_of_stock_count['count']; ?></div>
                     </div>
-                    <div class="align-self-center">
+                    <div class="col-auto">
                         <i class="fas fa-times-circle text-danger fa-2x"></i>
                     </div>
                 </div>
@@ -112,11 +113,14 @@ if (isset($_SESSION['message'])) {
 </div>
 
 <!-- Products Table -->
-<div class="card">
+<div class="card dashboard-card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Products Inventory</h6>
+    </div>
     <div class="card-body">
         <?php if ($products): ?>
             <div class="table-responsive">
-                <table class="table table-striped table-hover">
+                <table class="table table-bordered table-hover" width="100%" cellspacing="0">
                     <thead>
                         <tr>
                             <th>SKU</th>
@@ -133,11 +137,11 @@ if (isset($_SESSION['message'])) {
                             $stock_class = '';
                             $stock_status = '';
                             if ($product['quantity'] == 0) {
-                                $stock_class = 'out-of-stock';
-                                $stock_status = '<span class="badge bg-secondary">Out of Stock</span>';
+                                $stock_class = 'table-danger';
+                                $stock_status = '<span class="badge bg-danger">Out of Stock</span>';
                             } elseif ($product['quantity'] <= $product['min_stock']) {
-                                $stock_class = 'low-stock';
-                                $stock_status = '<span class="badge bg-warning">Low Stock</span>';
+                                $stock_class = 'table-warning';
+                                $stock_status = '<span class="badge bg-warning text-dark">Low Stock</span>';
                             } else {
                                 $stock_status = '<span class="badge bg-success">In Stock</span>';
                             }
@@ -167,14 +171,15 @@ if (isset($_SESSION['message'])) {
                             <td><?php echo $stock_status; ?></td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="edit_product.php?id=<?php echo $product['id']; ?>" class="btn btn-outline-primary">
+                                    <a href="edit_product.php?id=<?php echo $product['id']; ?>" class="btn btn-outline-primary" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <a href="update_stock.php?id=<?php echo $product['id']; ?>" class="btn btn-outline-success">
+                                    <a href="update_stock.php?id=<?php echo $product['id']; ?>" class="btn btn-outline-success" title="Update Stock">
                                         <i class="fas fa-warehouse"></i>
                                     </a>
                                     <a href="?delete_id=<?php echo $product['id']; ?>" 
                                        class="btn btn-outline-danger" 
+                                       title="Delete"
                                        onclick="return confirmDelete('<?php echo addslashes($product['name']); ?>')">
                                         <i class="fas fa-trash"></i>
                                     </a>
@@ -186,8 +191,8 @@ if (isset($_SESSION['message'])) {
                 </table>
             </div>
         <?php else: ?>
-            <div class="text-center py-4">
-                <i class="fas fa-box fa-3x text-muted mb-3"></i>
+            <div class="text-center py-5">
+                <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
                 <h4>No products found</h4>
                 <p class="text-muted">Get started by adding your first product.</p>
                 <a href="add_product.php" class="btn btn-primary">

@@ -25,25 +25,27 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 require_once "../includes/header.php";
 ?>
 
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2"><i class="fas fa-exclamation-triangle text-warning"></i> Low Stock Report</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <button onclick="window.print()" class="btn btn-outline-secondary">
-            <i class="fas fa-print"></i> Print Report
-        </button>
-    </div>
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-exclamation-triangle text-warning"></i> Low Stock Report</h1>
+    <button onclick="window.print()" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+        <i class="fas fa-print fa-sm text-white-50"></i> Print Report
+    </button>
 </div>
 
 <?php if (count($products) > 0): ?>
-    <div class="alert alert-warning">
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
         <i class="fas fa-info-circle"></i> 
         <strong>Attention Needed:</strong> There are <?php echo count($products); ?> products below their minimum stock level.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 
-    <div class="card">
+    <div class="card dashboard-card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Low Stock Items</h6>
+        </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-striped table-hover">
+                <table class="table table-bordered table-hover" width="100%" cellspacing="0">
                     <thead>
                         <tr>
                             <th>SKU</th>

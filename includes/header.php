@@ -1,26 +1,6 @@
 <?php
-// includes/header.php (updated)
-// Determine base path based on current directory depth
-$current_dir = dirname($_SERVER['PHP_SELF']);
-$depth = substr_count($current_dir, '/') - substr_count('/stock_management', '/');
-// Adjust depth calculation if running in root or subfolder
-$base_path = './';
-if (strpos($current_dir, 'stock_management/') !== false) {
-    $subdir_count = substr_count(substr($current_dir, strpos($current_dir, 'stock_management/') + 17), '/');
-    if ($subdir_count > 0) {
-        $base_path = str_repeat('../', $subdir_count);
-    }
-} else {
-    // Fallback for different setups
-    $path_parts = explode('/', trim($_SERVER['SCRIPT_NAME'], '/'));
-    $key = array_search('stock_management', $path_parts);
-    if ($key !== false) {
-        $count = count($path_parts) - 1 - $key;
-        $base_path = $count > 0 ? str_repeat('../', $count) : './';
-    }
-}
-
-require_once $base_path . "config/auth.php";
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once CONFIG_PATH . 'auth.php';
 Auth::startSession();
 ?>
 <!DOCTYPE html>
@@ -29,137 +9,213 @@ Auth::startSession();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventory Management System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .sidebar {
-            min-height: calc(100vh - 56px);
-            background-color: #f8f9fa;
-        }
-        .sidebar .nav-link {
-            color: #333;
-            padding: 10px 15px;
-            margin: 2px 0;
-        }
-        .sidebar .nav-link:hover, .sidebar .nav-link.active {
-            background-color: #007bff;
-            color: white;
-        }
-        .card { transition: transform 0.2s; }
-        .card:hover { transform: translateY(-2px); }
-        .low-stock { border-left: 4px solid #dc3545; background-color: #fff5f5; }
-        .out-of-stock { border-left: 4px solid #6c757d; background-color: #f8f9fa; }
-        .navbar { box-shadow: 0 2px 4px rgba(0,0,0,.1); }
-        .user-role {
-            font-size: 0.8em;
-            opacity: 0.8;
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="<?php echo BASE_URL; ?>assets/css/custom.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="<?php echo $base_path; ?>index.php">
-                <i class="fas fa-boxes"></i> Inventory System
-            </a>
-            <div class="navbar-nav ms-auto">
-                <?php if (Auth::isLoggedIn()): 
-                    $current_user = Auth::getCurrentUser();
-                ?>
-                <div class="dropdown">
-                    <a class="nav-link dropdown-toggle text-white" href="#" role="button" 
-                       data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fas fa-user-circle"></i> 
-                        <?php echo $current_user['full_name']; ?>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><span class="dropdown-item-text user-role">
-                            Role: <?php echo ucfirst($current_user['role']); ?>
-                        </span></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="<?php echo $base_path; ?>users/profile.php">
-                            <i class="fas fa-user"></i> My Profile
-                        </a></li>
-                        <?php if ($current_user['role'] == 'admin'): ?>
-                        <li><a class="dropdown-item" href="<?php echo $base_path; ?>users/view_users.php">
-                            <i class="fas fa-users"></i> Manage Users
-                        </a></li>
-                        <?php endif; ?>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger" href="<?php echo $base_path; ?>logout.php">
-                            <i class="fas fa-sign-out-alt"></i> Logout
-                        </a></li>
-                    </ul>
+<body id="page-top">
+    <!-- Page Wrapper -->
+    <div id="wrapper">
+        <!-- Sidebar -->
+        <ul class="navbar-nav sidebar accordion" id="accordionSidebar">
+            <!-- Sidebar - Brand -->
+            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="<?php echo BASE_URL; ?>index.php">
+                <div class="sidebar-brand-icon rotate-n-15">
+                    <i class="fas fa-boxes"></i>
                 </div>
-                <?php else: ?>
-                <a class="nav-link text-white" href="<?php echo $base_path; ?>login.php">
-                    <i class="fas fa-sign-in-alt"></i> Login
+                <div class="sidebar-brand-text mx-3">Inventory MS</div>
+            </a>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider my-0">
+
+            <!-- Nav Item - Dashboard -->
+            <li class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>index.php">
+                    <i class="fas fa-fw fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
                 </a>
-                <?php endif; ?>
-            </div>
-        </div>
-    </nav>
+            </li>
 
-    <?php if (Auth::isLoggedIn()): ?>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-2 sidebar p-0">
-                <nav class="nav flex-column p-3">
-                    <a class="nav-link" href="<?php echo $base_path; ?>index.php">
-                        <i class="fas fa-tachometer-alt"></i> Dashboard
-                    </a>
-                    <div class="dropdown-divider"></div>
-                    <h6 class="px-3 text-muted small">PRODUCT MANAGEMENT</h6>
-                    <a class="nav-link" href="<?php echo $base_path; ?>products/view_products.php">
-                        <i class="fas fa-list"></i> View Products
-                    </a>
-                    <?php if (Auth::hasPermission('products.create')): ?>
-                    <a class="nav-link" href="<?php echo $base_path; ?>products/add_product.php">
-                        <i class="fas fa-plus"></i> Add Product
-                    </a>
-                    <?php endif; ?>
-                    
-                    <div class="dropdown-divider"></div>
-                    <h6 class="px-3 text-muted small">STOCK MANAGEMENT</h6>
-                    <a class="nav-link" href="<?php echo $base_path; ?>products/stock_in.php">
-                        <i class="fas fa-download"></i> Stock In
-                    </a>
-                    <a class="nav-link" href="<?php echo $base_path; ?>products/stock_out.php">
-                        <i class="fas fa-upload"></i> Stock Out
-                    </a>
-                    
-                    <?php if (Auth::hasPermission('suppliers.view')): ?>
-                    <div class="dropdown-divider"></div>
-                    <h6 class="px-3 text-muted small">SUPPLIER MANAGEMENT</h6>
-                    <a class="nav-link" href="<?php echo $base_path; ?>suppliers/view_suppliers.php">
-                        <i class="fas fa-truck"></i> Manage Suppliers
-                    </a>
-                    <?php endif; ?>
-                    
-                    <?php if (Auth::hasPermission('reports.view')): ?>
-                    <div class="dropdown-divider"></div>
-                    <h6 class="px-3 text-muted small">REPORTS</h6>
-                    <a class="nav-link" href="<?php echo $base_path; ?>reports/stock_report.php">
-                        <i class="fas fa-chart-bar"></i> Stock Report
-                    </a>
-                    <a class="nav-link" href="<?php echo $base_path; ?>reports/low_stock.php">
-                        <i class="fas fa-exclamation-triangle"></i> Low Stock
-                    </a>
-                    <?php endif; ?>
-                    
-                    <?php if (Auth::hasPermission('users.manage')): ?>
-                    <div class="dropdown-divider"></div>
-                    <h6 class="px-3 text-muted small">ADMIN</h6>
-                    <a class="nav-link" href="<?php echo $base_path; ?>users/view_users.php">
-                        <i class="fas fa-users"></i> User Management
-                    </a>
-                    <?php endif; ?>
-                </nav>
+            <!-- Divider -->
+            <hr class="sidebar-divider">
+
+            <!-- Heading -->
+            <div class="sidebar-heading">
+                Product Management
             </div>
 
+            <!-- Nav Item - Products -->
+            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], '../products/view_products.php') !== false && strpos($_SERVER['REQUEST_URI'], 'stock_') === false ? 'active' : ''; ?>">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>products/view_products.php">
+                    <i class="fas fa-fw fa-list"></i>
+                    <span>View Products</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>products/add_product.php">
+                    <i class="fas fa-fw fa-plus"></i>
+                    <span>Add Product</span>
+                </a>
+            </li>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider">
+
+            <!-- Heading -->
+            <div class="sidebar-heading">
+                Stock Operations
+            </div>
+
+            <!-- Nav Item - Stock Movements -->
+            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], '../products/stock_in') !== false ? 'active' : ''; ?>">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>products/stock_in.php">
+                    <i class="fas fa-fw fa-download"></i>
+                    <span>Stock In</span>
+                </a>
+            </li>
+
+            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], '../products/stock_out') !== false ? 'active' : ''; ?>">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>products/stock_out.php">
+                    <i class="fas fa-fw fa-upload"></i>
+                    <span>Stock Out</span>
+                </a>
+            </li>
+
+            <!-- Nav Item - Suppliers -->
+            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'suppliers/') !== false ? 'active' : ''; ?>">
+                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseSuppliers"
+                    aria-expanded="true" aria-controls="collapseSuppliers">
+                    <i class="fas fa-fw fa-truck"></i>
+                    <span>Suppliers</span>
+                </a>
+                <div id="collapseSuppliers" class="collapse <?php echo strpos($_SERVER['REQUEST_URI'], 'suppliers/') !== false ? 'show' : ''; ?>" aria-labelledby="headingSuppliers" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>suppliers/view_suppliers.php">View Suppliers</a>
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>suppliers/add_supplier.php">Add Supplier</a>
+                    </div>
+                </div>
+            </li>
+
+            <!-- Nav Item - Route Optimizer -->
+            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/') !== false ? 'active' : ''; ?>">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>routes/index.php">
+                    <i class="fas fa-fw fa-map-marked-alt"></i>
+                    <span>Route Optimizer</span>
+                </a>
+            </li>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider">
+
+            <!-- Heading -->
+            <div class="sidebar-heading">
+                Reports & Analytics
+            </div>
+
+            <!-- Nav Item - Reports -->
+            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'reports/') !== false ? 'active' : ''; ?>">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>reports/stock_movement.php">
+                    <i class="fas fa-fw fa-chart-line"></i>
+                    <span>Stock Movement</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>reports/low_stock.php">
+                    <i class="fas fa-fw fa-exclamation-triangle"></i>
+                    <span>Low Stock Items</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>reports/stock_valuation.php">
+                    <i class="fas fa-fw fa-chart-pie"></i>
+                    <span>Stock Valuation</span>
+                </a>
+            </li>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider">
+
+            <!-- Heading -->
+            <div class="sidebar-heading">
+                Administration
+            </div>
+
+            <!-- Nav Item - Users -->
+            <?php if (Auth::isLoggedIn() && Auth::getCurrentUser()['role'] == 'admin'): ?>
+            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'users/') !== false ? 'active' : ''; ?>">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>users/view_users.php">
+                    <i class="fas fa-fw fa-users"></i>
+                    <span>User Management</span>
+                </a>
+            </li>
+            <?php endif; ?>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider d-none d-md-block">
+
+            <!-- Sidebar Toggler (Sidebar) -->
+            <div class="text-center d-none d-md-inline mt-3">
+                <button class="rounded-circle border-0" id="sidebarToggle"></button>
+            </div>
+        </ul>
+        <!-- End of Sidebar -->
+
+        <!-- Content Wrapper -->
+        <div id="content-wrapper" class="d-flex flex-column">
             <!-- Main Content -->
-            <div class="col-md-10">
-                <div class="p-4">
-    <?php endif; ?>
+            <div id="content">
+                <!-- Topbar -->
+                <nav class="topbar navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+                    <!-- Sidebar Toggle (Topbar) -->
+                    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
+                        <i class="fa fa-bars"></i>
+                    </button>
+
+                    <!-- Topbar Navbar -->
+                    <ul class="navbar-nav ml-auto">
+                        <!-- Nav Item - User Information -->
+                        <?php if (Auth::isLoggedIn()): 
+                            $current_user = Auth::getCurrentUser();
+                        ?>
+                        <li class="nav-item dropdown no-arrow">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                                data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <span class="mr-2 d-none d-lg-inline text-gray-600 small">
+                                    <?php echo htmlspecialchars($current_user['full_name']); ?>
+                                </span>
+                                <img class="img-profile rounded-circle"
+                                    src="https://ui-avatars.com/api/?name=<?php echo urlencode($current_user['full_name']); ?>&background=random">
+                            </a>
+                            <!-- Dropdown - User Information -->
+                            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
+                                aria-labelledby="userDropdown">
+                                <a class="dropdown-item" href="#">
+                                    <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
+                                    Profile
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="<?php echo BASE_URL; ?>logout.php">
+                                    <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
+                                    Logout
+                                </a>
+                            </div>
+                        </li>
+                        <?php else: ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="<?php echo BASE_URL; ?>login.php">
+                                <i class="fas fa-sign-in-alt fa-sm fa-fw mr-2 text-gray-400"></i>
+                                Login
+                            </a>
+                        </li>
+                        <?php endif; ?>
+                    </ul>
+                </nav>
+                <!-- End of Topbar -->
+
+                <!-- Begin Page Content -->
+                <div class="container-fluid">

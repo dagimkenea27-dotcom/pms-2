@@ -95,8 +95,11 @@ $movement_history = $movement_stmt->fetchAll(PDO::FETCH_ASSOC);
 require_once "../includes/header.php";
 ?>
 
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2"><i class="fas fa-warehouse"></i> Update Stock</h1>
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-warehouse"></i> Update Stock</h1>
+    <a href="view_products.php" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+        <i class="fas fa-arrow-left fa-sm text-white-50"></i> Back to Products
+    </a>
 </div>
 
 <?php if ($message): ?>
@@ -108,9 +111,9 @@ require_once "../includes/header.php";
 
 <div class="row">
     <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="card-title mb-0"><i class="fas fa-cube"></i> Product Details</h6>
+        <div class="card dashboard-card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-cube"></i> Product Details</h6>
             </div>
             <div class="card-body">
                 <table class="table table-sm">
@@ -142,9 +145,9 @@ require_once "../includes/header.php";
             </div>
         </div>
         
-        <div class="card mt-3">
-            <div class="card-header">
-                <h6 class="card-title mb-0"><i class="fas fa-edit"></i> Update Stock</h6>
+        <div class="card dashboard-card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-edit"></i> Update Stock</h6>
             </div>
             <div class="card-body">
                 <form method="POST" action="">
@@ -206,14 +209,14 @@ require_once "../includes/header.php";
     </div>
     
     <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="card-title mb-0"><i class="fas fa-history"></i> Stock Movement History</h6>
+        <div class="card dashboard-card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-history"></i> Stock Movement History</h6>
             </div>
             <div class="card-body">
                 <?php if ($movement_history): ?>
                     <div class="table-responsive">
-                        <table class="table table-striped table-sm">
+                        <table class="table table-bordered table-hover" width="100%" cellspacing="0">
                             <thead>
                                 <tr>
                                     <th>Date</th>
