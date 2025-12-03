@@ -1,6 +1,6 @@
 <?php
 // reports/low_stock.php
-session_start();
+require_once "../config/auth_check.php";
 require_once "../config/database.php";
 
 $database = new Database();

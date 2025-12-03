@@ -1,6 +1,6 @@
 <?php
 // products/stock_out.php
-session_start();
+require_once "../config/auth_check.php";
 require_once "../config/database.php";
 require_once "../models/AuditLog.php";
 require_once "../config/auth.php";

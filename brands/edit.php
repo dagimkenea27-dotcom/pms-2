@@ -1,5 +1,6 @@
 <?php
 // brands/edit.php
+require_once '../config/auth_check.php';
 require_once '../config/database.php';
 require_once '../includes/header.php';
 require_once '../models/Brand.php';
@@ -12,7 +13,6 @@ $message = '';
 $message_type = '';
 
 // Get ID from URL
-$brand->id = isset($_GET['id']) ? $_GET['id'] : die('ERROR: Missing ID.');
 
 // Handle form submission
 if ($_POST) {

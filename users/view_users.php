@@ -1,19 +1,6 @@
 <?php
 // users/view_users.php
 require_once "../config/auth.php";
-Auth::requireRole('admin');
-
-require_once "../config/database.php";
-require_once "../models/User.php";
-
-$database = new Database();
-$db = $database->getConnection();
-$user = new User($db);
-
-$users = $user->read()->fetchAll(PDO::FETCH_ASSOC);
-
-// Handle user deletion
-if (isset($_GET['delete_id'])) {
     $user->id = $_GET['delete_id'];
     if ($user->delete()) {
         $_SESSION['message'] = "User deleted successfully!";

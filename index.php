@@ -4,7 +4,7 @@ require_once "config/auth.php";
 require_once "config/database.php";
 require_once "models/User.php";
 
-Auth::requireLogin();
+Auth::checkAuthAndPreventCache();
 
 // Initialize database connection
 $database = new Database();
