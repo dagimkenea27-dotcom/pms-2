@@ -34,7 +34,7 @@ body {
 .sidebar {
     width: 14rem;
     min-height: 100vh;
-    background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
+    background: linear-gradient(180deg, #042480 10%, #224abe 100%);
     background-size: cover;
     transition: all .3s;
     display: flex;
@@ -245,7 +245,7 @@ body {
 }
 
 .sidebar .collapse-item:hover {
-    color: #fff;
+    color: #211277;
     background-color: rgba(255, 255, 255, 0.1);
     padding-left: 3.25rem;
 }
