@@ -116,15 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             Register New Account
                         </a>
                     </div>
-                </form>
-                
-                <div class="text-center mt-3">
-                    <small class="text-muted">
-                        <strong>Demo Credentials:</strong><br>
-                        Username: admin<br>
-                        Password: admin123
-                    </small>
-                </div>
+                </form>                
             </div>
         </div>
     </div>
