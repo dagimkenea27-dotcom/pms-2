@@ -55,9 +55,17 @@ if (isset($_SESSION['message'])) {
 
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-list"></i> Product List</h1>
-    <a href="add_product.php" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-        <i class="fas fa-plus fa-sm text-white-50"></i> Add New Product
-    </a>
+    <div>
+        <a href="export_products.php" class="d-none d-sm-inline-block btn btn-sm btn-success shadow-sm me-2">
+            <i class="fas fa-download fa-sm text-white-50"></i> Export CSV
+        </a>
+        <button type="button" class="d-none d-sm-inline-block btn btn-sm btn-info shadow-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal">
+            <i class="fas fa-upload fa-sm text-white-50"></i> Import CSV
+        </button>
+        <a href="add_product.php" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+            <i class="fas fa-plus fa-sm text-white-50"></i> Add New Product
+        </a>
+    </div>
 </div>
 
 <!-- Summary Cards -->
@@ -200,6 +208,38 @@ if (isset($_SESSION['message'])) {
                 </a>
             </div>
         <?php endif; ?>
+    </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="import_products.php" method="POST" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="importModalLabel">Import Products from CSV</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="csv_file" class="form-label">Choose CSV File</label>
+                        <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv" required>
+                    </div>
+                    <div class="alert alert-info">
+                        <small>
+                            <strong>CSV Format:</strong><br>
+                            Required columns: SKU, Name<br>
+                            Optional: Description, Category, Quantity, Price, Cost Price, Min Stock, Supplier, Location<br>
+                            <em>Existing SKUs will be updated.</em>
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Import</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
