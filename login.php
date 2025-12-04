@@ -112,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <button type="submit" class="btn btn-primary btn-lg">
                             <i class="fas fa-sign-in-alt"></i> Login
                         </button>
-                        <a href="register.php" class="btn btn-outline-secondary">
+                        <a href="egister.php" class="btn btn-outline-secondary">
                             Register New Account
                         </a>
                     </div>
