@@ -47,6 +47,13 @@ Auth::startSession();
             </div>
 
             <!-- Nav Item - Products -->
+             <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'price.php') !== false && strpos($_SERVER['REQUEST_URI'], 'price') === false ? 'active' : ''; ?>">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>price.php">
+                    <i class="fas fa-fw fa-calculator"></i>
+                    <span>price Calculator</span>
+                </a>
+            </li>
+
             <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], '../products/view_products.php') !== false && strpos($_SERVER['REQUEST_URI'], 'stock_') === false ? 'active' : ''; ?>">
                 <a class="nav-link" href="<?php echo BASE_URL; ?>products/view_products.php">
                     <i class="fas fa-fw fa-box"></i>

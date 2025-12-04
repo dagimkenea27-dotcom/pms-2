@@ -1,17 +1,40 @@
 <?php
 // users/view_users.php
+require_once "../config/auth_check.php";
+require_once "../config/database.php";
+require_once "../models/User.php";
 require_once "../config/auth.php";
+
+Auth::checkAuth();
+
+// Initialize DB and User
+$database = new Database();
+$db = $database->getConnection();
+$user = new User($db);
+
+// Handle Delete
+if (isset($_GET['delete_id'])) {
     $user->id = $_GET['delete_id'];
-    if ($user->delete()) {
-        $_SESSION['message'] = "User deleted successfully!";
-        $_SESSION['message_type'] = 'success';
-    } else {
-        $_SESSION['message'] = "Error: Cannot delete the last admin user.";
+    // Prevent self-deletion
+    if ($user->id == $_SESSION['user_id']) {
+        $_SESSION['message'] = "Error: You cannot delete your own account.";
         $_SESSION['message_type'] = 'danger';
+    } else {
+        if ($user->delete()) {
+            $_SESSION['message'] = "User deleted successfully!";
+            $_SESSION['message_type'] = 'success';
+        } else {
+            $_SESSION['message'] = "Error: Cannot delete the last admin user.";
+            $_SESSION['message_type'] = 'danger';
+        }
     }
     header("Location: view_users.php");
     exit();
 }
+
+// Get all users
+$stmt = $user->read();
+$users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 require_once "../includes/header.php";
 ?>

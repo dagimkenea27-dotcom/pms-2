@@ -151,6 +151,9 @@ require_once "includes/header.php";
                         <a href="products/view_products.php" class="btn quick-action-btn btn-success">
                             <i class="fas fa-list mr-2"></i>View Products
                         </a>
+                        <a href="price.php" class="btn quick-action-btn btn-primary">
+                            <i class="fas fa-calculator mr-2"></i>price Calculator
+                        </a>
                         <a href="products/stock_in.php" class="btn quick-action-btn btn-warning">
                             <i class="fas fa-download mr-2"></i>Stock In
                         </a>
@@ -231,3 +234,174 @@ require_once "includes/header.php";
 </div>
 
 <?php require_once "includes/footer.php"; ?>
+
+<?php
+// Prepare data for charts
+// 1. Stock Status Distribution
+$stock_status_data = [
+    'Out of Stock' => $out_of_stock['count'],
+    'Low Stock' => $low_stock['count'],
+    'In Stock' => $total_products['count'] - $out_of_stock['count'] - $low_stock['count']
+];
+
+// 2. Recent Stock Movements (for Overview - simplified to last 7 days)
+$dates = [];
+$ins = [];
+$outs = [];
+
+for ($i = 6; $i >= 0; $i--) {
+    $date = date('Y-m-d', strtotime("-$i days"));
+    $dates[] = date('M j', strtotime($date));
+    
+    // Stock In
+    $stmt = $db->prepare("SELECT SUM(quantity) as count FROM stock_movements WHERE movement_type = 'IN' AND DATE(created_at) = ?");
+    $stmt->execute([$date]);
+    $ins[] = $stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0;
+    
+    // Stock Out
+    $stmt = $db->prepare("SELECT SUM(quantity) as count FROM stock_movements WHERE movement_type = 'OUT' AND DATE(created_at) = ?");
+    $stmt->execute([$date]);
+    $outs[] = $stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0;
+}
+?>
+
+<script>
+    // Set new default font family and font color to mimic Bootstrap's default styling
+    Chart.defaults.font.family = 'Nunito, -apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
+    Chart.defaults.color = '#858796';
+
+    // Stock Overview Chart
+    var ctx = document.getElementById("stockOverviewChart");
+    if (ctx) {
+        var myLineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: <?php echo json_encode($dates); ?>,
+                datasets: [{
+                    label: "Stock In",
+                    lineTension: 0.3,
+                    backgroundColor: "rgba(78, 115, 223, 0.05)",
+                    borderColor: "rgba(78, 115, 223, 1)",
+                    pointRadius: 3,
+                    pointBackgroundColor: "rgba(78, 115, 223, 1)",
+                    pointBorderColor: "rgba(78, 115, 223, 1)",
+                    pointHoverRadius: 3,
+                    pointHoverBackgroundColor: "rgba(78, 115, 223, 1)",
+                    pointHoverBorderColor: "rgba(78, 115, 223, 1)",
+                    pointHitRadius: 10,
+                    pointBorderWidth: 2,
+                    data: <?php echo json_encode($ins); ?>,
+                }, {
+                    label: "Stock Out",
+                    lineTension: 0.3,
+                    backgroundColor: "rgba(231, 74, 59, 0.05)",
+                    borderColor: "rgba(231, 74, 59, 1)",
+                    pointRadius: 3,
+                    pointBackgroundColor: "rgba(231, 74, 59, 1)",
+                    pointBorderColor: "rgba(231, 74, 59, 1)",
+                    pointHoverRadius: 3,
+                    pointHoverBackgroundColor: "rgba(231, 74, 59, 1)",
+                    pointHoverBorderColor: "rgba(231, 74, 59, 1)",
+                    pointHitRadius: 10,
+                    pointBorderWidth: 2,
+                    data: <?php echo json_encode($outs); ?>,
+                }],
+            },
+            options: {
+                maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        left: 10,
+                        right: 25,
+                        top: 25,
+                        bottom: 0
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            maxTicksLimit: 7
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            maxTicksLimit: 5,
+                            padding: 10,
+                        },
+                        grid: {
+                            color: "rgb(234, 236, 244)",
+                            zeroLineColor: "rgb(234, 236, 244)",
+                            drawBorder: false,
+                            borderDash: [2],
+                            zeroLineBorderDash: [2]
+                        }
+                    },
+                },
+                plugins: {
+                    legend: {
+                        display: true
+                    },
+                    tooltip: {
+                        backgroundColor: "rgb(255,255,255)",
+                        bodyColor: "#858796",
+                        titleMarginBottom: 10,
+                        titleColor: '#6e707e',
+                        titleFont: {
+                            size: 14,
+                        },
+                        borderColor: '#dddfeb',
+                        borderWidth: 1,
+                        xPadding: 15,
+                        yPadding: 15,
+                        displayColors: false,
+                        intersect: false,
+                        mode: 'index',
+                        caretPadding: 10,
+                    }
+                }
+            }
+        });
+    }
+
+    // Stock Status Pie Chart
+    var ctxPie = document.getElementById("stockStatusChart");
+    if (ctxPie) {
+        var myPieChart = new Chart(ctxPie, {
+            type: 'doughnut',
+            data: {
+                labels: ["In Stock", "Low Stock", "Out of Stock"],
+                datasets: [{
+                    data: [
+                        <?php echo $stock_status_data['In Stock']; ?>, 
+                        <?php echo $stock_status_data['Low Stock']; ?>, 
+                        <?php echo $stock_status_data['Out of Stock']; ?>
+                    ],
+                    backgroundColor: ['#1cc88a', '#f6c23e', '#e74a3b'],
+                    hoverBackgroundColor: ['#17a673', '#dda20a', '#be2617'],
+                    hoverBorderColor: "rgba(234, 236, 244, 1)",
+                }],
+            },
+            options: {
+                maintainAspectRatio: false,
+                tooltips: {
+                    backgroundColor: "rgb(255,255,255)",
+                    bodyFontColor: "#858796",
+                    borderColor: '#dddfeb',
+                    borderWidth: 1,
+                    xPadding: 15,
+                    yPadding: 15,
+                    displayColors: false,
+                    caretPadding: 10,
+                },
+                legend: {
+                    display: false
+                },
+                cutout: '80%',
+            },
+        });
+    }
+</script>
