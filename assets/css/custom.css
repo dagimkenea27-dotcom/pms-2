@@ -529,4 +529,89 @@ footer.sticky-footer .copyright {
     .chart-area {
         height: 15rem;
     }
+}/* --- FIXED LAYOUT IMPLEMENTATION --- */
+
+/* Fix the sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1040;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+/* Adjust wrapper to account for fixed sidebar */
+#content-wrapper {
+    margin-left: 14rem;
+    /* Match sidebar width */
+    width: calc(100% - 14rem);
+    transition: margin-left 0.3s cubic-bezier(0.18, 1.25, 0.4, 1), width 0.3s cubic-bezier(0.18, 1.25, 0.4, 1);
+}
+
+/* Fix the topbar */
+.topbar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 14rem;
+    /* Starts where sidebar ends */
+    z-index: 1030;
+    transition: left 0.3s cubic-bezier(0.18, 1.25, 0.4, 1);
+}
+
+/* Push content down so it's not hidden behind topbar */
+#content .container-fluid {
+    padding-top: 1.5rem;
+    margin-top: 5.875rem;
+    /* Topbar height (4.375rem) + margin (1.5rem) */
+}
+
+/* --- TOGGLED STATE --- */
+/* When sidebar is toggled (small) */
+.sidebar.toggled {
+    width: 6.5rem;
+}
+
+/* Adjust wrapper when sidebar is toggled */
+body.sidebar-toggled #content-wrapper {
+    margin-left: 6.5rem;
+    width: calc(100% - 6.5rem);
+}
+
+/* Adjust topbar when sidebar is toggled */
+body.sidebar-toggled .topbar {
+    left: 6.5rem;
+}
+
+/* --- MOBILE RESPONSIVE --- */
+@media (max-width: 768px) {
+
+    /* On mobile, sidebar behaves differently */
+    .sidebar {
+        width: 6.5rem;
+    }
+
+    #content-wrapper {
+        margin-left: 6.5rem;
+        width: calc(100% - 6.5rem);
+    }
+
+    .topbar {
+        left: 6.5rem;
+    }
+
+    /* If toggled on mobile (usually hides sidebar completely) */
+    .sidebar.toggled {
+        transform: translateX(-100%);
+    }
+
+    body.sidebar-toggled #content-wrapper {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    body.sidebar-toggled .topbar {
+        left: 0;
+    }
 }
