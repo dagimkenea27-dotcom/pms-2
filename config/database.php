@@ -1,11 +1,21 @@
 <?php
 // config/database.php
+require_once __DIR__ . '/Env.php';
+Env::load(__DIR__ . '/../.env');
+
 class Database {
-    private $host = "localhost";
-    private $db_name = "inventory_system";
-    private $username = "root";
-    private $password = "";
+    private $host;
+    private $db_name;
+    private $username;
+    private $password;
     public $conn;
+
+    public function __construct() {
+        $this->host = getenv('DB_HOST') ?: 'localhost';
+        $this->db_name = getenv('DB_NAME') ?: 'inventory_system';
+        $this->username = getenv('DB_USER') ?: 'root';
+        $this->password = getenv('DB_PASS') ?: '';
+    }
 
     public function getConnection() {
         $this->conn = null;
