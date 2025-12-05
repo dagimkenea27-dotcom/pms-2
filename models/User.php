@@ -25,7 +25,7 @@ class User {
     public function create() {
         $query = "INSERT INTO " . $this->table_name . "
                 SET username=:username, email=:email, password_hash=:password_hash,
-                first_name=:first_name, last_name=:last_name, role=:role";
+                first_name=:first_name, last_name=:last_name, role=:role, is_active=0";
         
         $stmt = $this->conn->prepare($query);
         

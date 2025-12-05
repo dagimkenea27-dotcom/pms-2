@@ -114,6 +114,18 @@ endif; ?>
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     <?php if ($user_data['id'] != $_SESSION['user_id']): ?>
+                                        <?php if ($user_data['is_active']): ?>
+                                        <a href="toggle_status.php?id=<?php echo $user_data['id']; ?>&status=0" 
+                                           class="btn btn-outline-secondary" title="Deactivate">
+                                            <i class="fas fa-ban"></i>
+                                        </a>
+                                        <?php else: ?>
+                                        <a href="toggle_status.php?id=<?php echo $user_data['id']; ?>&status=1" 
+                                           class="btn btn-outline-success" title="Activate">
+                                            <i class="fas fa-check"></i>
+                                        </a>
+                                        <?php endif; ?>
+                                    
                                     <a href="?delete_id=<?php echo $user_data['id']; ?>" 
                                        class="btn btn-outline-danger" 
                                        onclick="return confirm('Delete user <?php echo addslashes($user_data['username']); ?>?')"

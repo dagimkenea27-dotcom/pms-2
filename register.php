@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error = "Email already exists.";
     } else {
         if ($user->create()) {
-            $message = "Registration successful! You can now <a href='login.php'>login</a>.";
+            $message = "Registration successful! Your account is pending admin approval. Please contact administrator.";
         } else {
             $error = "Unable to register. Please try again.";
         }
