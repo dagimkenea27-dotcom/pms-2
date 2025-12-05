@@ -426,8 +426,8 @@ require_once "includes/header.php";
 
     .receipt-info {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
+        grid-template-columns: 6fr 8fr;
+        gap: 8rem;
         margin-bottom: 1.5rem;
         padding: 1rem;
         background: #f9fafb;
@@ -691,12 +691,12 @@ require_once "includes/header.php";
             <div class="receipt-section-title">CALCULATION DETAILS</div>
             
             <div class="receipt-item">
-                <span class="receipt-item-label">USD Amount:</span>
+                <span class="receipt-item-label">Product Price in USD:</span>
                 <span class="receipt-item-value">$<?php echo number_format($usdAmount, 2); ?></span>
             </div>
             
             <div class="receipt-item">
-                <span class="receipt-item-label">Exchange Rate:</span>
+                <span class="receipt-item-label">Exchange Rate (ETB/USD):</span>
                 <span class="receipt-item-value"><?php echo number_format($exchangeRateValue, 2); ?> ETB</span>
             </div>
             
@@ -743,7 +743,7 @@ require_once "includes/header.php";
             <div class="barcode-container">
                 <svg id="barcode"></svg>
             </div>
-            <div class="receipt-footer-text">Thank you for using our Price Calculator</div>
+            <div class="receipt-footer-text">Thank you for using our Service! Contact us for any inquiries.</div>
             <div class="receipt-timestamp">Generated on <?php echo date('Y-m-d H:i:s'); ?></div>
         </div>
     </div>
