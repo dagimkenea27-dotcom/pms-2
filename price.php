@@ -325,27 +325,55 @@ require_once "includes/header.php";
 
     /* Receipt Styles */
     @media print {
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        
         body * {
             visibility: hidden;
         }
         
-        .receipt-container,
+        .receipt-container {
+            visibility: visible;
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            margin: 0 auto; /* Center horizontally */
+            
+            width: 100%;
+            max-width: 210mm;
+            padding: 1cm;
+            box-shadow: none;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            box-sizing: border-box;
+            
+            /* Zoom for print scaling */
+            zoom: 0.75;
+            -moz-transform: scale(0.75);
+            -moz-transform-origin: center top;
+            
+            page-break-inside: avoid;
+        }
+        
         .receipt-container * {
             visibility: visible;
         }
         
-        .receipt-container {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            max-width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 1cm;
-            box-shadow: none;
-            border: none;
-            border-radius: 0;
+        .receipt-items {
+            flex: 0 0 auto;
+        }
+        
+        /* Push footer to bottom */
+        .receipt-footer {
+            margin-top: auto;
+            border-top: 3px double #333;
+            padding-top: 1rem;
         }
         
         .no-print {
@@ -362,6 +390,8 @@ require_once "includes/header.php";
         border-radius: 12px;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         font-family: 'Courier New', monospace;
+        display: flex;
+        flex-direction: column;
     }
 
     .receipt-header {
@@ -369,6 +399,7 @@ require_once "includes/header.php";
         border-bottom: 3px double #333;
         padding-bottom: 1.5rem;
         margin-bottom: 1.5rem;
+        flex: 0 0 auto;
     }
 
     .receipt-logo {
@@ -401,6 +432,7 @@ require_once "includes/header.php";
         padding: 1rem;
         background: #f9fafb;
         border-radius: 8px;
+        flex: 0 0 auto;
     }
 
     .receipt-info-item {
@@ -422,10 +454,12 @@ require_once "includes/header.php";
         border: none;
         border-top: 2px dashed #d1d5db;
         margin: 1.5rem 0;
+        flex: 0 0 auto;
     }
 
     .receipt-items {
         margin-bottom: 1.5rem;
+        flex: 0 0 auto;
     }
 
     .receipt-section-title {
@@ -471,6 +505,7 @@ require_once "includes/header.php";
         background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
         border: 2px solid #6366f1;
         border-radius: 8px;
+        flex: 0 0 auto;
     }
 
     .receipt-total-row {
@@ -486,6 +521,7 @@ require_once "includes/header.php";
         padding-top: 1.5rem;
         border-top: 3px double #333;
         text-align: center;
+        flex: 0 0 auto;
     }
 
     .receipt-footer-text {
@@ -499,6 +535,13 @@ require_once "includes/header.php";
         font-size: 0.75rem;
         font-style: italic;
     }
+    
+    .barcode-container {
+        text-align: center;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+    
 </style>
 
 <div class="price-calculator-container">
@@ -697,6 +740,9 @@ require_once "includes/header.php";
         </div>
         
         <div class="receipt-footer">
+            <div class="barcode-container">
+                <svg id="barcode"></svg>
+            </div>
             <div class="receipt-footer-text">Thank you for using our Price Calculator</div>
             <div class="receipt-timestamp">Generated on <?php echo date('Y-m-d H:i:s'); ?></div>
         </div>
@@ -710,43 +756,25 @@ require_once "includes/header.php";
     <?php endif; ?>
 </div>
 
+<!-- JsBarcode Library -->
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
 <script>
+// Generate Barcode
+<?php if ($result): ?>
+document.addEventListener('DOMContentLoaded', function() {
+    JsBarcode("#barcode", "<?php echo 'RCP' . substr(time(), -8); ?>", {
+        format: "CODE128",
+        lineColor: "#000",
+        width: 2,
+        height: 40,
+        displayValue: true
+    });
+});
+<?php endif; ?>
+
 function printReceipt() {
-    var printContents = document.getElementById('printableReceipt').innerHTML;
-    var originalContents = document.body.innerHTML;
-    
-    // Create a temporary container for printing
-    var printDiv = document.createElement('div');
-    printDiv.className = 'receipt-container';
-    printDiv.innerHTML = printContents;
-    
-    // We need to ensure styles are applied. 
-    // Since we are in a SPA-like or included environment, window.print() prints the whole page.
-    // A better approach for "Print Receipt" in this context is to hide everything else.
-    
-    var style = document.createElement('style');
-    style.innerHTML = `
-        @media print {
-            body * {
-                visibility: hidden;
-            }
-            #printableReceipt, #printableReceipt * {
-                visibility: visible;
-            }
-            #printableReceipt {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-            }
-        }
-    `;
-    document.head.appendChild(style);
-    
     window.print();
-    
-    // Clean up
-    document.head.removeChild(style);
 }
 </script>
 
