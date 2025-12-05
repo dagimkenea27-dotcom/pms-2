@@ -5,7 +5,7 @@ require_once "../config/database.php";
 require_once "../models/User.php";
 require_once "../config/auth.php";
 
-Auth::checkAuth();
+// Auth check handled by auth_check.php
 
 // Initialize DB and User
 $database = new Database();

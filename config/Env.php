@@ -13,7 +13,11 @@ class Env {
                 continue;
             }
 
-            list($name, $value) = explode('=', $line, 2);
+            $parts = explode('=', $line, 2);
+            if (count($parts) !== 2) {
+                continue;
+            }
+            list($name, $value) = $parts;
             $name = trim($name);
             $value = trim($value);
 
