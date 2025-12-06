@@ -5,7 +5,7 @@ class PriceCalculator {
     private const VALUE_TAX_RATE = 0.15;
     private const SHIPMENT_FEE_RATE = 0.10;
     private const PROCESSING_FEE_RATE = 0.05;
-    private const ADDITIONAL_FEE = 50.00;
+    private const ADDITIONAL_FEE = 200.00;
 
     /**
      * Calculate total cost including taxes and fees

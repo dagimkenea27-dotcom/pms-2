@@ -130,7 +130,7 @@ require_once "includes/header.php";
             </div>
             
             <div class="result-item">
-                <h3>Additional Fee</h3>
+                <h3>Delivery Fee</h3>
                 <div class="amount">ETB <?php echo number_format($result['additionalFee'], 2); ?></div>
             </div>
             
@@ -157,6 +157,10 @@ require_once "includes/header.php";
             <div class="tax-item">
                 <span class="tax-label">Processing Fee (5%):</span>
                 <span class="tax-value">ETB <?php echo number_format($result['processingFee'], 2); ?></span>
+            </div>
+            <div class="tax-item">
+                <span class="tax-label">Delivery Fee:</span>
+                <span class="tax-value">ETB <?php echo number_format($result['additionalFee'], 2); ?></span>
             </div>
             <div class="tax-item">
                 <span class="tax-label">Total Fees:</span>
@@ -226,6 +230,10 @@ require_once "includes/header.php";
             <div class="receipt-item">
                 <span class="receipt-item-label">Processing Fee (5%):</span>
                 <span class="receipt-item-value">ETB <?php echo number_format($result['processingFee'], 2); ?></span>
+            </div>
+            <div class="receipt-item">
+                <span class="receipt-item-label">Delivery Fee:</span>
+                <span class="receipt-item-value">ETB <?php echo number_format($result['additionalFee'], 2); ?></span>
             </div>
             
             <div class="receipt-item highlight">

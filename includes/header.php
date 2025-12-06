@@ -201,8 +201,109 @@ Auth::startSession();
                         <!-- Nav Item - User Information -->
                         <?php if (Auth::isLoggedIn()): 
                             $current_user = Auth::getCurrentUser();
+                            
+                            // Fetch Notifications
+                            require_once dirname(__DIR__) . '/models/Notification.php';
+                            $db = (new Database())->getConnection();
+                            $notification = new Notification($db);
+                            $unread_count = $notification->countUnread($current_user['id']);
+                            $recent_notifs = $notification->getRecent($current_user['id']);
                         ?>
+                        
+                        <!-- Notifications Dropdown -->
+                        <li class="nav-item dropdown no-arrow mx-1">
+                            <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button"
+                                data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-bell fa-fw"></i>
+                                <!-- Counter - Alerts -->
+                                <span class="badge bg-danger badge-counter" id="alertBadge" style="position: absolute; top: 10px; right: -5px; font-size: 0.65rem; padding: 3px 5px; display: <?php echo $unread_count > 0 ? 'inline-block' : 'none'; ?>;">
+                                    <?php echo $unread_count > 9 ? '9+' : $unread_count; ?>
+                                </span>
+                            </a>
+                            <!-- Dropdown - Alerts -->
+                            <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in"
+                                aria-labelledby="alertsDropdown" style="width: 320px;">
+                                <h6 class="dropdown-header bg-primary text-white border-0 py-2">
+                                    Alerts Center
+                                </h6>
+                                <div id="alertList">
+                                    <?php if ($recent_notifs->rowCount() > 0): ?>
+                                        <?php while ($notif = $recent_notifs->fetch(PDO::FETCH_ASSOC)): ?>
+                                        <a class="dropdown-item d-flex align-items-center <?php echo $notif['is_read'] ? '' : 'bg-light'; ?>" 
+                                           href="<?php echo $notif['link'] ? BASE_URL . $notif['link'] : '#'; ?>">
+                                            <div class="mr-3">
+                                                <div class="icon-circle bg-<?php echo $notif['type'] == 'info' ? 'primary' : ($notif['type'] == 'success' ? 'success' : 'warning'); ?> text-white p-2 rounded-circle">
+                                                    <i class="fas fa-<?php echo $notif['type'] == 'info' ? 'file-alt' : 'exclamation-triangle'; ?>"></i>
+                                                </div>
+                                            </div>
+                                            <div class="ms-2">
+                                                <div class="small text-gray-500"><?php echo date('F j, Y', strtotime($notif['created_at'])); ?></div>
+                                                <span class="font-weight-<?php echo $notif['is_read'] ? 'normal' : 'bold'; ?>"><?php echo htmlspecialchars($notif['message']); ?></span>
+                                            </div>
+                                        </a>
+                                        <?php endwhile; ?>
+                                    <?php else: ?>
+                                        <a class="dropdown-item text-center small text-gray-500" href="#">No new alerts</a>
+                                    <?php endif; ?>
+                                </div>
+                                <a class="dropdown-item text-center small text-gray-500 py-2 bg-light border-top" href="<?php echo BASE_URL; ?>notifications.php">Show All Alerts</a>
+                            </div>
+                        </li>
+
+                        <div class="topbar-divider d-none d-sm-block"></div>
+                        
                         <li class="nav-item dropdown no-arrow">
+                            
+                            <!-- Notification Poller Script -->
+                            <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                function fetchNotifications() {
+                                    fetch('<?php echo BASE_URL; ?>api/get_notifications.php')
+                                        .then(response => response.json())
+                                        .then(data => {
+                                            // Update Badge
+                                            const badge = document.getElementById('alertBadge');
+                                            if (data.count > 0) {
+                                                badge.style.display = 'inline-block';
+                                                badge.textContent = data.count > 9 ? '9+' : data.count;
+                                            } else {
+                                                badge.style.display = 'none';
+                                            }
+
+                                            // Update List (Optional: Only if dropdown is open or simpler just replace innerHTML)
+                                            // For now, let's just update the list content if we have data
+                                            const list = document.getElementById('alertList');
+                                            if (data.notifications && data.notifications.length > 0) {
+                                                let html = '';
+                                                data.notifications.forEach(notif => {
+                                                    const bgClass = notif.is_read == 1 ? '' : 'bg-light';
+                                                    const fontWeight = notif.is_read == 1 ? 'font-weight-normal' : 'font-weight-bold';
+                                                    const icon = notif.type === 'info' ? 'file-alt' : 'exclamation-triangle';
+                                                    const iconBg = notif.type === 'info' ? 'bg-primary' : (notif.type === 'success' ? 'bg-success' : 'bg-warning');
+                                                    
+                                                    html += `
+                                                    <a class="dropdown-item d-flex align-items-center ${bgClass}" href="${notif.link}">
+                                                        <div class="mr-3">
+                                                            <div class="icon-circle ${iconBg} text-white p-2 rounded-circle">
+                                                                <i class="fas fa-${icon}"></i>
+                                                            </div>
+                                                        </div>
+                                                        <div class="ms-2">
+                                                            <div class="small text-gray-500">${notif.date}</div>
+                                                            <span class="${fontWeight}">${notif.message}</span>
+                                                        </div>
+                                                    </a>`;
+                                                });
+                                                list.innerHTML = html;
+                                            }
+                                        })
+                                        .catch(err => console.error('Error fetching notifications:', err));
+                                }
+
+                                // Poll every 30 seconds
+                                setInterval(fetchNotifications, 30000);
+                            });
+                            </script>
                             <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button"
                                 data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <div class="d-flex flex-column align-items-end mr-3 d-none d-sm-block">

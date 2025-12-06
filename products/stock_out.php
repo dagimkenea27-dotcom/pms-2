@@ -59,6 +59,15 @@ if ($_POST) {
             $movement_stmt->bindParam(":reference", $reference);
             
             if ($movement_stmt->execute()) {
+                // Check if stock is low (threshold: 10)
+                $new_quantity = $current_quantity - $quantity;
+                if ($new_quantity <= 10) {
+                    require_once "../models/Notification.php";
+                    $notification = new Notification($db);
+                    $notifMsg = "Low Stock Alert: Product ID $product_id is down to $new_quantity units.";
+                    $notification->notifyAdmins($notifMsg, "products/view_products.php", "warning");
+                }
+                
                 $message = "Stock removed successfully!";
                 $message_type = "success";
                 
