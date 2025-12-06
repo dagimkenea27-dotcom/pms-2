@@ -50,10 +50,15 @@ Auth::startSession();
              <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'price.php') !== false && strpos($_SERVER['REQUEST_URI'], 'price') === false ? 'active' : ''; ?>">
                 <a class="nav-link" href="<?php echo BASE_URL; ?>price.php">
                     <i class="fas fa-fw fa-calculator"></i>
-                    <span>price Calculator</span>
+                    <span>Price Calculator</span>
                 </a>
             </li>
-
+            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'price_analytics.php') !== false ? 'active' : ''; ?>">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>price_analytics.php">
+                    <i class="fas fa-fw fa-chart-line"></i>
+                    <span>Price Analytics</span>
+                </a>
+            </li>
             <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], '../products/view_products.php') !== false && strpos($_SERVER['REQUEST_URI'], 'stock_') === false ? 'active' : ''; ?>">
                 <a class="nav-link" href="<?php echo BASE_URL; ?>products/view_products.php">
                     <i class="fas fa-fw fa-box"></i>
@@ -171,6 +176,12 @@ Auth::startSession();
                 <a class="nav-link" href="<?php echo BASE_URL; ?>admin/audit_logs.php">
                     <i class="fas fa-fw fa-history"></i>
                     <span>Audit Logs</span>
+                </a>
+            </li>
+            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'tax_fee_admin.php') !== false ? 'active' : ''; ?>">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>tax_fee_admin.php">
+                    <i class="fas fa-fw fa-cogs"></i>
+                    <span>Tax/Fee Config</span>
                 </a>
             </li>
             <?php endif; ?>

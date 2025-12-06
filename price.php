@@ -5,38 +5,37 @@ require_once "services/PriceCalculator.php";
 
 Auth::checkAuthAndPreventCache();
 
-// Handle exchange rate fetch
-$exchangeRateValue = 120.0;
-if (isset($_GET['get_rate'])) {
-    try {
-        $apiUrl = 'https://api.exchangerate-api.com/v4/latest/USD';
-        $response = @file_get_contents($apiUrl);
-        
-        if ($response !== false) {
-            $data = json_decode($response, true);
-            if (isset($data['rates']['ETB'])) {
-                $exchangeRateValue = $data['rates']['ETB'];
-            }
-        }
-    } catch (Exception $e) {
-        $exchangeRateValue = 120.0;
-    }
-}
+// Initialize calculator
+$calculator = new PriceCalculator();
+
+// Get supported currencies
+$supportedCurrencies = $calculator->getSupportedCurrencies();
+
+// Default values
+$exchangeRateValue = $calculator->getDefaultExchangeRate('USD');
+$selectedCurrency = 'USD';
+
+// Get current user
+$currentUser = Auth::getCurrentUser();
+$userId = $currentUser['id'];
 
 // Handle form submission
 $result = null;
 $errorMessage = null;
-$usdAmount = null;
+$amount = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $usdAmount = isset($_POST['usdAmount']) ? floatval($_POST['usdAmount']) : 0;
+    $amount = isset($_POST['amount']) ? floatval($_POST['amount']) : 0;
     $exchangeRate = isset($_POST['exchangeRate']) ? floatval($_POST['exchangeRate']) : 0;
+    $selectedCurrency = isset($_POST['currency']) ? $_POST['currency'] : 'USD';
     
-    if ($usdAmount <= 0 || $exchangeRate <= 0) {
-        $errorMessage = 'Valid USD amount and exchange rate are required';
+    // Validate currency
+    if (!in_array($selectedCurrency, $supportedCurrencies)) {
+        $errorMessage = 'Unsupported currency selected';
+    } elseif ($amount <= 0 || $exchangeRate <= 0) {
+        $errorMessage = 'Valid amount and exchange rate are required';
     } else {
-        $calculator = new PriceCalculator();
-        $result = $calculator->calculate($usdAmount, $exchangeRate);
+        $result = $calculator->calculate($amount, $exchangeRate, $selectedCurrency, $userId);
         $exchangeRateValue = $exchangeRate;
     }
 }
@@ -61,33 +60,44 @@ require_once "includes/header.php";
     <div class="form-card">
         <div class="form-card-header">
             <h2><i class="fas fa-dollar-sign"></i> Enter Product Details</h2>
-            <p>Provide the USD amount and current exchange rate to calculate the total cost</p>
+            <p>Provide the amount and current exchange rate to calculate the total cost</p>
         </div>
         
         <div class="form-card-body">
             <form method="post">
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="usdAmount">USD Amount</label>
-                        <input type="number" id="usdAmount" name="usdAmount" class="form-control" 
-                               step="0.01" min="0" placeholder="0.00" 
-                               value="<?php echo isset($_POST['usdAmount']) ? htmlspecialchars($_POST['usdAmount']) : ''; ?>" required>
+                        <label for="currency">Currency</label>
+                        <select id="currency" name="currency" class="form-control" required>
+                            <?php foreach ($supportedCurrencies as $currency): ?>
+                            <option value="<?php echo $currency; ?>" <?php echo ($selectedCurrency === $currency) ? 'selected' : ''; ?>>
+                                <?php echo $currency; ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     
                     <div class="form-group">
-                        <label for="exchangeRate">Exchange Rate (USD to ETB)</label>
-                        <div class="input-with-action">
-                            <input type="number" id="exchangeRate" name="exchangeRate" class="form-control" 
-                                   step="0.01" min="0" placeholder="0.00" 
-                                   value="<?php echo $exchangeRateValue; ?>" required>
-                            <a href="?get_rate=1" class="btn-calc btn-outline-calc" title="Get current exchange rate">
-                                <i class="fas fa-sync-alt"></i>
-                            </a>
-                        </div>
-                        <div class="exchange-rate-info">
-                            <i class="fas fa-info-circle"></i>
-                            <small>Click the refresh button to get the current USD to ETB exchange rate</small>
-                        </div>
+                        <label for="amount">Amount</label>
+                        <input type="number" id="amount" name="amount" class="form-control" 
+                               step="0.01" min="0" placeholder="0.00" 
+                               value="<?php echo isset($_POST['amount']) ? htmlspecialchars($_POST['amount']) : ''; ?>" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="exchangeRate">Exchange Rate (Selected Currency to ETB)</label>
+                    <div class="input-with-action">
+                        <input type="number" id="exchangeRate" name="exchangeRate" class="form-control" 
+                               step="0.01" min="0" placeholder="0.00" 
+                               value="<?php echo $exchangeRateValue; ?>" required>
+                        <button type="button" class="btn-calc btn-outline-calc" id="refreshRateBtn" title="Get current exchange rate">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div class="exchange-rate-info">
+                        <i class="fas fa-info-circle"></i>
+                        <small id="rateStatus">Rate loaded from default. Click refresh to update.</small>
                     </div>
                 </div>
                 
@@ -110,8 +120,9 @@ require_once "includes/header.php";
         <div class="result-grid">
             <div class="result-item">
                 <h3>Base Amount</h3>
-                <div class="amount">ETB <?php echo number_format($result['etbAmount'], 2); ?></div>
-                <div>USD <?php echo number_format($usdAmount, 2); ?> × <?php echo number_format($exchangeRateValue, 2); ?></div>
+                <div class="amount"><?php echo $result['sourceCurrency']; ?> <?php echo number_format($result['sourceAmount'], 2); ?></div>
+                <div>ETB <?php echo number_format($result['etbAmount'], 2); ?></div>
+                <div>(Exchange Rate: <?php echo number_format($result['exchangeRate'], 2); ?>)</div>
             </div>
             
             <div class="result-item">
@@ -144,7 +155,7 @@ require_once "includes/header.php";
             <h3><i class="fas fa-info-circle"></i> Tax Breakdown</h3>
             <div class="tax-item">
                 <span class="tax-label">Base Conversion:</span>
-                <span class="tax-value">ETB <?php echo number_format($result['etbAmount'], 2); ?></span>
+                <span class="tax-value"><?php echo $result['sourceCurrency']; ?> <?php echo number_format($result['sourceAmount'], 2); ?> = ETB <?php echo number_format($result['etbAmount'], 2); ?></span>
             </div>
             <div class="tax-item">
                 <span class="tax-label">Value Tax (15%):</span>
@@ -197,13 +208,13 @@ require_once "includes/header.php";
             <div class="receipt-section-title">CALCULATION DETAILS</div>
             
             <div class="receipt-item">
-                <span class="receipt-item-label">Product Price in USD:</span>
-                <span class="receipt-item-value">$<?php echo number_format($usdAmount, 2); ?></span>
+                <span class="receipt-item-label">Product Price in <?php echo $result['sourceCurrency']; ?>:</span>
+                <span class="receipt-item-value"><?php echo $result['sourceCurrency']; ?><?php echo number_format($result['sourceAmount'], 2); ?></span>
             </div>
             
             <div class="receipt-item">
-                <span class="receipt-item-label">Exchange Rate (ETB/USD):</span>
-                <span class="receipt-item-value"><?php echo number_format($exchangeRateValue, 2); ?> ETB</span>
+                <span class="receipt-item-label">Exchange Rate (ETB/<?php echo $result['sourceCurrency']; ?>):</span>
+                <span class="receipt-item-value"><?php echo number_format($result['exchangeRate'], 2); ?> ETB</span>
             </div>
             
             <div class="receipt-item highlight">
@@ -249,43 +260,80 @@ require_once "includes/header.php";
             </div>
         </div>
         
+        <div class="receipt-barcode">
+            <!-- Barcode generated with Receipt No -->
+            <img src="https://barcode.tec-it.com/barcode.ashx?data=<?php echo 'RCP' . substr(time(), -8); ?>&code=Code128&translate-esc=on" alt="Barcode">
+        </div>
+        
         <div class="receipt-footer">
-            <div class="barcode-container">
-                <svg id="barcode"></svg>
-            </div>
-            <div class="receipt-footer-text">Thank you for using our Service! Contact us for any inquiries.</div>
-            <div class="receipt-timestamp">Generated on <?php echo date('Y-m-d H:i:s'); ?></div>
+            <p>Thank you for using our calculator!</p>
+            <p>Generated by Stock Management System</p>
         </div>
     </div>
     
-    <div style="text-align: center; margin-top: 2rem;">
-        <button onclick="printReceipt()" class="btn-calc btn-primary-calc">
+    <div style="text-align: center; margin-top: 2rem; margin-bottom: 2rem;">
+        <button onclick="printReceipt()" class="btn-calc btn-outline-calc">
             <i class="fas fa-print"></i> Print Receipt
         </button>
     </div>
     <?php endif; ?>
 </div>
 
-<!-- JsBarcode Library -->
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-
 <script>
-// Generate Barcode
-<?php if ($result): ?>
-document.addEventListener('DOMContentLoaded', function() {
-    JsBarcode("#barcode", "<?php echo 'RCP' . substr(time(), -8); ?>", {
-        format: "CODE128",
-        lineColor: "#000",
-        width: 2,
-        height: 40,
-        displayValue: true
-    });
-});
-<?php endif; ?>
-
 function printReceipt() {
     window.print();
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const currencySelect = document.getElementById('currency');
+    const rateInput = document.getElementById('exchangeRate');
+    const refreshBtn = document.getElementById('refreshRateBtn');
+    const statusText = document.getElementById('rateStatus');
+    const icon = refreshBtn.querySelector('i');
+    
+    function fetchRate() {
+        // UI Loading State
+        refreshBtn.disabled = true;
+        icon.className = 'fas fa-sync-alt fa-spin';
+        statusText.textContent = 'Fetching current rate...';
+        
+        const selectedCurrency = currencySelect.value;
+        
+        fetch('api/get_exchange_rate.php?currency=' + encodeURIComponent(selectedCurrency))
+            .then(response => response.json())
+            .then(data => {
+                if (data.rate) {
+                    rateInput.value = data.rate;
+                    statusText.textContent = 'Rate updated successfully for ' + data.currency;
+                    statusText.style.color = '#1cc88a';
+                } else {
+                    throw new Error('Invalid data');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                statusText.textContent = 'Failed to fetch rate. Using default.';
+                statusText.style.color = '#e74a3b';
+            })
+            .finally(() => {
+                // UI Reset State
+                refreshBtn.disabled = false;
+                icon.className = 'fas fa-sync-alt';
+                setTimeout(() => {
+                    statusText.style.color = '';
+                }, 3000);
+            });
+    }
+    
+    // Attach event listeners
+    currencySelect.addEventListener('change', fetchRate);
+    refreshBtn.addEventListener('click', fetchRate);
+    
+    // Auto-fetch on load (only if not a POST result)
+    <?php if ($_SERVER['REQUEST_METHOD'] !== 'POST'): ?>
+    fetchRate();
+    <?php endif; ?>
+});
 </script>
 
 <?php require_once "includes/footer.php"; ?>

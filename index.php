@@ -50,13 +50,58 @@ $current_user = Auth::getCurrentUser();
 
 require_once "includes/header.php";
 ?>
+<style>
+    .quick-action-btn {
+        margin: 5px;
+        min-width: 150px;
+    }
+    
+    .dashboard-card {
+        border-radius: 0.5rem;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+    
+    .border-left-primary {
+        border-left: 0.25rem solid #4e73df !important;
+    }
+    
+    .border-left-warning {
+        border-left: 0.25rem solid #f6c23e !important;
+    }
+    
+    .border-left-danger {
+        border-left: 0.25rem solid #e74a3b !important;
+    }
+    
+    .border-left-success {
+        border-left: 0.25rem solid #1cc88a !important;
+    }
+    
+    .border-left-info {
+        border-left: 0.25rem solid #36b9cc !important;
+    }
+</style>
 
 <!-- Page Heading -->
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
-    <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-        <i class="fas fa-download fa-sm text-white-50"></i> Generate Report
-    </a>
+    <div class="dropdown">
+        <button class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm dropdown-toggle" type="button" id="reportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-download fa-sm text-white-50"></i> Generate Report
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="reportDropdown">
+            <li><a class="dropdown-item" href="reports/stock_valuation.php"><i class="fas fa-file-invoice-dollar mr-2"></i>Stock Valuation</a></li>
+            <li><a class="dropdown-item" href="reports/stock_movement.php"><i class="fas fa-exchange-alt mr-2"></i>Stock Movement</a></li>
+            <li><a class="dropdown-item" href="reports/low_stock.php"><i class="fas fa-exclamation-triangle mr-2"></i>Low Stock Report</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="products/export_products.php"><i class="fas fa-file-export mr-2"></i>Export Products</a></li>
+        </ul>
+    </div>
 </div>
 
 <!-- Content Row -->
@@ -152,7 +197,7 @@ require_once "includes/header.php";
                             <i class="fas fa-list mr-2"></i>View Products
                         </a>
                         <a href="price.php" class="btn quick-action-btn btn-primary">
-                            <i class="fas fa-calculator mr-2"></i>price Calculator
+                            <i class="fas fa-calculator mr-2"></i>Price Calculator
                         </a>
                         <a href="products/stock_in.php" class="btn quick-action-btn btn-warning">
                             <i class="fas fa-download mr-2"></i>Stock In
@@ -162,6 +207,64 @@ require_once "includes/header.php";
                         </a>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Quick Reports -->
+        <div class="card dashboard-card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Quick Reports</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <a href="reports/stock_valuation.php" class="btn quick-action-btn btn-info">
+                            <i class="fas fa-file-invoice-dollar mr-2"></i>Valuation Report
+                        </a>
+                        <a href="reports/stock_movement.php" class="btn quick-action-btn btn-info">
+                            <i class="fas fa-exchange-alt mr-2"></i>Movement Report
+                        </a>
+                        <a href="reports/low_stock.php" class="btn quick-action-btn btn-warning">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>Low Stock Report
+                        </a>
+                        <a href="products/export_products.php" class="btn quick-action-btn btn-success">
+                            <i class="fas fa-file-export mr-2"></i>Export Products
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Selling Products -->
+        <div class="card dashboard-card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Top Selling Products (Last 30 Days)</h6>
+            </div>
+            <div class="card-body">
+                <?php if ($top_products && count($top_products) > 0): ?>
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>SKU</th>
+                                    <th>Sold</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($top_products as $product): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($product['name']); ?></td>
+                                    <td><?php echo htmlspecialchars($product['sku']); ?></td>
+                                    <td><?php echo $product['total_sold']; ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php else: ?>
+                    <p class="text-muted text-center">No sales data available.</p>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -207,14 +310,24 @@ require_once "includes/header.php";
 
     <!-- Charts Column -->
     <div class="col-lg-6 mb-4">
-        <!-- Stock Overview Chart -->
+        <!-- Daily Stock Trends Chart -->
         <div class="card dashboard-card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Stock Overview</h6>
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Daily Stock Trends (Last 30 Days)</h6>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="chartToggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        View Options
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="chartToggle">
+                        <li><a class="dropdown-item" href="#" onclick="showChart('daily')">Daily Trends</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="showChart('monthly')">Monthly Trends</a></li>
+                    </ul>
+                </div>
             </div>
             <div class="card-body">
                 <div class="chart-area">
-                    <canvas id="stockOverviewChart"></canvas>
+                    <canvas id="dailyStockChart"></canvas>
+                    <canvas id="monthlyStockChart" style="display: none;"></canvas>
                 </div>
             </div>
         </div>
@@ -228,6 +341,39 @@ require_once "includes/header.php";
                 <div class="chart-pie">
                     <canvas id="stockStatusChart"></canvas>
                 </div>
+            </div>
+        </div>
+
+        <!-- Supplier Performance -->
+        <div class="card dashboard-card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Top Suppliers (Last 30 Days)</h6>
+            </div>
+            <div class="card-body">
+                <?php if ($supplier_performance && count($supplier_performance) > 0): ?>
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Supplier</th>
+                                    <th>Products</th>
+                                    <th>Units Sold</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($supplier_performance as $supplier): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($supplier['supplier_name']); ?></td>
+                                    <td><?php echo $supplier['product_count']; ?></td>
+                                    <td><?php echo $supplier['total_sold']; ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php else: ?>
+                    <p class="text-muted text-center">No supplier performance data available.</p>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -270,10 +416,25 @@ for ($i = 6; $i >= 0; $i--) {
     Chart.defaults.font.family = 'Nunito, -apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
     Chart.defaults.color = '#858796';
 
-    // Stock Overview Chart
-    var ctx = document.getElementById("stockOverviewChart");
-    if (ctx) {
-        var myLineChart = new Chart(ctx, {
+    // Function to switch between daily and monthly charts
+    function showChart(type) {
+        const dailyChart = document.getElementById('dailyStockChart');
+        const monthlyChart = document.getElementById('monthlyStockChart');
+        
+        if (type === 'daily') {
+            dailyChart.style.display = 'block';
+            monthlyChart.style.display = 'none';
+        } else {
+            dailyChart.style.display = 'none';
+            monthlyChart.style.display = 'block';
+            renderMonthlyChart();
+        }
+    }
+
+    // Daily Stock Trends Chart
+    var dailyCtx = document.getElementById("dailyStockChart");
+    if (dailyCtx) {
+        var dailyChart = new Chart(dailyCtx, {
             type: 'line',
             data: {
                 labels: <?php echo json_encode($dates); ?>,
@@ -324,7 +485,7 @@ for ($i = 6; $i >= 0; $i--) {
                             drawBorder: false
                         },
                         ticks: {
-                            maxTicksLimit: 7
+                            maxTicksLimit: 10
                         }
                     },
                     y: {
@@ -365,6 +526,91 @@ for ($i = 6; $i >= 0; $i--) {
                 }
             }
         });
+    }
+
+    // Monthly Stock Trends Chart
+    var monthlyCtx = document.getElementById("monthlyStockChart");
+    var monthlyChart;
+
+    function renderMonthlyChart() {
+        if (monthlyCtx && !monthlyChart) {
+            monthlyChart = new Chart(monthlyCtx, {
+                type: 'bar',
+                data: {
+                    labels: <?php echo json_encode($months); ?>,
+                    datasets: [{
+                        label: "Stock In",
+                        backgroundColor: "rgba(78, 115, 223, 0.8)",
+                        hoverBackgroundColor: "rgba(78, 115, 223, 1)",
+                        borderColor: "rgba(78, 115, 223, 1)",
+                        data: <?php echo json_encode($monthly_ins); ?>,
+                    }, {
+                        label: "Stock Out",
+                        backgroundColor: "rgba(231, 74, 59, 0.8)",
+                        hoverBackgroundColor: "rgba(231, 74, 59, 1)",
+                        borderColor: "rgba(231, 74, 59, 1)",
+                        data: <?php echo json_encode($monthly_outs); ?>,
+                    }],
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            left: 10,
+                            right: 25,
+                            top: 25,
+                            bottom: 0
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false,
+                                drawBorder: false
+                            },
+                            ticks: {
+                                maxTicksLimit: 6
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                maxTicksLimit: 5,
+                                padding: 10,
+                            },
+                            grid: {
+                                color: "rgb(234, 236, 244)",
+                                zeroLineColor: "rgb(234, 236, 244)",
+                                drawBorder: false,
+                                borderDash: [2],
+                                zeroLineBorderDash: [2]
+                            }
+                        },
+                    },
+                    plugins: {
+                        legend: {
+                            display: true
+                        },
+                        tooltip: {
+                            backgroundColor: "rgb(255,255,255)",
+                            bodyColor: "#858796",
+                            titleMarginBottom: 10,
+                            titleColor: '#6e707e',
+                            titleFont: {
+                                size: 14,
+                            },
+                            borderColor: '#dddfeb',
+                            borderWidth: 1,
+                            xPadding: 15,
+                            yPadding: 15,
+                            displayColors: false,
+                            intersect: false,
+                            mode: 'index',
+                            caretPadding: 10,
+                        }
+                    }
+                }
+            });
+        }
     }
 
     // Stock Status Pie Chart
