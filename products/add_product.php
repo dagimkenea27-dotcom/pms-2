@@ -12,14 +12,18 @@ $database = new Database();
 $db = $database->getConnection();
 $audit = new AuditLog($db);
 
-// Get categories, brands, suppliers for dropdowns
-$categories = $db->query("SELECT id, name FROM categories ORDER BY name ASC");
-$brands = $db->query("SELECT id, name FROM brands ORDER BY name ASC");
-$suppliers = $db->query("SELECT id, name FROM suppliers ORDER BY name ASC");
-
 $message = '';
 $message_type = '';
 $errors = [];
+
+// Helper to get name from ID - Moved outside AJAX handler to prevent redefinition errors
+function getName($db, $table, $id) {
+    if (!$id) return null;
+    $stmt = $db->prepare("SELECT name FROM $table WHERE id = ?");
+    $stmt->execute([$id]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row ? $row['name'] : null;
+}
 
 // Handle AJAX request
 if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
@@ -33,6 +37,8 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
         $price = floatval($_POST['price'] ?? 0);
         $cost_price = floatval($_POST['cost_price'] ?? 0);
         $min_stock = intval($_POST['min_stock'] ?? 0);
+        $has_variants = isset($_POST['has_variants']) && $_POST['has_variants'] == '1';
+        $location = trim($_POST['location'] ?? '');
         
         $response = ['success' => false, 'message' => '', 'errors' => []];
         
@@ -52,6 +58,60 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
             
             if ($check_stmt->rowCount() > 0) {
                 $response['errors'][] = "SKU already exists. Please use a unique SKU.";
+            }
+        }
+
+        // Validate variants
+        $variants = [];
+        if ($has_variants) {
+            if (isset($_POST['variant_size']) && is_array($_POST['variant_size'])) {
+                for ($i = 0; $i < count($_POST['variant_size']); $i++) {
+                    $v_size = trim($_POST['variant_size'][$i]);
+                    $v_color = trim($_POST['variant_color'][$i]);
+                    $v_qty = intval($_POST['variant_qty'][$i]);
+                    $v_price = floatval($_POST['variant_price'][$i]);
+                    $v_sku = trim($_POST['variant_sku'][$i]);
+
+                    if (empty($v_size) && empty($v_color)) {
+                        continue; // Skip empty rows
+                    }
+                    
+                    if (empty($v_sku)) {
+                         $v_sku = $sku . '-' . strtoupper(substr($v_size ? $v_size : 'X', 0, 3)) . '-' . strtoupper(substr($v_color ? $v_color : 'X', 0, 3)) . '-' . ($i+1);
+                    }
+
+                    // Check duplicate SKU among variants in this submit
+                    foreach ($variants as $existing_v) {
+                         if ($existing_v['sku'] == $v_sku || ($existing_v['size'] == $v_size && $existing_v['color'] == $v_color)) {
+                             $response['errors'][] = "Duplicate variant (Option/Color or SKU) within this product: " . $v_sku;
+                             break;
+                         }
+                    }
+
+                    // Check duplicate SKU in DB (variants table)
+                    $v_check = $db->prepare("SELECT id FROM product_variants WHERE sku = ?");
+                    $v_check->execute([$v_sku]);
+                    if ($v_check->rowCount() > 0) {
+                        $response['errors'][] = "Variant SKU already exists: " . $v_sku;
+                    }
+
+                    $variants[] = [
+                        'size' => $v_size,
+                        'color' => $v_color,
+                        'qty' => $v_qty,
+                        'price' => $v_price > 0 ? $v_price : null,
+                        'sku' => $v_sku
+                    ];
+                }
+            }
+            if (empty($variants)) {
+                 $response['errors'][] = "Please add at least one variant.";
+            }
+
+            // For products with variants, master quantity is sum of variants
+            $quantity = 0;
+            foreach ($variants as $v) {
+                $quantity += $v['qty'];
             }
         }
         
@@ -75,13 +135,15 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
         $image_path = null;
         if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
             $upload_dir = '../uploads/products/';
+            if (!file_exists($upload_dir)) {
+                mkdir($upload_dir, 0777, true);
+            }
             $allowed_types = ['jpg', 'jpeg', 'png', 'gif'];
             $max_size = 5 * 1024 * 1024; // 5MB
             
             $file_name = $_FILES['product_image']['name'];
             $file_size = $_FILES['product_image']['size'];
             $file_tmp = $_FILES['product_image']['tmp_name'];
-            $file_type = $_FILES['product_image']['type'];
             
             // Get file extension
             $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
@@ -113,27 +175,20 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
         // If no errors, proceed with insertion
         if (empty($response['errors'])) {
             try {
+                $db->beginTransaction();
+
                 // Get names for backward compatibility
                 $category_id = !empty($_POST['category_id']) ? $_POST['category_id'] : null;
                 $brand_id = !empty($_POST['brand_id']) ? $_POST['brand_id'] : null;
                 $supplier_id = !empty($_POST['supplier_id']) ? $_POST['supplier_id'] : null;
                 
-                // Helper to get name from ID
-                function getName($db, $table, $id) {
-                    if (!$id) return null;
-                    $stmt = $db->prepare("SELECT name FROM $table WHERE id = ?");
-                    $stmt->execute([$id]);
-                    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-                    return $row ? $row['name'] : null;
-                }
-
                 $category_name = getName($db, 'categories', $category_id);
                 $supplier_name = getName($db, 'suppliers', $supplier_id);
 
                 $query = "INSERT INTO products 
-                          (sku, name, description, category, category_id, brand_id, quantity, price, cost_price, min_stock, supplier, supplier_id, location, image, barcode) 
+                          (sku, name, description, category, category_id, brand_id, quantity, price, cost_price, min_stock, supplier, supplier_id, location, image, barcode, has_variants) 
                           VALUES 
-                          (:sku, :name, :description, :category, :category_id, :brand_id, :quantity, :price, :cost_price, :min_stock, :supplier, :supplier_id, :location, :image, :barcode)";
+                          (:sku, :name, :description, :category, :category_id, :brand_id, :quantity, :price, :cost_price, :min_stock, :supplier, :supplier_id, :location, :image, :barcode, :has_variants)";
                 
                 $stmt = $db->prepare($query);
                 
@@ -149,23 +204,55 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                 $stmt->bindParam(":min_stock", $min_stock);
                 $stmt->bindParam(":supplier", $supplier_name);
                 $stmt->bindParam(":supplier_id", $supplier_id);
-                $stmt->bindParam(":location", $_POST['location']);
+                $stmt->bindParam(":location", $location);
                 $stmt->bindParam(":image", $image_path);
                 $stmt->bindParam(":barcode", $sku); // Use SKU as barcode by default
+                $has_variants_int = $has_variants ? 1 : 0;
+                $stmt->bindParam(":has_variants", $has_variants_int);
                 
                 if ($stmt->execute()) {
+                    $product_id = $db->lastInsertId();
+
+                    if ($has_variants) {
+                        $v_stmt = $db->prepare("INSERT INTO product_variants (product_id, sku, size, color, quantity, price, min_stock) VALUES (:pid, :sku, :size, :color, :qty, :price, :min_stock)");
+                        foreach ($variants as $v) {
+                            $v_stmt->execute([
+                                ':pid' => $product_id,
+                                ':sku' => $v['sku'],
+                                ':size' => $v['size'],
+                                ':color' => $v['color'],
+                                ':qty' => $v['qty'],
+                                ':price' => $v['price'], // Can be null
+                                ':min_stock' => $min_stock // default to product min_stock
+                            ]);
+                            $variant_id = $db->lastInsertId();
+
+                            // Log stock movement for variant
+                            $movement_query = "INSERT INTO stock_movements (product_id, variant_id, movement_type, quantity, reason, supplier_id) 
+                                              VALUES (:product_id, :variant_id, 'IN', :quantity, 'Initial stock', :supplier_id)";
+                            $m_stmt = $db->prepare($movement_query);
+                            $m_stmt->execute([
+                                ':product_id' => $product_id,
+                                ':variant_id' => $variant_id,
+                                ':quantity' => $v['qty'],
+                                ':supplier_id' => $supplier_id
+                            ]);
+                        }
+                    } else {
+                        // Log the initial stock movement for simple product
+                        $movement_query = "INSERT INTO stock_movements (product_id, movement_type, quantity, reason, supplier_id) 
+                                          VALUES (:product_id, 'IN', :quantity, 'Initial stock', :supplier_id)";
+                        $movement_stmt = $db->prepare($movement_query);
+                        $movement_stmt->bindParam(":product_id", $product_id);
+                        $movement_stmt->bindParam(":quantity", $quantity);
+                        $movement_stmt->bindParam(":supplier_id", $supplier_id);
+                        $movement_stmt->execute();
+                    }
+
+                    $db->commit();
+
                     $response['success'] = true;
                     $response['message'] = "Product added successfully!";
-                    
-                    // Log the initial stock movement
-                    $product_id = $db->lastInsertId();
-                    $movement_query = "INSERT INTO stock_movements (product_id, movement_type, quantity, reason, supplier_id) 
-                                      VALUES (:product_id, 'IN', :quantity, 'Initial stock', :supplier_id)";
-                    $movement_stmt = $db->prepare($movement_query);
-                    $movement_stmt->bindParam(":product_id", $product_id);
-                    $movement_stmt->bindParam(":quantity", $quantity);
-                    $movement_stmt->bindParam(":supplier_id", $supplier_id);
-                    $movement_stmt->execute();
                     
                     // Log to AuditLog
                     if (Auth::isLoggedIn()) {
@@ -173,9 +260,13 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                         $audit->log($user['id'], "PRODUCT_ADD", "Added product: " . $name . " (SKU: " . $sku . ")");
                     }
                 } else {
+                    $db->rollBack();
                     $response['errors'][] = "Error adding product.";
                 }
             } catch (PDOException $exception) {
+                if ($db->inTransaction()) {
+                    $db->rollBack();
+                }
                 $response['errors'][] = "Error: " . $exception->getMessage();
             }
         }
@@ -185,185 +276,15 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
     }
 }
 
-// Handle regular form submission (fallback for non-AJAX requests)
-if ($_POST && empty($_SERVER['HTTP_X_REQUESTED_WITH'])) {
-    // Validate input
-    $name = trim($_POST['name'] ?? '');
-    $sku = trim($_POST['sku'] ?? '');
-    $quantity = intval($_POST['quantity'] ?? 0);
-    $price = floatval($_POST['price'] ?? 0);
-    $cost_price = floatval($_POST['cost_price'] ?? 0);
-    $min_stock = intval($_POST['min_stock'] ?? 0);
-    
-    // Validation checks
-    if (empty($name)) {
-        $errors[] = "Product name is required.";
-    }
-    
-    if (empty($sku)) {
-        $sku = generateSKU($db);
-    } else {
-        // Check if SKU already exists
-        $check_query = "SELECT id FROM products WHERE sku = :sku";
-        $check_stmt = $db->prepare($check_query);
-        $check_stmt->bindParam(":sku", $sku);
-        $check_stmt->execute();
-        
-        if ($check_stmt->rowCount() > 0) {
-            $errors[] = "SKU already exists. Please use a unique SKU.";
-        }
-    }
-    
-    if ($quantity < 0) {
-        $errors[] = "Quantity cannot be negative.";
-    }
-    
-    if ($price < 0) {
-        $errors[] = "Selling price cannot be negative.";
-    }
-    
-    if ($cost_price < 0) {
-        $errors[] = "Cost price cannot be negative.";
-    }
-    
-    if ($min_stock < 0) {
-        $errors[] = "Minimum stock level cannot be negative.";
-    }
-    
-    // Handle image upload
-    $image_path = null;
-    if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
-        $upload_dir = '../uploads/products/';
-        $allowed_types = ['jpg', 'jpeg', 'png', 'gif'];
-        $max_size = 5 * 1024 * 1024; // 5MB
-        
-        $file_name = $_FILES['product_image']['name'];
-        $file_size = $_FILES['product_image']['size'];
-        $file_tmp = $_FILES['product_image']['tmp_name'];
-        $file_type = $_FILES['product_image']['type'];
-        
-        // Get file extension
-        $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-        
-        // Validate file
-        if (!in_array($file_ext, $allowed_types)) {
-            $errors[] = "Invalid file type. Only JPG, JPEG, PNG, and GIF files are allowed.";
-        }
-        
-        if ($file_size > $max_size) {
-            $errors[] = "File size too large. Maximum file size is 5MB.";
-        }
-        
-        // If no errors, process the file
-        if (empty($errors)) {
-            // Generate unique filename
-            $new_filename = uniqid() . '_' . time() . '.' . $file_ext;
-            $target_file = $upload_dir . $new_filename;
-            
-            // Move uploaded file
-            if (move_uploaded_file($file_tmp, $target_file)) {
-                $image_path = 'uploads/products/' . $new_filename;
-            } else {
-                $errors[] = "Error uploading image file.";
-            }
-        }
-    }
-    
-    // If no errors, proceed with insertion
-    if (empty($errors)) {
-        try {
-            // Get names for backward compatibility
-            $category_id = !empty($_POST['category_id']) ? $_POST['category_id'] : null;
-            $brand_id = !empty($_POST['brand_id']) ? $_POST['brand_id'] : null;
-            $supplier_id = !empty($_POST['supplier_id']) ? $_POST['supplier_id'] : null;
-            
-            // Helper to get name from ID
-            function getName($db, $table, $id) {
-                if (!$id) return null;
-                $stmt = $db->prepare("SELECT name FROM $table WHERE id = ?");
-                $stmt->execute([$id]);
-                $row = $stmt->fetch(PDO::FETCH_ASSOC);
-                return $row ? $row['name'] : null;
-            }
-
-            $category_name = getName($db, 'categories', $category_id);
-            $supplier_name = getName($db, 'suppliers', $supplier_id);
-
-            $query = "INSERT INTO products 
-                      (sku, name, description, category, category_id, brand_id, quantity, price, cost_price, min_stock, supplier, supplier_id, location, image, barcode) 
-                      VALUES 
-                      (:sku, :name, :description, :category, :category_id, :brand_id, :quantity, :price, :cost_price, :min_stock, :supplier, :supplier_id, :location, :image, :barcode)";
-            
-            $stmt = $db->prepare($query);
-            
-            $stmt->bindParam(":sku", $sku);
-            $stmt->bindParam(":name", $name);
-            $stmt->bindParam(":description", $_POST['description']);
-            $stmt->bindParam(":category", $category_name);
-            $stmt->bindParam(":category_id", $category_id);
-            $stmt->bindParam(":brand_id", $brand_id);
-            $stmt->bindParam(":quantity", $quantity);
-            $stmt->bindParam(":price", $price);
-            $stmt->bindParam(":cost_price", $cost_price);
-            $stmt->bindParam(":min_stock", $min_stock);
-            $stmt->bindParam(":supplier", $supplier_name);
-            $stmt->bindParam(":supplier_id", $supplier_id);
-            $stmt->bindParam(":location", $_POST['location']);
-            $stmt->bindParam(":image", $image_path);
-            $stmt->bindParam(":barcode", $sku); // Use SKU as barcode by default
-            
-            if ($stmt->execute()) {
-                $message = "Product added successfully!";
-                $message_type = "success";
-                
-                // Log the initial stock movement
-                $product_id = $db->lastInsertId();
-                $movement_query = "INSERT INTO stock_movements (product_id, movement_type, quantity, reason, supplier_id) 
-                                  VALUES (:product_id, 'IN', :quantity, 'Initial stock', :supplier_id)";
-                $movement_stmt = $db->prepare($movement_query);
-                $movement_stmt->bindParam(":product_id", $product_id);
-                $movement_stmt->bindParam(":quantity", $quantity);
-                $movement_stmt->bindParam(":supplier_id", $supplier_id);
-                $movement_stmt->execute();
-                
-                // Log to AuditLog
-                if (Auth::isLoggedIn()) {
-                    $user = Auth::getCurrentUser();
-                    $audit->log($user['id'], "PRODUCT_ADD", "Added product: " . $name . " (SKU: " . $sku . ")");
-                }
-                
-                // Clear form data after successful submission
-                $_POST = [];
-            } else {
-                $message = "Error adding product.";
-                $message_type = "danger";
-            }
-        } catch (PDOException $exception) {
-            $message = "Error: " . $exception->getMessage();
-            $message_type = "danger";
-        }
-    } else {
-        $message = "Please correct the following errors:";
-        $message_type = "danger";
-    }
-}
-
 // Function to generate unique SKU
 function generateSKU($db) {
     $prefix = "PRD";
     $timestamp = time();
     $random = rand(100, 999);
     $sku = $prefix . "-" . $timestamp . "-" . $random;
-    
-    // Check if SKU exists
     $stmt = $db->prepare("SELECT id FROM products WHERE sku = ?");
     $stmt->execute([$sku]);
-    
-    if ($stmt->fetch()) {
-        // Recursively generate new SKU if collision occurs
-        return generateSKU($db);
-    }
-    
+    if ($stmt->fetch()) return generateSKU($db);
     return $sku;
 }
 
@@ -376,20 +297,6 @@ require_once "../includes/header.php";
         <i class="fas fa-arrow-left fa-sm text-white-50"></i> Back to Products
     </a>
 </div>
-
-<?php if ($message): ?>
-<div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
-    <?php echo $message; ?>
-    <?php if (!empty($errors)): ?>
-        <ul class="mb-0 mt-2">
-            <?php foreach ($errors as $error): ?>
-                <li><?php echo htmlspecialchars($error); ?></li>
-            <?php endforeach; ?>
-        </ul>
-    <?php endif; ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-<?php endif; ?>
 
 <div class="card dashboard-card shadow mb-4">
     <div class="card-header py-3">
@@ -425,12 +332,10 @@ require_once "../includes/header.php";
                             <select class="form-select" id="category_id" name="category_id">
                                 <option value="">Select Category</option>
                                 <?php 
-                                // Reset pointer for reuse
                                 $categories = $db->query("SELECT id, name FROM categories ORDER BY name ASC");
                                 while ($row = $categories->fetch(PDO::FETCH_ASSOC)): 
-                                    $selected = (isset($_POST['category_id']) && $_POST['category_id'] == $row['id']) ? 'selected' : '';
                                 ?>
-                                    <option value="<?php echo $row['id']; ?>" <?php echo $selected; ?>><?php echo htmlspecialchars($row['name']); ?></option>
+                                    <option value="<?php echo $row['id']; ?>"><?php echo htmlspecialchars($row['name']); ?></option>
                                 <?php endwhile; ?>
                             </select>
                             <a href="../categories/add.php" class="btn btn-outline-secondary" title="Add New Category"><i class="fas fa-plus"></i></a>
@@ -443,12 +348,10 @@ require_once "../includes/header.php";
                             <select class="form-select" id="brand_id" name="brand_id">
                                 <option value="">Select Brand</option>
                                 <?php 
-                                // Reset pointer for reuse
                                 $brands = $db->query("SELECT id, name FROM brands ORDER BY name ASC");
                                 while ($row = $brands->fetch(PDO::FETCH_ASSOC)): 
-                                    $selected = (isset($_POST['brand_id']) && $_POST['brand_id'] == $row['id']) ? 'selected' : '';
                                 ?>
-                                    <option value="<?php echo $row['id']; ?>" <?php echo $selected; ?>><?php echo htmlspecialchars($row['name']); ?></option>
+                                    <option value="<?php echo $row['id']; ?>"><?php echo htmlspecialchars($row['name']); ?></option>
                                 <?php endwhile; ?>
                             </select>
                             <a href="../brands/add.php" class="btn btn-outline-secondary" title="Add New Brand"><i class="fas fa-plus"></i></a>
@@ -458,9 +361,9 @@ require_once "../includes/header.php";
                     <div class="mb-3">
                         <label for="description" class="form-label">Description</label>
                         <textarea class="form-control" id="description" name="description" 
-                                  rows="3" placeholder="Product description"><?php echo htmlspecialchars($_POST['description'] ?? ''); ?></textarea>
+                                  rows="3" placeholder="Product description"></textarea>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="product_image" class="form-label">Product Image</label>
                         <input type="file" class="form-control" id="product_image" name="product_image" accept="image/*">
@@ -469,30 +372,37 @@ require_once "../includes/header.php";
                 </div>
                 
                 <div class="col-md-6">
-                    <div class="mb-3">
-                        <label for="quantity" class="form-label">Initial Quantity *</label>
-                        <input type="number" class="form-control" id="quantity" name="quantity" 
-                               value="<?php echo intval($_POST['quantity'] ?? 0); ?>" min="0" required>
+                    <div class="mb-3 form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="has_variants" name="has_variants" value="1">
+                        <label class="form-check-label font-weight-bold" for="has_variants">Product has variants (Option/Color)</label>
+                    </div>
+
+                    <!-- Simple Product Fields -->
+                    <div id="simpleProductFields">
+                        <div class="mb-3">
+                            <label for="quantity" class="form-label">Initial Quantity *</label>
+                            <input type="number" class="form-control" id="quantity" name="quantity" 
+                                   value="0" min="0">
+                        </div>
                     </div>
                     
                     <div class="mb-3">
                         <label for="cost_price" class="form-label">Cost Price ($)</label>
                         <input type="number" step="0.01" class="form-control" id="cost_price" 
-                               name="cost_price" value="<?php echo floatval($_POST['cost_price'] ?? 0); ?>" min="0" placeholder="0.00">
+                               name="cost_price" value="" min="0" placeholder="0.00">
                     </div>
                     
                     <div class="mb-3">
                         <label for="price" class="form-label">Selling Price ($)</label>
                         <input type="number" step="0.01" class="form-control" id="price" 
-                               name="price" value="<?php echo floatval($_POST['price'] ?? 0); ?>" min="0" placeholder="0.00">
+                               name="price" value="" min="0" placeholder="0.00">
                         <div class="form-text" id="profitMarginText"></div>
                     </div>
                     
                     <div class="mb-3">
                         <label for="min_stock" class="form-label">Minimum Stock Level</label>
                         <input type="number" class="form-control" id="min_stock" name="min_stock" 
-                               value="<?php echo intval($_POST['min_stock'] ?? 5); ?>" min="0">
-                        <div class="form-text">Low stock alert will trigger when quantity reaches this level</div>
+                               value="5" min="0">
                     </div>
                     
                     <div class="mb-3">
@@ -501,12 +411,10 @@ require_once "../includes/header.php";
                             <select class="form-select" id="supplier_id" name="supplier_id">
                                 <option value="">Select Supplier</option>
                                 <?php 
-                                // Reset pointer for reuse
                                 $suppliers = $db->query("SELECT id, name FROM suppliers ORDER BY name ASC");
                                 while ($row = $suppliers->fetch(PDO::FETCH_ASSOC)): 
-                                    $selected = (isset($_POST['supplier_id']) && $_POST['supplier_id'] == $row['id']) ? 'selected' : '';
                                 ?>
-                                    <option value="<?php echo $row['id']; ?>" <?php echo $selected; ?>><?php echo htmlspecialchars($row['name']); ?></option>
+                                    <option value="<?php echo $row['id']; ?>"><?php echo htmlspecialchars($row['name']); ?></option>
                                 <?php endwhile; ?>
                             </select>
                             <a href="../suppliers/add_supplier.php" class="btn btn-outline-secondary" title="Add New Supplier"><i class="fas fa-plus"></i></a>
@@ -516,13 +424,51 @@ require_once "../includes/header.php";
                     <div class="mb-3">
                         <label for="location" class="form-label">Location</label>
                         <input type="text" class="form-control" id="location" name="location" 
-                               value="<?php echo htmlspecialchars($_POST['location'] ?? ''); ?>"
                                placeholder="e.g., Aisle 4, Shelf B">
                     </div>
                 </div>
             </div>
+
+            <!-- Variants Section -->
+            <div id="variantsSection" style="display:none;" class="row mt-3">
+                <div class="col-12">
+                    <hr>
+                    <h6 class="font-weight-bold text-primary mb-3">Product Variants</h6>
+                    <div class="alert alert-info py-2 small">
+                        <i class="fas fa-info-circle"></i> Price and SKU will be auto-filled from main product details. You can override them.
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="variantsTable">
+                            <thead>
+                                <tr>
+                                    <th>Option (Size)</th>
+                                    <th>Color</th>
+                                    <th>Quantity</th>
+                                    <th>Price (Override)</th>
+                                    <th>SKU (Auto/Override)</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="variant-row">
+                                    <td><input type="text" class="form-control form-control-sm" name="variant_size[]" placeholder="Option/Size"></td>
+                                    <td><input type="text" class="form-control form-control-sm" name="variant_color[]" placeholder="Color"></td>
+                                    <td><input type="number" class="form-control form-control-sm variant-qty" name="variant_qty[]" value="0" min="0"></td>
+                                    <td><input type="number" step="0.01" class="form-control form-control-sm variant-price" name="variant_price[]" placeholder="Uses Main Price"></td>
+                                    <td><input type="text" class="form-control form-control-sm variant-sku" name="variant_sku[]" placeholder="Auto-gen"></td>
+                                    <td><button type="button" class="btn btn-danger btn-sm remove-variant"><i class="fas fa-trash"></i></button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <button type="button" class="btn btn-success btn-sm" id="addVariantBtn"><i class="fas fa-plus"></i> Add Variant</button>
+                    <div class="mt-2 text-muted small">
+                         * Price defaults to Main Selling Price. SKU auto-generates if empty.
+                    </div>
+                </div>
+            </div>
             
-            <div class="row">
+            <div class="row mt-4">
                 <div class="col-12">
                     <button type="submit" class="btn btn-primary" id="submitBtn">
                         <i class="fas fa-save"></i> Add Product
@@ -537,7 +483,7 @@ require_once "../includes/header.php";
 </div>
 
 <script>
-// Generate SKU
+// Generate main SKU
 document.getElementById('generateSKU').addEventListener('click', function() {
     const timestamp = Math.floor(Date.now() / 1000);
     const random = Math.floor(Math.random() * 900) + 100;
@@ -545,8 +491,38 @@ document.getElementById('generateSKU').addEventListener('click', function() {
 });
 
 // Calculate profit margin
-document.getElementById('price').addEventListener('input', calculateProfitMargin);
+function updateVariantPrices() {
+    const mainPrice = document.getElementById('price').value;
+    const variantPriceInputs = document.querySelectorAll('input[name="variant_price[]"]');
+    
+    // Set price for all variant rows
+    variantPriceInputs.forEach(input => {
+        // Only auto-fill if the field is empty or if it's the first row and hasn't been manually changed
+        if (!input.value || input.classList.contains('auto-filled')) {
+            input.value = mainPrice;
+            input.classList.add('auto-filled');
+        }
+    });
+}
+
+document.getElementById('price').addEventListener('input', function() {
+    calculateProfitMargin();
+    updateVariantPrices();
+});
+
 document.getElementById('cost_price').addEventListener('input', calculateProfitMargin);
+
+// Initialize variant prices on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateVariantPrices();
+    
+    // Add event listeners to variant price inputs to remove auto-filled class when manually changed
+    document.querySelectorAll('input[name="variant_price[]"]').forEach(input => {
+        input.addEventListener('input', function() {
+            this.classList.remove('auto-filled');
+        });
+    });
+});
 
 function calculateProfitMargin() {
     const costPrice = parseFloat(document.getElementById('cost_price').value) || 0;
@@ -562,70 +538,101 @@ function calculateProfitMargin() {
     }
 }
 
-// Trigger profit calculation on page load if values exist
-window.addEventListener('load', function() {
-    calculateProfitMargin();
+// Toggle Variants
+const hasVariantsCheckbox = document.getElementById('has_variants');
+const simpleProductFields = document.getElementById('simpleProductFields');
+const variantsSection = document.getElementById('variantsSection');
+
+hasVariantsCheckbox.addEventListener('change', function() {
+    if (this.checked) {
+        simpleProductFields.style.display = 'none';
+        variantsSection.style.display = 'block';
+    } else {
+        simpleProductFields.style.display = 'block';
+        variantsSection.style.display = 'none';
+    }
 });
 
-// Form validation
+// Add Variant Row
+document.getElementById('addVariantBtn').addEventListener('click', function() {
+    const tbody = document.querySelector('#variantsTable tbody');
+    const row = tbody.querySelector('.variant-row').cloneNode(true);
+    
+    // Get main defaults
+    const mainPrice = document.getElementById('price').value;
+    const mainSku = document.getElementById('sku').value;
+    
+    // Set inputs
+    row.querySelectorAll('input').forEach(input => {
+        if (input.name.includes('qty')) {
+             input.value = '0';
+        } else if (input.name.includes('variant_price')) {
+             input.value = mainPrice; // Auto-fill price
+             input.classList.add('auto-filled');
+             // Add event listener to remove auto-filled class when manually changed
+             input.addEventListener('input', function() {
+                 this.classList.remove('auto-filled');
+             });
+        } else if (input.name.includes('variant_sku')) {
+             // Generate a temporary SKU suffix for display, actual unique gen happens on backend or user edit
+             if (mainSku) input.value = mainSku + '-VAR'; 
+             else input.value = '';
+        } else {
+             input.value = '';
+        }
+    });
+    
+    tbody.appendChild(row);
+});
+
+// Remove Variant Row
+document.querySelector('#variantsTable').addEventListener('click', function(e) {
+    if (e.target.closest('.remove-variant')) {
+        const tbody = document.querySelector('#variantsTable tbody');
+        if (tbody.querySelectorAll('tr').length > 1) {
+            e.target.closest('tr').remove();
+        } else {
+            alert('You must have at least one variant row.');
+        }
+    }
+});
+
+// Form validation and submission
 document.getElementById('addProductForm').addEventListener('submit', function(e) {
     let isValid = true;
     const errors = [];
     
     // Get form values
     const name = document.getElementById('name').value.trim();
-    const quantity = parseInt(document.getElementById('quantity').value);
     const price = parseFloat(document.getElementById('price').value) || 0;
-    const costPrice = parseFloat(document.getElementById('cost_price').value) || 0;
-    const minStock = parseInt(document.getElementById('min_stock').value) || 0;
     
-    // Validation checks
-    if (!name) {
-        isValid = false;
-        errors.push('Product name is required');
-    }
+    // Common validation
+    if (!name) { isValid = false; errors.push('Product name is required'); }
+    if (price < 0) { isValid = false; errors.push('Selling price cannot be negative'); }
     
-    if (isNaN(quantity) || quantity < 0) {
-        isValid = false;
-        errors.push('Quantity must be a valid positive number');
-    }
-    
-    if (price < 0) {
-        isValid = false;
-        errors.push('Selling price cannot be negative');
-    }
-    
-    if (costPrice < 0) {
-        isValid = false;
-        errors.push('Cost price cannot be negative');
-    }
-    
-    if (minStock < 0) {
-        isValid = false;
-        errors.push('Minimum stock level cannot be negative');
-    }
-    
-    // Check image file
-    const imageInput = document.getElementById('product_image');
-    if (imageInput.files.length > 0) {
-        const file = imageInput.files[0];
-        const fileSize = file.size;
-        const fileName = file.name;
-        const fileExt = fileName.split('.').pop().toLowerCase();
-        const allowedTypes = ['jpg', 'jpeg', 'png', 'gif'];
-        const maxSize = 5 * 1024 * 1024; // 5MB
+    // Variants vs Simple validation
+    if (hasVariantsCheckbox.checked) {
+        const variantRows = document.querySelectorAll('.variant-row');
+        let hasValidVariant = false;
         
-        if (!allowedTypes.includes(fileExt)) {
+        variantRows.forEach(row => {
+            const size = row.querySelector('input[name="variant_size[]"]').value.trim();
+            const color = row.querySelector('input[name="variant_color[]"]').value.trim();
+            if (size || color) hasValidVariant = true;
+        });
+
+        if (!hasValidVariant) {
             isValid = false;
-            errors.push('Invalid file type. Only JPG, JPEG, PNG, and GIF files are allowed.');
+            errors.push('Please add at least one variant with Option/Size or Color.');
         }
-        
-        if (fileSize > maxSize) {
+    } else {
+        const quantity = parseInt(document.getElementById('quantity').value);
+        if (isNaN(quantity) || quantity < 0) {
             isValid = false;
-            errors.push('File size too large. Maximum file size is 5MB.');
+            errors.push('Quantity must be a valid positive number');
         }
     }
-    
+
     if (!isValid) {
         e.preventDefault();
         alert('Please correct the following errors:\n' + errors.join('\n'));
@@ -635,34 +642,24 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
     // If valid, submit via AJAX
     e.preventDefault();
     
-    // Show loading indicator
     const submitBtn = document.getElementById('submitBtn');
     const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...';
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Adding...';
     submitBtn.disabled = true;
     
-    // Create FormData object
     const formData = new FormData(this);
     
-    // Send AJAX request
     fetch('add_product.php', {
         method: 'POST',
         body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Show success message
             alert(data.message);
-            // Reset form
-            document.getElementById('addProductForm').reset();
-            // Redirect to products page
             window.location.href = 'view_products.php';
         } else {
-            // Show errors
             let errorText = 'Please correct the following errors:\n';
             if (data.errors && data.errors.length > 0) {
                 errorText += data.errors.join('\n');
@@ -674,10 +671,9 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while adding the product. Please try again.');
+        alert('An error occurred. Please try again.');
     })
     .finally(() => {
-        // Restore button
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     });

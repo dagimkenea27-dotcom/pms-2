@@ -2,6 +2,7 @@
 // products/update_stock.php
 require_once "../config/auth_check.php";
 require_once "../config/database.php";
+require_once "../config/auth.php";
 
 $database = new Database();
 $db = $database->getConnection();
@@ -11,12 +12,19 @@ $message_type = '';
 
 // Get product data
 $product = null;
+$variants = [];
 if (isset($_GET['id'])) {
     $query = "SELECT * FROM products WHERE id = :id";
     $stmt = $db->prepare($query);
     $stmt->bindParam(":id", $_GET['id']);
     $stmt->execute();
     $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($product && $product['has_variants']) {
+        $v_stmt = $db->prepare("SELECT * FROM product_variants WHERE product_id = :pid");
+        $v_stmt->execute([':pid' => $product['id']]);
+        $variants = $v_stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 
 if (!$product) {
@@ -33,59 +41,102 @@ if ($_POST) {
         $quantity = intval($_POST['quantity']);
         $reason = $_POST['reason'];
         $reference = $_POST['reference'];
+        $variant_id = !empty($_POST['variant_id']) ? $_POST['variant_id'] : null;
+
+        if ($product['has_variants'] && empty($variant_id)) {
+            throw new Exception("Please select a variant.");
+        }
         
-        // Update product quantity
-        if ($movement_type == 'IN') {
-            $new_quantity = $product['quantity'] + $quantity;
-            $update_query = "UPDATE products SET quantity = quantity + :quantity WHERE id = :id";
-        } else {
-            if ($product['quantity'] < $quantity) {
-                $message = "Error: Not enough stock available. Current stock: " . $product['quantity'];
-                $message_type = "danger";
+        $db->beginTransaction();
+
+        $current_qty = 0;
+        
+        // Update logic depending on variant or simple
+        if ($variant_id) {
+            // Get current variant qty
+            $v_stmt = $db->prepare("SELECT quantity FROM product_variants WHERE id = ?");
+            $v_stmt->execute([$variant_id]);
+            $v_row = $v_stmt->fetch(PDO::FETCH_ASSOC);
+            $current_qty = $v_row['quantity'];
+
+            if ($movement_type == 'OUT' && $current_qty < $quantity) {
+                 throw new Exception("Not enough stock available for this variant. Current: " . $current_qty);
+            }
+
+            // Update variant quantity
+            if ($movement_type == 'IN') {
+                $db->prepare("UPDATE product_variants SET quantity = quantity + ? WHERE id = ?")->execute([$quantity, $variant_id]);
+                // Update master product quantity
+                $db->prepare("UPDATE products SET quantity = quantity + ? WHERE id = ?")->execute([$quantity, $product['id']]);
+                $new_qty = $current_qty + $quantity;
             } else {
-                $new_quantity = $product['quantity'] - $quantity;
-                $update_query = "UPDATE products SET quantity = quantity - :quantity WHERE id = :id";
+                $db->prepare("UPDATE product_variants SET quantity = quantity - ? WHERE id = ?")->execute([$quantity, $variant_id]);
+                // Update master product quantity
+                $db->prepare("UPDATE products SET quantity = quantity - ? WHERE id = ?")->execute([$quantity, $product['id']]);
+                $new_qty = $current_qty - $quantity;
+            }
+
+        } else {
+            // Simple product update
+            $current_qty = $product['quantity'];
+
+            if ($movement_type == 'OUT' && $current_qty < $quantity) {
+                 throw new Exception("Not enough stock available. Current: " . $current_qty);
+            }
+
+            if ($movement_type == 'IN') {
+                 $db->prepare("UPDATE products SET quantity = quantity + ? WHERE id = ?")->execute([$quantity, $product['id']]);
+                 $new_qty = $current_qty + $quantity;
+            } else {
+                 $db->prepare("UPDATE products SET quantity = quantity - ? WHERE id = ?")->execute([$quantity, $product['id']]);
+                 $new_qty = $current_qty - $quantity;
             }
         }
+
+        // Log movement
+        $movement_query = "INSERT INTO stock_movements 
+                          (product_id, variant_id, movement_type, quantity, reason, reference) 
+                          VALUES (:product_id, :variant_id, :movement_type, :quantity, :reason, :reference)";
+        $movement_stmt = $db->prepare($movement_query);
+        $movement_stmt->execute([
+            ':product_id' => $product['id'],
+            ':variant_id' => $variant_id,
+            ':movement_type' => $movement_type,
+            ':quantity' => $quantity,
+            ':reason' => $reason,
+            ':reference' => $reference
+        ]);
+
+        $db->commit();
         
-        if (!isset($message)) {
-            $update_stmt = $db->prepare($update_query);
-            $update_stmt->bindParam(":quantity", $quantity);
-            $update_stmt->bindParam(":id", $product['id']);
-            
-            if ($update_stmt->execute()) {
-                // Log the stock movement
-                $movement_query = "INSERT INTO stock_movements 
-                                  (product_id, movement_type, quantity, reason, reference) 
-                                  VALUES (:product_id, :movement_type, :quantity, :reason, :reference)";
-                $movement_stmt = $db->prepare($movement_query);
-                $movement_stmt->bindParam(":product_id", $product['id']);
-                $movement_stmt->bindParam(":movement_type", $movement_type);
-                $movement_stmt->bindParam(":quantity", $quantity);
-                $movement_stmt->bindParam(":reason", $reason);
-                $movement_stmt->bindParam(":reference", $reference);
-                $movement_stmt->execute();
-                
-                $message = "Stock updated successfully! New quantity: " . $new_quantity;
-                $message_type = "success";
-                
-                // Refresh product data
-                $stmt = $db->prepare("SELECT * FROM products WHERE id = :id");
-                $stmt->bindParam(":id", $product['id']);
-                $stmt->execute();
-                $product = $stmt->fetch(PDO::FETCH_ASSOC);
-            }
+        $message = "Stock updated successfully!";
+        $message_type = "success";
+        
+        // Refresh product data
+        $stmt = $db->prepare("SELECT * FROM products WHERE id = :id");
+        $stmt->bindParam(":id", $product['id']);
+        $stmt->execute();
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($product['has_variants']) {
+            $v_stmt = $db->prepare("SELECT * FROM product_variants WHERE product_id = :pid");
+            $v_stmt->execute([':pid' => $product['id']]);
+            $variants = $v_stmt->fetchAll(PDO::FETCH_ASSOC);
         }
-    } catch (PDOException $exception) {
+
+    } catch (Exception $exception) {
+        if ($db->inTransaction()) $db->rollBack();
         $message = "Error: " . $exception->getMessage();
         $message_type = "danger";
     }
 }
 
 // Get stock movement history
-$movement_query = "SELECT * FROM stock_movements 
-                  WHERE product_id = :product_id 
-                  ORDER BY created_at DESC 
+$movement_query = "SELECT sm.*, pv.sku as variant_sku, pv.size, pv.color 
+                  FROM stock_movements sm
+                  LEFT JOIN product_variants pv ON sm.variant_id = pv.id
+                  WHERE sm.product_id = :product_id 
+                  ORDER BY sm.created_at DESC 
                   LIMIT 20";
 $movement_stmt = $db->prepare($movement_query);
 $movement_stmt->bindParam(":product_id", $product['id']);
@@ -126,20 +177,12 @@ require_once "../includes/header.php";
                         <td><?php echo htmlspecialchars($product['name']); ?></td>
                     </tr>
                     <tr>
-                        <th>Current Stock:</th>
+                        <th>Total Stock:</th>
                         <td>
                             <span class="h5 <?php echo $product['quantity'] <= $product['min_stock'] ? 'text-warning' : 'text-success'; ?>">
                                 <?php echo $product['quantity']; ?>
                             </span>
                         </td>
-                    </tr>
-                    <tr>
-                        <th>Min Stock:</th>
-                        <td><?php echo $product['min_stock']; ?></td>
-                    </tr>
-                    <tr>
-                        <th>Location:</th>
-                        <td><?php echo htmlspecialchars($product['location']); ?></td>
                     </tr>
                 </table>
             </div>
@@ -153,6 +196,20 @@ require_once "../includes/header.php";
                 <form method="POST" action="">
                     <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
                     
+                    <?php if ($product['has_variants']): ?>
+                    <div class="mb-3">
+                        <label for="variant_id" class="form-label">Variant *</label>
+                        <select class="form-select" id="variant_id" name="variant_id" required>
+                            <option value="">Select Variant</option>
+                            <?php foreach ($variants as $v): ?>
+                                <option value="<?php echo $v['id']; ?>">
+                                    <?php echo htmlspecialchars($v['sku'] . ' (' . $v['size'] . '/' . $v['color'] . ') - Qty: ' . $v['quantity']); ?> 
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php endif; ?>
+
                     <div class="mb-3">
                         <label class="form-label">Movement Type *</label>
                         <div>
@@ -221,6 +278,7 @@ require_once "../includes/header.php";
                                 <tr>
                                     <th>Date</th>
                                     <th>Type</th>
+                                    <th>Variant</th>
                                     <th>Quantity</th>
                                     <th>Reason</th>
                                     <th>Reference</th>
@@ -234,6 +292,16 @@ require_once "../includes/header.php";
                                         <span class="badge bg-<?php echo $movement['movement_type'] == 'IN' ? 'success' : 'danger'; ?>">
                                             <?php echo $movement['movement_type']; ?>
                                         </span>
+                                    </td>
+                                    <td>
+                                        <?php 
+                                        if ($movement['variant_id']) {
+                                            echo htmlspecialchars($movement['size'] . '/' . $movement['color']);
+                                            if ($movement['variant_sku']) echo ' <small class="text-muted">('.$movement['variant_sku'].')</small>';
+                                        } else {
+                                            echo '<span class="text-muted">-</span>';
+                                        }
+                                        ?>
                                     </td>
                                     <td><?php echo $movement['quantity']; ?></td>
                                     <td><?php echo htmlspecialchars($movement['reason']); ?></td>

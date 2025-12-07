@@ -11,33 +11,64 @@ $database = new Database();
 $db = $database->getConnection();
 
 $product = null;
+$variant = null;
 $barcode_svg = '';
 $message = '';
 $message_type = '';
 
 // Get product data
 if (isset($_GET['id'])) {
-    $query = "SELECT * FROM products WHERE id = :id";
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(":id", $_GET['id']);
-    $stmt->execute();
-    $product = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if ($product) {
-        // Generate or retrieve barcode
-        if (empty($product['barcode'])) {
-            // Generate barcode from SKU
-            $barcode_data = $product['sku'];
-        } else {
-            // Use existing barcode
-            $barcode_data = $product['barcode'];
-        }
+    // Check if we're looking for a variant barcode
+    if (isset($_GET['variant_id'])) {
+        // Get variant data
+        $query = "SELECT pv.*, p.name as product_name, p.sku as product_sku FROM product_variants pv 
+                  JOIN products p ON pv.product_id = p.id 
+                  WHERE pv.id = :variant_id AND pv.product_id = :id";
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(":variant_id", $_GET['variant_id']);
+        $stmt->bindParam(":id", $_GET['id']);
+        $stmt->execute();
+        $variant = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        $generator = new BarcodeGenerator();
-        $barcode_svg = $generator->generateSVG($barcode_data, 300, 100);
+        if ($variant) {
+            $product_query = "SELECT * FROM products WHERE id = :id";
+            $product_stmt = $db->prepare($product_query);
+            $product_stmt->bindParam(":id", $_GET['id']);
+            $product_stmt->execute();
+            $product = $product_stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Generate barcode from variant SKU
+            $barcode_data = $variant['sku'];
+            $generator = new BarcodeGenerator();
+            $barcode_svg = $generator->generateSVG($barcode_data, 300, 100);
+        } else {
+            $message = "Variant not found!";
+            $message_type = "danger";
+        }
     } else {
-        $message = "Product not found!";
-        $message_type = "danger";
+        // Get main product data
+        $query = "SELECT * FROM products WHERE id = :id";
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(":id", $_GET['id']);
+        $stmt->execute();
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($product) {
+            // Generate or retrieve barcode
+            if (empty($product['barcode'])) {
+                // Generate barcode from SKU
+                $barcode_data = $product['sku'];
+            } else {
+                // Use existing barcode
+                $barcode_data = $product['barcode'];
+            }
+            
+            $generator = new BarcodeGenerator();
+            $barcode_svg = $generator->generateSVG($barcode_data, 300, 100);
+        } else {
+            $message = "Product not found!";
+            $message_type = "danger";
+        }
     }
 } else {
     $message = "No product specified!";
@@ -63,7 +94,9 @@ require_once "../includes/header.php";
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h6 class="card-title mb-0">Barcode for <?php echo htmlspecialchars($product['name']); ?></h6>
+                <h6 class="card-title mb-0">
+                    Barcode for <?php echo htmlspecialchars($variant ? $product['name'] . ' - ' . $variant['size'] . ' ' . $variant['color'] : $product['name']); ?>
+                </h6>
             </div>
             <div class="card-body text-center">
                 <?php if ($barcode_svg): ?>
@@ -71,7 +104,7 @@ require_once "../includes/header.php";
                         <?php echo $barcode_svg; ?>
                     </div>
                     <div class="mb-3">
-                        <p><strong>Barcode Data:</strong> <?php echo htmlspecialchars($product['sku']); ?></p>
+                        <p><strong>Barcode Data:</strong> <?php echo htmlspecialchars($variant ? $variant['sku'] : $product['sku']); ?></p>
                     </div>
                     <div class="mb-3">
                         <button class="btn btn-primary" onclick="window.print()">
@@ -96,9 +129,13 @@ require_once "../includes/header.php";
             <div class="card-body">
                 <p><strong>Name:</strong> <?php echo htmlspecialchars($product['name']); ?></p>
                 <p><strong>SKU:</strong> <?php echo htmlspecialchars($product['sku']); ?></p>
+                <?php if ($variant): ?>
+                    <p><strong>Variant:</strong> <?php echo htmlspecialchars($variant['size'] . ' ' . $variant['color']); ?></p>
+                    <p><strong>Variant SKU:</strong> <?php echo htmlspecialchars($variant['sku']); ?></p>
+                <?php endif; ?>
                 <p><strong>Category:</strong> <?php echo htmlspecialchars($product['category']); ?></p>
-                <p><strong>Quantity:</strong> <?php echo $product['quantity']; ?></p>
-                <p><strong>Price:</strong> $<?php echo number_format($product['price'], 2); ?></p>
+                <p><strong>Quantity:</strong> <?php echo $variant ? $variant['quantity'] : $product['quantity']; ?></p>
+                <p><strong>Price:</strong> $<?php echo number_format($variant && $variant['price'] ? $variant['price'] : $product['price'], 2); ?></p>
                 
                 <?php if (!empty($product['image'])): ?>
                     <div class="text-center mt-3">
