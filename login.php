@@ -12,6 +12,9 @@ if (Auth::isLoggedIn()) {
 }
 
 $error = '';
+if (isset($_GET['timeout']) && $_GET['timeout'] == 1) {
+    $error = "Your session has expired. Please log in again.";
+}
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $database = new Database();

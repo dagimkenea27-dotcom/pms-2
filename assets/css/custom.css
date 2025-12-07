@@ -1,26 +1,50 @@
 /* Custom CSS for Inventory Management System */
 
 :root {
+    /* Brand Colors */
     --primary-color: #4e73df;
     --secondary-color: #858796;
     --success-color: #1cc88a;
     --info-color: #36b9cc;
     --warning-color: #f6c23e;
     --danger-color: #e74a3b;
-    --light-color: #f8f9fc;
-    --dark-color: #5a5c69;
-    --sidebar-bg: #4e73df;
-    --sidebar-text: #fff;
-    --sidebar-hover: rgba(255, 255, 255, 0.2);
-    --body-bg: #f8f9fc;
+
+    /* Semantic Colors - Light Mode (Default) */
+    --bg-body: #f8f9fc;
+    --bg-card: #ffffff;
+    --bg-nav: #ffffff;
+    --text-main: #5a5c69;
+    --text-muted: #858796;
+    --text-headers: #4e73df;
+    --border-color: #e3e6f0;
     --card-shadow: 0 .15rem 1.75rem 0 rgba(58, 59, 69, .15);
+}
+
+/* Dark Mode Overrides */
+[data-theme="dark"] {
+    --bg-body: #0f172a;
+    /* Deep Blue/Slate */
+    --bg-card: #1e293b;
+    /* Dark Slate */
+    --bg-nav: #1e293b;
+    /* Dark Slate */
+    --text-main: #e2e8f0;
+    /* Light Gray */
+    --text-muted: #94a3b8;
+    /* Muted Slate */
+    --text-headers: #60a5fa;
+    /* Brighter Blue */
+    --border-color: #334155;
+    /* Slate Border */
+    --card-shadow: 0 .15rem 1.75rem 0 rgba(0, 0, 0, .5);
 }
 
 body {
     font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background-color: var(--body-bg);
-    color: #5a5c69;
+    background-color: var(--bg-body);
+    color: var(--text-main);
     overflow-x: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Wrapper */
@@ -41,6 +65,11 @@ body {
     flex-direction: column;
     box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
     z-index: 1000;
+}
+
+[data-theme="dark"] .sidebar {
+    background: var(--bg-nav);
+    background-size: cover;
 }
 
 .sidebar.toggled {
@@ -104,7 +133,7 @@ body {
 
 .sidebar .nav-item .nav-link:hover {
     color: #fff;
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: var(--sidebar-hover, rgba(255, 255, 255, 0.1));
 }
 
 .sidebar .nav-item .nav-link:hover i {
@@ -127,7 +156,7 @@ body {
 
 /* Content Wrapper */
 #content-wrapper {
-    background-color: var(--body-bg);
+    background-color: var(--bg-body);
     width: 100%;
     overflow-x: hidden;
     display: flex;
@@ -144,7 +173,7 @@ body {
     height: 4.375rem;
     margin-bottom: 1.5rem;
     box-shadow: 0 .15rem 1.75rem 0 rgba(58, 59, 69, .15);
-    background-color: #fff;
+    background-color: var(--bg-nav);
     display: flex;
     align-items: center;
     padding: 0 1.5rem;
@@ -155,7 +184,7 @@ body {
     display: flex;
     align-items: center;
     padding: 0 .75rem;
-    color: #d1d3e2;
+    color: var(--text-muted);
 }
 
 .topbar .nav-item .nav-link:hover {
@@ -163,7 +192,7 @@ body {
 }
 
 .topbar .dropdown-list {
-    width: 20rem !important;
+    width: 19rem !important;
 }
 
 .topbar .dropdown-toggle::after {
@@ -186,22 +215,26 @@ body {
     border: none;
     border-radius: 0.5rem;
     margin-top: 0.5rem;
+    background-color: var(--bg-nav);
+    color: var(--text-main);
 }
 
 .topbar .dropdown-header {
-    padding: 0.75rem 1rem;
-    background-color: #f8f9fc;
-    border-bottom: 1px solid #e3e6f0;
+    padding: 0.5rem 0.75rem;
+    background-color: var(--bg-body);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-main);
 }
 
 .topbar .dropdown-item {
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
     transition: all 0.2s;
+    white-space: normal !important;
 }
 
 .topbar .dropdown-item:hover {
-    background-color: #f8f9fc;
+    background-color: var(--bg-body);
     color: var(--primary-color);
     padding-left: 1.25rem;
 }
@@ -245,7 +278,7 @@ body {
 }
 
 .sidebar .collapse-item:hover {
-    color: #211277;
+    color: #fff;
     background-color: rgba(255, 255, 255, 0.1);
     padding-left: 3.25rem;
 }
@@ -255,7 +288,7 @@ body {
     left: 2.25rem;
 }
 
-.sidebar .nav-link.collapsed:after {
+.sidebar .nav-link[data-bs-toggle="collapse"].collapsed:after {
     content: '\f107';
     font-family: 'Font Awesome 6 Free';
     font-weight: 900;
@@ -263,13 +296,18 @@ body {
     transition: transform 0.3s;
 }
 
-.sidebar .nav-link:not(.collapsed):after {
+.sidebar .nav-link[data-bs-toggle="collapse"]:not(.collapsed):after {
     content: '\f107';
     font-family: 'Font Awesome 6 Free';
     font-weight: 900;
     float: right;
     transform: rotate(180deg);
     transition: transform 0.3s;
+}
+
+.sidebar .nav-link:not([data-bs-toggle="collapse"]):after {
+    content: none !important;
+    display: none !important;
 }
 
 /* Animated dropdown */
@@ -298,9 +336,9 @@ body {
     flex-direction: column;
     min-width: 0;
     word-wrap: break-word;
-    background-color: #fff;
+    background-color: var(--bg-nav);
     background-clip: border-box;
-    border: 1px solid #e3e6f0;
+    border: 1px solid var(--border-color);
     border-radius: .35rem;
     box-shadow: var(--card-shadow);
     margin-bottom: 1.5rem;
@@ -314,8 +352,9 @@ body {
 .card-header {
     padding: .75rem 1.25rem;
     margin-bottom: 0;
-    background-color: #f8f9fc;
-    border-bottom: 1px solid #e3e6f0;
+    background-color: var(--bg-body);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-main);
     font-weight: 700;
     color: var(--primary-color);
 }
@@ -344,12 +383,25 @@ body {
     font-size: .7rem;
 }
 
+/* Text Utility Overrides for Theming */
 .text-gray-300 {
-    color: #dddfeb !important;
+    color: var(--text-muted) !important;
 }
 
-.text-gray-800 {
-    color: #5a5c69 !important;
+.text-gray-400,
+.text-gray-500,
+.text-gray-600 {
+    color: var(--text-muted) !important;
+}
+
+.text-gray-800,
+.text-gray-900,
+.text-dark {
+    color: var(--text-main) !important;
+}
+
+.text-muted {
+    color: var(--text-muted) !important;
 }
 
 /* Dashboard Cards */
@@ -391,7 +443,7 @@ body {
 
 /* Recent Activity */
 .activity-item {
-    border-left: 2px solid #e3e6f0;
+    border-left: 2px solid var(--border-color);
     padding-left: 1rem;
     margin-left: 1rem;
     position: relative;
@@ -413,6 +465,7 @@ body {
     background-color: transparent;
     border: none;
     color: #d1d3e2;
+    /* Keeping nav text light on sidebar, but topbar needs check */
     font-size: 1.2rem;
     padding: 0.5rem;
     border-radius: 0.35rem;
@@ -459,7 +512,7 @@ body {
 footer.sticky-footer {
     padding: 2rem 0;
     flex-shrink: 0;
-    background-color: #fff;
+    background-color: var(--bg-nav);
 }
 
 footer.sticky-footer .copyright {
@@ -529,7 +582,9 @@ footer.sticky-footer .copyright {
     .chart-area {
         height: 15rem;
     }
-}/* --- FIXED LAYOUT IMPLEMENTATION --- */
+}
+
+/* --- FIXED LAYOUT IMPLEMENTATION --- */
 
 /* Fix the sidebar */
 .sidebar {

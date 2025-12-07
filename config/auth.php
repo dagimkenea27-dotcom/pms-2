@@ -1,7 +1,15 @@
 <?php
 // config/auth.php
 class Auth {
+    // Ensure paths are loaded for BASE_URL
+    private static function loadPaths() {
+        if (!defined('BASE_URL')) {
+            require_once __DIR__ . '/paths.php';
+        }
+    }
+    
     public static function startSession() {
+        self::loadPaths();
         if (session_status() == PHP_SESSION_NONE) {
             session_start();
         }

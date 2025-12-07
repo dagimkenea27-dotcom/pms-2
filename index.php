@@ -181,59 +181,7 @@ require_once "includes/header.php";
 
 <!-- Content Row -->
 <div class="row">
-    <!-- Quick Actions -->
     <div class="col-lg-6 mb-4">
-        <div class="card dashboard-card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-12">
-                        <a href="products/add_product.php" class="btn quick-action-btn btn-primary">
-                            <i class="fas fa-plus mr-2"></i>Add Product
-                        </a>
-                        <a href="products/view_products.php" class="btn quick-action-btn btn-success">
-                            <i class="fas fa-list mr-2"></i>View Products
-                        </a>
-                        <a href="price.php" class="btn quick-action-btn btn-primary">
-                            <i class="fas fa-calculator mr-2"></i>Price Calculator
-                        </a>
-                        <a href="products/stock_in.php" class="btn quick-action-btn btn-warning">
-                            <i class="fas fa-download mr-2"></i>Stock In
-                        </a>
-                        <a href="products/stock_out.php" class="btn quick-action-btn btn-danger">
-                            <i class="fas fa-upload mr-2"></i>Stock Out
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quick Reports -->
-        <div class="card dashboard-card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Quick Reports</h6>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-12">
-                        <a href="reports/stock_valuation.php" class="btn quick-action-btn btn-info">
-                            <i class="fas fa-file-invoice-dollar mr-2"></i>Valuation Report
-                        </a>
-                        <a href="reports/stock_movement.php" class="btn quick-action-btn btn-info">
-                            <i class="fas fa-exchange-alt mr-2"></i>Movement Report
-                        </a>
-                        <a href="reports/low_stock.php" class="btn quick-action-btn btn-warning">
-                            <i class="fas fa-exclamation-triangle mr-2"></i>Low Stock Report
-                        </a>
-                        <a href="products/export_products.php" class="btn quick-action-btn btn-success">
-                            <i class="fas fa-file-export mr-2"></i>Export Products
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- Top Selling Products -->
         <div class="card dashboard-card shadow mb-4">
