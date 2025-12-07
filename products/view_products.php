@@ -170,7 +170,7 @@ if (isset($_SESSION['message'])) {
                         <tr class="<?php echo $stock_class; ?>">
                             <td>
                                 <?php if (!empty($product['image'])): ?>
-                                    <img src="<?php echo htmlspecialchars($product['image']); ?>" alt="Product Image" class="img-thumbnail" style="max-height: 50px;">
+                                    <img src="../<?php echo htmlspecialchars($product['image']); ?>" alt="Product Image" class="img-thumbnail" style="max-height: 50px;">
                                 <?php else: ?>
                                     <div class="bg-light text-center" style="width: 50px; height: 50px; line-height: 50px;">
                                         <i class="fas fa-image text-muted"></i>
