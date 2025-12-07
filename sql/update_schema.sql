@@ -59,3 +59,42 @@ DELIMITER ;
 
 CALL UpgradeDatabase();
 DROP PROCEDURE UpgradeDatabase;
+
+-- Create routes table for saving route information
+CREATE TABLE IF NOT EXISTS routes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    warehouse_location TEXT,
+    warehouse_coords JSON,
+    driver_count INT DEFAULT 1,
+    country_code VARCHAR(10) DEFAULT 'et',
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Create route_stops table for storing individual stops
+CREATE TABLE IF NOT EXISTS route_stops (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    route_id INT,
+    address TEXT NOT NULL,
+    coordinates JSON,
+    stop_number INT,
+    driver_id INT,
+    distance_from_previous DECIMAL(10,2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (route_id) REFERENCES routes(id) ON DELETE CASCADE
+);
+
+-- Create route_optimization_settings table for storing different optimization algorithms
+CREATE TABLE IF NOT EXISTS route_optimization_settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    route_id INT,
+    algorithm VARCHAR(50) DEFAULT 'nearest_neighbor',
+    time_windows JSON,
+    vehicle_capacity INT,
+    constraints JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (route_id) REFERENCES routes(id) ON DELETE CASCADE
+);

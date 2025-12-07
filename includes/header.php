@@ -119,10 +119,17 @@ Auth::startSession();
 
             <!-- Nav Item - Route Optimizer -->
             <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/') !== false ? 'active' : ''; ?>">
-                <a class="nav-link" href="<?php echo BASE_URL; ?>routes/index.php">
+                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseRoutes"
+                    aria-expanded="true" aria-controls="collapseRoutes">
                     <i class="fas fa-fw fa-map-marked-alt"></i>
-                    <span>Route Optimizer</span>
+                    <span>Route Management</span>
                 </a>
+                <div id="collapseRoutes" class="collapse <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/') !== false ? 'show' : ''; ?>" aria-labelledby="headingRoutes" data-parent="#accordionSidebar">
+                    <div class="py-2 collapse-inner rounded">
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/index.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>routes/index.php">Optimize Routes</a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/manage.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>routes/manage.php">Saved Routes</a>
+                    </div>
+                </div>
             </li>
 
             <!-- Divider -->
