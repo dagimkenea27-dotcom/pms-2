@@ -8,11 +8,23 @@ $db = $database->getConnection();
 
 // Handle product deletion
 if (isset($_GET['delete_id'])) {
+    // First get the product to delete its image
+    $get_query = "SELECT image FROM products WHERE id = :id";
+    $get_stmt = $db->prepare($get_query);
+    $get_stmt->bindParam(":id", $_GET['delete_id']);
+    $get_stmt->execute();
+    $product = $get_stmt->fetch(PDO::FETCH_ASSOC);
+    
     $delete_query = "DELETE FROM products WHERE id = :id";
     $delete_stmt = $db->prepare($delete_query);
     $delete_stmt->bindParam(":id", $_GET['delete_id']);
     
     if ($delete_stmt->execute()) {
+        // Delete image file if it exists
+        if (!empty($product['image']) && file_exists("../" . $product['image'])) {
+            unlink("../" . $product['image']);
+        }
+        
         $_SESSION['message'] = "Product deleted successfully!";
         $_SESSION['message_type'] = "success";
     } else {
@@ -131,6 +143,7 @@ if (isset($_SESSION['message'])) {
                 <table class="table table-bordered table-hover" width="100%" cellspacing="0">
                     <thead>
                         <tr>
+                            <th>Image</th>
                             <th>SKU</th>
                             <th>Product Name</th>
                             <th>Category</th>
@@ -155,6 +168,15 @@ if (isset($_SESSION['message'])) {
                             }
                         ?>
                         <tr class="<?php echo $stock_class; ?>">
+                            <td>
+                                <?php if (!empty($product['image'])): ?>
+                                    <img src="<?php echo htmlspecialchars($product['image']); ?>" alt="Product Image" class="img-thumbnail" style="max-height: 50px;">
+                                <?php else: ?>
+                                    <div class="bg-light text-center" style="width: 50px; height: 50px; line-height: 50px;">
+                                        <i class="fas fa-image text-muted"></i>
+                                    </div>
+                                <?php endif; ?>
+                            </td>
                             <td><strong><?php echo htmlspecialchars($product['sku']); ?></strong></td>
                             <td>
                                 <strong><?php echo htmlspecialchars($product['name']); ?></strong>
@@ -181,6 +203,9 @@ if (isset($_SESSION['message'])) {
                                 <div class="btn-group btn-group-sm">
                                     <a href="edit_product.php?id=<?php echo $product['id']; ?>" class="btn btn-outline-primary" title="Edit">
                                         <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="generate_barcode.php?id=<?php echo $product['id']; ?>" class="btn btn-outline-secondary" title="View Barcode">
+                                        <i class="fas fa-barcode"></i>
                                     </a>
                                     <a href="update_stock.php?id=<?php echo $product['id']; ?>" class="btn btn-outline-success" title="Update Stock">
                                         <i class="fas fa-warehouse"></i>

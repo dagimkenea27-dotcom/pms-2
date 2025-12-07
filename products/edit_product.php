@@ -19,6 +19,7 @@ $suppliers = $db->query("SELECT id, name FROM suppliers ORDER BY name ASC");
 
 $message = '';
 $message_type = '';
+$errors = [];
 
 // Get product data
 $product = null;
@@ -39,79 +40,172 @@ if (!$product) {
 
 // Handle form submission
 if ($_POST) {
-    try {
-        $category_id = !empty($_POST['category_id']) ? $_POST['category_id'] : null;
-        $brand_id = !empty($_POST['brand_id']) ? $_POST['brand_id'] : null;
-        $supplier_id = !empty($_POST['supplier_id']) ? $_POST['supplier_id'] : null;
+    // Validate input
+    $name = trim($_POST['name'] ?? '');
+    $sku = trim($_POST['sku'] ?? '');
+    $price = floatval($_POST['price'] ?? 0);
+    $cost_price = floatval($_POST['cost_price'] ?? 0);
+    $min_stock = intval($_POST['min_stock'] ?? 0);
+    
+    // Validation checks
+    if (empty($name)) {
+        $errors[] = "Product name is required.";
+    }
+    
+    if (empty($sku)) {
+        $errors[] = "SKU is required.";
+    } else if ($sku != $product['sku']) {
+        // Check if new SKU already exists
+        $check_query = "SELECT id FROM products WHERE sku = :sku AND id != :id";
+        $check_stmt = $db->prepare($check_query);
+        $check_stmt->bindParam(":sku", $sku);
+        $check_stmt->bindParam(":id", $product['id']);
+        $check_stmt->execute();
         
-        // Helper to get name from ID
-        function getName($db, $table, $id) {
-            if (!$id) return null;
-            $stmt = $db->prepare("SELECT name FROM $table WHERE id = ?");
-            $stmt->execute([$id]);
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            return $row ? $row['name'] : null;
+        if ($check_stmt->rowCount() > 0) {
+            $errors[] = "SKU already exists. Please use a unique SKU.";
         }
-
-        $category_name = getName($db, 'categories', $category_id);
-        $supplier_name = getName($db, 'suppliers', $supplier_id);
-
-        $query = "UPDATE products SET 
-                  sku = :sku, 
-                  name = :name, 
-                  description = :description, 
-                  category = :category, 
-                  category_id = :category_id,
-                  brand_id = :brand_id,
-                  price = :price, 
-                  cost_price = :cost_price, 
-                  min_stock = :min_stock, 
-                  supplier = :supplier, 
-                  supplier_id = :supplier_id,
-                  location = :location 
-                  WHERE id = :id";
+    }
+    
+    if ($price < 0) {
+        $errors[] = "Selling price cannot be negative.";
+    }
+    
+    if ($cost_price < 0) {
+        $errors[] = "Cost price cannot be negative.";
+    }
+    
+    if ($min_stock < 0) {
+        $errors[] = "Minimum stock level cannot be negative.";
+    }
+    
+    // Handle image upload
+    $image_path = $product['image']; // Keep existing image by default
+    if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
+        $upload_dir = '../uploads/products/';
+        $allowed_types = ['jpg', 'jpeg', 'png', 'gif'];
+        $max_size = 5 * 1024 * 1024; // 5MB
         
-        $stmt = $db->prepare($query);
+        $file_name = $_FILES['product_image']['name'];
+        $file_size = $_FILES['product_image']['size'];
+        $file_tmp = $_FILES['product_image']['tmp_name'];
+        $file_type = $_FILES['product_image']['type'];
         
-        $stmt->bindParam(":sku", $_POST['sku']);
-        $stmt->bindParam(":name", $_POST['name']);
-        $stmt->bindParam(":description", $_POST['description']);
-        $stmt->bindParam(":category", $category_name);
-        $stmt->bindParam(":category_id", $category_id);
-        $stmt->bindParam(":brand_id", $brand_id);
-        $stmt->bindParam(":price", $_POST['price']);
-        $stmt->bindParam(":cost_price", $_POST['cost_price']);
-        $stmt->bindParam(":min_stock", $_POST['min_stock']);
-        $stmt->bindParam(":supplier", $supplier_name);
-        $stmt->bindParam(":supplier_id", $supplier_id);
-        $stmt->bindParam(":location", $_POST['location']);
-        $stmt->bindParam(":id", $product['id']);
+        // Get file extension
+        $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
         
-        if ($stmt->execute()) {
-            $message = "Product updated successfully!";
-            $message_type = "success";
+        // Validate file
+        if (!in_array($file_ext, $allowed_types)) {
+            $errors[] = "Invalid file type. Only JPG, JPEG, PNG, and GIF files are allowed.";
+        }
+        
+        if ($file_size > $max_size) {
+            $errors[] = "File size too large. Maximum file size is 5MB.";
+        }
+        
+        // If no errors, process the file
+        if (empty($errors)) {
+            // Generate unique filename
+            $new_filename = uniqid() . '_' . time() . '.' . $file_ext;
+            $target_file = $upload_dir . $new_filename;
             
-            // Log to AuditLog
-            if (Auth::isLoggedIn()) {
-                $user = Auth::getCurrentUser();
-                $audit->log($user['id'], "PRODUCT_UPDATE", "Updated product: " . $_POST['name'] . " (ID: " . $product['id'] . ")");
+            // Move uploaded file
+            if (move_uploaded_file($file_tmp, $target_file)) {
+                $image_path = 'uploads/products/' . $new_filename;
+                
+                // Delete old image if it exists and is not the default
+                if (!empty($product['image']) && file_exists('../' . $product['image'])) {
+                    unlink('../' . $product['image']);
+                }
+            } else {
+                $errors[] = "Error uploading image file.";
             }
+        }
+    }
+    
+    // If no errors, proceed with update
+    if (empty($errors)) {
+        try {
+            $category_id = !empty($_POST['category_id']) ? $_POST['category_id'] : null;
+            $brand_id = !empty($_POST['brand_id']) ? $_POST['brand_id'] : null;
+            $supplier_id = !empty($_POST['supplier_id']) ? $_POST['supplier_id'] : null;
             
-            // Refresh product data
-            $stmt = $db->prepare("SELECT * FROM products WHERE id = :id");
+            // Helper to get name from ID
+            function getName($db, $table, $id) {
+                if (!$id) return null;
+                $stmt = $db->prepare("SELECT name FROM $table WHERE id = ?");
+                $stmt->execute([$id]);
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                return $row ? $row['name'] : null;
+            }
+
+            $category_name = getName($db, 'categories', $category_id);
+            $supplier_name = getName($db, 'suppliers', $supplier_id);
+
+            $query = "UPDATE products SET 
+                      sku = :sku, 
+                      name = :name, 
+                      description = :description, 
+                      category = :category, 
+                      category_id = :category_id,
+                      brand_id = :brand_id,
+                      price = :price, 
+                      cost_price = :cost_price, 
+                      min_stock = :min_stock, 
+                      supplier = :supplier, 
+                      supplier_id = :supplier_id,
+                      location = :location,
+                      image = :image,
+                      barcode = :barcode
+                      WHERE id = :id";
+            
+            $stmt = $db->prepare($query);
+            
+            $stmt->bindParam(":sku", $sku);
+            $stmt->bindParam(":name", $name);
+            $stmt->bindParam(":description", $_POST['description']);
+            $stmt->bindParam(":category", $category_name);
+            $stmt->bindParam(":category_id", $category_id);
+            $stmt->bindParam(":brand_id", $brand_id);
+            $stmt->bindParam(":price", $price);
+            $stmt->bindParam(":cost_price", $cost_price);
+            $stmt->bindParam(":min_stock", $min_stock);
+            $stmt->bindParam(":supplier", $supplier_name);
+            $stmt->bindParam(":supplier_id", $supplier_id);
+            $stmt->bindParam(":location", $_POST['location']);
+            $stmt->bindParam(":image", $image_path);
+            $stmt->bindParam(":barcode", $sku); // Use SKU as barcode
             $stmt->bindParam(":id", $product['id']);
-            $stmt->execute();
-            $product = $stmt->fetch(PDO::FETCH_ASSOC);
-        } else {
-            $message = "Error updating product.";
+            
+            if ($stmt->execute()) {
+                $message = "Product updated successfully!";
+                $message_type = "success";
+                
+                // Log to AuditLog
+                if (Auth::isLoggedIn()) {
+                    $user = Auth::getCurrentUser();
+                    $audit->log($user['id'], "PRODUCT_UPDATE", "Updated product: " . $name . " (ID: " . $product['id'] . ")");
+                }
+                
+                // Refresh product data
+                $stmt = $db->prepare("SELECT * FROM products WHERE id = :id");
+                $stmt->bindParam(":id", $product['id']);
+                $stmt->execute();
+                $product = $stmt->fetch(PDO::FETCH_ASSOC);
+            } else {
+                $message = "Error updating product.";
+                $message_type = "danger";
+            }
+        } catch (PDOException $exception) {
+            if ($exception->getCode() == 23000) {
+                $message = "Error: SKU already exists. Please use a unique SKU.";
+            } else {
+                $message = "Error: " . $exception->getMessage();
+            }
             $message_type = "danger";
         }
-    } catch (PDOException $exception) {
-        if ($exception->getCode() == 23000) {
-            $message = "Error: SKU already exists. Please use a unique SKU.";
-        } else {
-            $message = "Error: " . $exception->getMessage();
-        }
+    } else {
+        $message = "Please correct the following errors:";
         $message_type = "danger";
     }
 }
@@ -126,6 +220,13 @@ require_once "../includes/header.php";
 <?php if ($message): ?>
 <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
     <?php echo $message; ?>
+    <?php if (!empty($errors)): ?>
+        <ul class="mb-0 mt-2">
+            <?php foreach ($errors as $error): ?>
+                <li><?php echo htmlspecialchars($error); ?></li>
+            <?php endforeach; ?>
+        </ul>
+    <?php endif; ?>
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 <?php endif; ?>
@@ -134,7 +235,7 @@ require_once "../includes/header.php";
     <div class="col-md-8">
         <div class="card">
             <div class="card-body">
-                <form method="POST" action="">
+                <form method="POST" action="" enctype="multipart/form-data">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -193,6 +294,17 @@ require_once "../includes/header.php";
                                 <textarea class="form-control" id="description" name="description" 
                                           rows="3"><?php echo htmlspecialchars($product['description']); ?></textarea>
                             </div>
+                            
+                            <div class="mb-3">
+                                <label for="product_image" class="form-label">Product Image</label>
+                                <input type="file" class="form-control" id="product_image" name="product_image" accept="image/*">
+                                <div class="form-text">Allowed formats: JPG, JPEG, PNG, GIF. Max size: 5MB</div>
+                                <?php if (!empty($product['image'])): ?>
+                                    <div class="mt-2">
+                                        <img src="../<?php echo htmlspecialchars($product['image']); ?>" alt="Product Image" class="img-thumbnail" style="max-height: 100px;">
+                                    </div>
+                                <?php endif; ?>
+                            </div>
                         </div>
                         
                         <div class="col-md-6">
@@ -206,6 +318,7 @@ require_once "../includes/header.php";
                                 <label for="price" class="form-label">Selling Price ($)</label>
                                 <input type="number" step="0.01" class="form-control" id="price" 
                                        name="price" value="<?php echo $product['price']; ?>">
+                                <div class="form-text" id="profitMarginText"></div>
                             </div>
                             
                             <div class="mb-3">
@@ -240,6 +353,17 @@ require_once "../includes/header.php";
                                 <label for="location" class="form-label">Location</label>
                                 <input type="text" class="form-control" id="location" name="location" 
                                        value="<?php echo htmlspecialchars($product['location']); ?>">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Barcode</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars($product['sku']); ?>" readonly>
+                                    <a href="generate_barcode.php?id=<?php echo $product['id']; ?>" class="btn btn-outline-primary" title="View Barcode">
+                                        <i class="fas fa-barcode"></i> View
+                                    </a>
+                                </div>
+                                <div class="form-text">Barcode is automatically generated from SKU</div>
                             </div>
                         </div>
                     </div>
@@ -316,5 +440,98 @@ require_once "../includes/header.php";
         </div>
     </div>
 </div>
+
+<script>
+// Calculate profit margin
+document.getElementById('price').addEventListener('input', calculateProfitMargin);
+document.getElementById('cost_price').addEventListener('input', calculateProfitMargin);
+
+function calculateProfitMargin() {
+    const costPrice = parseFloat(document.getElementById('cost_price').value) || 0;
+    const sellingPrice = parseFloat(document.getElementById('price').value) || 0;
+    
+    if (costPrice > 0 && sellingPrice > 0) {
+        const profit = sellingPrice - costPrice;
+        const margin = (profit / sellingPrice) * 100;
+        document.getElementById('profitMarginText').innerHTML = 
+            '<span class="text-success">Profit: $' + profit.toFixed(2) + ' (' + margin.toFixed(2) + '% margin)</span>';
+    } else {
+        document.getElementById('profitMarginText').innerHTML = '';
+    }
+}
+
+// Trigger profit calculation on page load if values exist
+window.addEventListener('load', function() {
+    calculateProfitMargin();
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    let isValid = true;
+    const errors = [];
+    
+    // Get form values
+    const name = document.getElementById('name').value.trim();
+    const sku = document.getElementById('sku').value.trim();
+    const price = parseFloat(document.getElementById('price').value) || 0;
+    const costPrice = parseFloat(document.getElementById('cost_price').value) || 0;
+    const minStock = parseInt(document.getElementById('min_stock').value) || 0;
+    
+    // Validation checks
+    if (!name) {
+        isValid = false;
+        errors.push('Product name is required');
+    }
+    
+    if (!sku) {
+        isValid = false;
+        errors.push('SKU is required');
+    }
+    
+    if (price < 0) {
+        isValid = false;
+        errors.push('Selling price cannot be negative');
+    }
+    
+    if (costPrice < 0) {
+        isValid = false;
+        errors.push('Cost price cannot be negative');
+    }
+    
+    if (minStock < 0) {
+        isValid = false;
+        errors.push('Minimum stock level cannot be negative');
+    }
+    
+    // Check image file
+    const imageInput = document.getElementById('product_image');
+    if (imageInput.files.length > 0) {
+        const file = imageInput.files[0];
+        const fileSize = file.size;
+        const fileName = file.name;
+        const fileExt = fileName.split('.').pop().toLowerCase();
+        const allowedTypes = ['jpg', 'jpeg', 'png', 'gif'];
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        
+        if (!allowedTypes.includes(fileExt)) {
+            isValid = false;
+            errors.push('Invalid file type. Only JPG, JPEG, PNG, and GIF files are allowed.');
+        }
+        
+        if (fileSize > maxSize) {
+            isValid = false;
+            errors.push('File size too large. Maximum file size is 5MB.');
+        }
+    }
+    
+    if (!isValid) {
+        e.preventDefault();
+        alert('Please correct the following errors:\n' + errors.join('\n'));
+        return false;
+    }
+    
+    return true;
+});
+</script>
 
 <?php require_once "../includes/footer.php"; ?>

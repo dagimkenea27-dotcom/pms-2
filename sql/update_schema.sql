@@ -54,6 +54,22 @@ BEGIN
         ALTER TABLE products ADD COLUMN brand_id INT;
         ALTER TABLE products ADD CONSTRAINT fk_product_brand FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE SET NULL;
     END IF;
+    
+    -- Add image column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT * FROM information_schema.COLUMNS 
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = 'image'
+    ) THEN
+        ALTER TABLE products ADD COLUMN image VARCHAR(255) NULL;
+    END IF;
+    
+    -- Add barcode column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT * FROM information_schema.COLUMNS 
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = 'barcode'
+    ) THEN
+        ALTER TABLE products ADD COLUMN barcode VARCHAR(100) NULL;
+    END IF;
 END//
 DELIMITER ;
 
