@@ -1,0 +1,32 @@
+# ===============================
+# DISABLE EXECUTION OF DANGEROUS FILES
+# ===============================
+<FilesMatch "\.(pl|py|sh|cgi|exe|bat|jar)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Allow only PHP files to run
+<FilesMatch "\.php$">
+    SetHandler application/x-httpd-php
+</FilesMatch>
+
+# ===============================
+# DENY ACCESS TO SENSITIVE DIRECTORIES
+# ===============================
+<DirectoryMatch "config|sql|includes|models|users|suppliers|products|reports">
+    Order allow,deny
+    Deny from all
+</DirectoryMatch>
+
+# ===============================
+# DISABLE DIRECTORY LISTING
+# ===============================
+Options -Indexes
+
+# ===============================
+# ADDITIONAL SECURITY HEADERS
+# ===============================
+Header always append X-Frame-Options SAMEORIGIN
+Header set X-Content-Type-Options nosniff
+Header set X-XSS-Protection "1; mode=block"
