@@ -18,7 +18,7 @@ $errors = [];
 
 // Helper to get name from ID - Moved outside AJAX handler to prevent redefinition errors
 function getName($db, $table, $id) {
-    if (!$id) return null;
+    if (!$id || $id === '') return null;
     $stmt = $db->prepare("SELECT name FROM $table WHERE id = ?");
     $stmt->execute([$id]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -178,9 +178,9 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                 $db->beginTransaction();
 
                 // Get names for backward compatibility
-                $category_id = !empty($_POST['category_id']) ? $_POST['category_id'] : null;
-                $brand_id = !empty($_POST['brand_id']) ? $_POST['brand_id'] : null;
-                $supplier_id = !empty($_POST['supplier_id']) ? $_POST['supplier_id'] : null;
+                $category_id = !empty($_POST['category_id']) ? intval($_POST['category_id']) : null;
+                $brand_id = !empty($_POST['brand_id']) ? intval($_POST['brand_id']) : null;
+                $supplier_id = !empty($_POST['supplier_id']) ? intval($_POST['supplier_id']) : null;
                 
                 $category_name = getName($db, 'categories', $category_id);
                 $supplier_name = getName($db, 'suppliers', $supplier_id);
@@ -196,14 +196,14 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                 $stmt->bindParam(":name", $name);
                 $stmt->bindParam(":description", $_POST['description']);
                 $stmt->bindParam(":category", $category_name);
-                $stmt->bindParam(":category_id", $category_id);
-                $stmt->bindParam(":brand_id", $brand_id);
+                $stmt->bindParam(":category_id", $category_id, PDO::PARAM_INT);
+                $stmt->bindParam(":brand_id", $brand_id, PDO::PARAM_INT);
                 $stmt->bindParam(":quantity", $quantity);
                 $stmt->bindParam(":price", $price);
                 $stmt->bindParam(":cost_price", $cost_price);
                 $stmt->bindParam(":min_stock", $min_stock);
                 $stmt->bindParam(":supplier", $supplier_name);
-                $stmt->bindParam(":supplier_id", $supplier_id);
+                $stmt->bindParam(":supplier_id", $supplier_id, PDO::PARAM_INT);
                 $stmt->bindParam(":location", $location);
                 $stmt->bindParam(":image", $image_path);
                 $stmt->bindParam(":barcode", $sku); // Use SKU as barcode by default
@@ -411,7 +411,7 @@ require_once "../includes/header.php";
                             <select class="form-select" id="supplier_id" name="supplier_id">
                                 <option value="">Select Supplier</option>
                                 <?php 
-                                $suppliers = $db->query("SELECT id, name FROM suppliers ORDER BY name ASC");
+                                $suppliers = $db->query("SELECT id, name FROM suppliers WHERE is_active = 1 ORDER BY name ASC");
                                 while ($row = $suppliers->fetch(PDO::FETCH_ASSOC)): 
                                 ?>
                                     <option value="<?php echo $row['id']; ?>"><?php echo htmlspecialchars($row['name']); ?></option>
@@ -422,80 +422,148 @@ require_once "../includes/header.php";
                     </div>
                     
                     <div class="mb-3">
-                        <label for="location" class="form-label">Location</label>
+                        <label for="location" class="form-label">Storage Location</label>
                         <input type="text" class="form-control" id="location" name="location" 
-                               placeholder="e.g., Aisle 4, Shelf B">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Variants Section -->
-            <div id="variantsSection" style="display:none;" class="row mt-3">
-                <div class="col-12">
-                    <hr>
-                    <h6 class="font-weight-bold text-primary mb-3">Product Variants</h6>
-                    <div class="alert alert-info py-2 small">
-                        <i class="fas fa-info-circle"></i> Price and SKU will be auto-filled from main product details. You can override them.
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-bordered" id="variantsTable">
-                            <thead>
-                                <tr>
-                                    <th>Option (Size)</th>
-                                    <th>Color</th>
-                                    <th>Quantity</th>
-                                    <th>Price (Override)</th>
-                                    <th>SKU (Auto/Override)</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr class="variant-row">
-                                    <td><input type="text" class="form-control form-control-sm" name="variant_size[]" placeholder="Option/Size"></td>
-                                    <td><input type="text" class="form-control form-control-sm" name="variant_color[]" placeholder="Color"></td>
-                                    <td><input type="number" class="form-control form-control-sm variant-qty" name="variant_qty[]" value="0" min="0"></td>
-                                    <td><input type="number" step="0.01" class="form-control form-control-sm variant-price" name="variant_price[]" placeholder="Uses Main Price"></td>
-                                    <td><input type="text" class="form-control form-control-sm variant-sku" name="variant_sku[]" placeholder="Auto-gen"></td>
-                                    <td><button type="button" class="btn btn-danger btn-sm remove-variant"><i class="fas fa-trash"></i></button></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <button type="button" class="btn btn-success btn-sm" id="addVariantBtn"><i class="fas fa-plus"></i> Add Variant</button>
-                    <div class="mt-2 text-muted small">
-                         * Price defaults to Main Selling Price. SKU auto-generates if empty.
+                               placeholder="Warehouse A, Shelf 5, etc.">
                     </div>
                 </div>
             </div>
             
-            <div class="row mt-4">
-                <div class="col-12">
-                    <button type="submit" class="btn btn-primary" id="submitBtn">
-                        <i class="fas fa-save"></i> Add Product
-                    </button>
-                    <a href="view_products.php" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> Cancel
-                    </a>
+            <!-- Variants Section -->
+            <div id="variantsSection" style="display: none;">
+                <hr>
+                <h5 class="mb-3">Product Variants</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="variantsTable">
+                        <thead>
+                            <tr>
+                                <th>Size/Option</th>
+                                <th>Color</th>
+                                <th>SKU</th>
+                                <th>Quantity</th>
+                                <th>Price ($)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><input type="text" class="form-control" name="variant_size[]" placeholder="e.g., Small"></td>
+                                <td><input type="text" class="form-control" name="variant_color[]" placeholder="e.g., Red"></td>
+                                <td><input type="text" class="form-control" name="variant_sku[]" placeholder="Auto-generated"></td>
+                                <td><input type="number" class="form-control" name="variant_qty[]" value="0" min="0"></td>
+                                <td><input type="number" class="form-control" name="variant_price[]" step="0.01" placeholder="Same as main"></td>
+                                <td><button type="button" class="btn btn-danger remove-variant"><i class="fas fa-trash"></i></button></td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="6">
+                                    <button type="button" class="btn btn-outline-primary" id="addVariantRow">
+                                        <i class="fas fa-plus"></i> Add Another Variant
+                                    </button>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
+            </div>
+            
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Add Product
+                </button>
+                <a href="view_products.php" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
             </div>
         </form>
     </div>
 </div>
 
 <script>
-// Generate main SKU
-document.getElementById('generateSKU').addEventListener('click', function() {
-    const timestamp = Math.floor(Date.now() / 1000);
-    const random = Math.floor(Math.random() * 900) + 100;
-    document.getElementById('sku').value = 'PRD-' + timestamp + '-' + random;
+// Toggle variants section
+document.getElementById('has_variants').addEventListener('change', function() {
+    const variantsSection = document.getElementById('variantsSection');
+    const simpleProductFields = document.getElementById('simpleProductFields');
+    
+    if (this.checked) {
+        variantsSection.style.display = 'block';
+        simpleProductFields.style.display = 'none';
+    } else {
+        variantsSection.style.display = 'none';
+        simpleProductFields.style.display = 'block';
+    }
 });
 
-// Calculate profit margin
-function updateVariantPrices() {
-    const mainPrice = document.getElementById('price').value;
+// Add variant row
+document.getElementById('addVariantRow').addEventListener('click', function() {
+    const tbody = document.querySelector('#variantsTable tbody');
+    const newRow = document.createElement('tr');
+    
+    newRow.innerHTML = `
+        <td><input type="text" class="form-control" name="variant_size[]" placeholder="e.g., Small"></td>
+        <td><input type="text" class="form-control" name="variant_color[]" placeholder="e.g., Red"></td>
+        <td><input type="text" class="form-control" name="variant_sku[]" placeholder="Auto-generated"></td>
+        <td><input type="number" class="form-control" name="variant_qty[]" value="0" min="0"></td>
+        <td><input type="number" class="form-control" name="variant_price[]" step="0.01" placeholder="Same as main"></td>
+        <td><button type="button" class="btn btn-danger remove-variant"><i class="fas fa-trash"></i></button></td>
+    `;
+    
+    tbody.appendChild(newRow);
+    
+    // Add event listener to the new remove button
+    newRow.querySelector('.remove-variant').addEventListener('click', function() {
+        if (tbody.children.length > 1) {
+            tbody.removeChild(newRow);
+        } else {
+            alert('You must have at least one variant row.');
+        }
+    });
+});
+
+// Remove variant row
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.remove-variant')) {
+        const button = e.target.closest('.remove-variant');
+        const row = button.closest('tr');
+        const tbody = document.querySelector('#variantsTable tbody');
+        
+        if (tbody.children.length > 1) {
+            tbody.removeChild(row);
+        } else {
+            alert('You must have at least one variant row.');
+        }
+    }
+});
+
+// Generate SKU
+document.getElementById('generateSKU').addEventListener('click', function() {
+    const skuInput = document.getElementById('sku');
+    const productName = document.getElementById('name').value;
+    
+    if (productName) {
+        // Generate SKU based on product name
+        const prefix = productName.substring(0, 3).toUpperCase();
+        const timestamp = Math.floor(Date.now() / 1000);
+        const random = Math.floor(Math.random() * 1000);
+        skuInput.value = prefix + '-' + timestamp + '-' + random;
+    } else {
+        // Generate random SKU
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let result = '';
+        for (let i = 0; i < 8; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        skuInput.value = 'PRD-' + result;
+    }
+});
+
+// Auto-fill variant prices from main product price
+document.getElementById('price').addEventListener('input', function() {
+    const mainPrice = this.value;
     const variantPriceInputs = document.querySelectorAll('input[name="variant_price[]"]');
     
-    // Set price for all variant rows
+    // Set price for all variant rows that don't have a manual value
     variantPriceInputs.forEach(input => {
         // Only auto-fill if the field is empty or if it's the first row and hasn't been manually changed
         if (!input.value || input.classList.contains('auto-filled')) {
@@ -503,156 +571,45 @@ function updateVariantPrices() {
             input.classList.add('auto-filled');
         }
     });
-}
-
-document.getElementById('price').addEventListener('input', function() {
-    calculateProfitMargin();
-    updateVariantPrices();
 });
 
+// Remove auto-fill class when user manually changes variant price
+document.addEventListener('input', function(e) {
+    if (e.target.name === 'variant_price[]') {
+        e.target.classList.remove('auto-filled');
+    }
+});
+
+// Calculate profit margin
+document.getElementById('price').addEventListener('input', calculateProfitMargin);
 document.getElementById('cost_price').addEventListener('input', calculateProfitMargin);
 
-// Initialize variant prices on page load
-document.addEventListener('DOMContentLoaded', function() {
-    updateVariantPrices();
-    
-    // Add event listeners to variant price inputs to remove auto-filled class when manually changed
-    document.querySelectorAll('input[name="variant_price[]"]').forEach(input => {
-        input.addEventListener('input', function() {
-            this.classList.remove('auto-filled');
-        });
-    });
-});
-
 function calculateProfitMargin() {
+    const price = parseFloat(document.getElementById('price').value) || 0;
     const costPrice = parseFloat(document.getElementById('cost_price').value) || 0;
-    const sellingPrice = parseFloat(document.getElementById('price').value) || 0;
     
-    if (costPrice > 0 && sellingPrice > 0) {
-        const profit = sellingPrice - costPrice;
-        const margin = (profit / sellingPrice) * 100;
-        document.getElementById('profitMarginText').innerHTML = 
-            '<span class="text-success">Profit: $' + profit.toFixed(2) + ' (' + margin.toFixed(2) + '% margin)</span>';
+    if (costPrice > 0 && price > 0) {
+        const profit = price - costPrice;
+        const margin = (profit / price) * 100;
+        document.getElementById('profitMarginText').textContent = 
+            `Profit: $${profit.toFixed(2)} (${margin.toFixed(2)}%)`;
     } else {
-        document.getElementById('profitMarginText').innerHTML = '';
+        document.getElementById('profitMarginText').textContent = '';
     }
 }
 
-// Toggle Variants
-const hasVariantsCheckbox = document.getElementById('has_variants');
-const simpleProductFields = document.getElementById('simpleProductFields');
-const variantsSection = document.getElementById('variantsSection');
-
-hasVariantsCheckbox.addEventListener('change', function() {
-    if (this.checked) {
-        simpleProductFields.style.display = 'none';
-        variantsSection.style.display = 'block';
-    } else {
-        simpleProductFields.style.display = 'block';
-        variantsSection.style.display = 'none';
-    }
-});
-
-// Add Variant Row
-document.getElementById('addVariantBtn').addEventListener('click', function() {
-    const tbody = document.querySelector('#variantsTable tbody');
-    const row = tbody.querySelector('.variant-row').cloneNode(true);
-    
-    // Get main defaults
-    const mainPrice = document.getElementById('price').value;
-    const mainSku = document.getElementById('sku').value;
-    
-    // Set inputs
-    row.querySelectorAll('input').forEach(input => {
-        if (input.name.includes('qty')) {
-             input.value = '0';
-        } else if (input.name.includes('variant_price')) {
-             input.value = mainPrice; // Auto-fill price
-             input.classList.add('auto-filled');
-             // Add event listener to remove auto-filled class when manually changed
-             input.addEventListener('input', function() {
-                 this.classList.remove('auto-filled');
-             });
-        } else if (input.name.includes('variant_sku')) {
-             // Generate a temporary SKU suffix for display, actual unique gen happens on backend or user edit
-             if (mainSku) input.value = mainSku + '-VAR'; 
-             else input.value = '';
-        } else {
-             input.value = '';
-        }
-    });
-    
-    tbody.appendChild(row);
-});
-
-// Remove Variant Row
-document.querySelector('#variantsTable').addEventListener('click', function(e) {
-    if (e.target.closest('.remove-variant')) {
-        const tbody = document.querySelector('#variantsTable tbody');
-        if (tbody.querySelectorAll('tr').length > 1) {
-            e.target.closest('tr').remove();
-        } else {
-            alert('You must have at least one variant row.');
-        }
-    }
-});
-
-// Form validation and submission
+// Handle form submission
 document.getElementById('addProductForm').addEventListener('submit', function(e) {
-    let isValid = true;
-    const errors = [];
-    
-    // Get form values
-    const name = document.getElementById('name').value.trim();
-    const price = parseFloat(document.getElementById('price').value) || 0;
-    
-    // Common validation
-    if (!name) { isValid = false; errors.push('Product name is required'); }
-    if (price < 0) { isValid = false; errors.push('Selling price cannot be negative'); }
-    
-    // Variants vs Simple validation
-    if (hasVariantsCheckbox.checked) {
-        const variantRows = document.querySelectorAll('.variant-row');
-        let hasValidVariant = false;
-        
-        variantRows.forEach(row => {
-            const size = row.querySelector('input[name="variant_size[]"]').value.trim();
-            const color = row.querySelector('input[name="variant_color[]"]').value.trim();
-            if (size || color) hasValidVariant = true;
-        });
-
-        if (!hasValidVariant) {
-            isValid = false;
-            errors.push('Please add at least one variant with Option/Size or Color.');
-        }
-    } else {
-        const quantity = parseInt(document.getElementById('quantity').value);
-        if (isNaN(quantity) || quantity < 0) {
-            isValid = false;
-            errors.push('Quantity must be a valid positive number');
-        }
-    }
-
-    if (!isValid) {
-        e.preventDefault();
-        alert('Please correct the following errors:\n' + errors.join('\n'));
-        return false;
-    }
-    
-    // If valid, submit via AJAX
     e.preventDefault();
-    
-    const submitBtn = document.getElementById('submitBtn');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Adding...';
-    submitBtn.disabled = true;
     
     const formData = new FormData(this);
     
-    fetch('add_product.php', {
+    fetch('', {
         method: 'POST',
         body: formData,
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
     })
     .then(response => response.json())
     .then(data => {
@@ -660,22 +617,24 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
             alert(data.message);
             window.location.href = 'view_products.php';
         } else {
-            let errorText = 'Please correct the following errors:\n';
-            if (data.errors && data.errors.length > 0) {
-                errorText += data.errors.join('\n');
-            } else {
-                errorText += data.message;
-            }
-            alert(errorText);
+            let errorHtml = '<div class="alert alert-danger alert-dismissible fade show" role="alert">';
+            errorHtml += '<strong>Error!</strong><ul>';
+            data.errors.forEach(error => {
+                errorHtml += `<li>${error}</li>`;
+            });
+            errorHtml += '</ul><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+            
+            // Remove existing error alerts
+            const existingAlerts = document.querySelectorAll('.alert');
+            existingAlerts.forEach(alert => alert.remove());
+            
+            // Add new error alert
+            document.querySelector('.card-body').insertAdjacentHTML('afterbegin', errorHtml);
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred. Please try again.');
-    })
-    .finally(() => {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
+        alert('An error occurred while submitting the form.');
     });
 });
 </script>

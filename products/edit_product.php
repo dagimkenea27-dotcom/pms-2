@@ -96,7 +96,7 @@ if ($_POST) {
     if ($min_stock < 0) {
         $errors[] = "Minimum stock level cannot be negative.";
     }
-
+    
     // Process Variants Data
     $submitted_variants = [];
     $total_qty = 0;
@@ -117,6 +117,29 @@ if ($_POST) {
                 
                 if (empty($v_sku)) {
                      $v_sku = $sku . '-' . strtoupper(substr($v_size ? $v_size : 'X', 0, 3)) . '-' . strtoupper(substr($v_color ? $v_color : 'X', 0, 3)) . '-' . ($i+1);
+                }
+
+                // Check duplicate SKU among variants in this submit
+                foreach ($submitted_variants as $existing_v) {
+                     if ($existing_v['sku'] == $v_sku || ($existing_v['size'] == $v_size && $existing_v['color'] == $v_color)) {
+                         $errors[] = "Duplicate variant (Option/Color or SKU) within this product: " . $v_sku;
+                         break;
+                     }
+                }
+
+                // Check duplicate SKU in DB (variants table) - exclude current variant if editing
+                if ($v_id) {
+                    // Editing existing variant - check if SKU exists for OTHER variants
+                    $v_check = $db->prepare("SELECT id FROM product_variants WHERE sku = ? AND id != ?");
+                    $v_check->execute([$v_sku, $v_id]);
+                } else {
+                    // Adding new variant - check if SKU exists anywhere
+                    $v_check = $db->prepare("SELECT id FROM product_variants WHERE sku = ?");
+                    $v_check->execute([$v_sku]);
+                }
+                
+                if ($v_check->rowCount() > 0) {
+                    $errors[] = "Variant SKU already exists: " . $v_sku;
                 }
 
                 $submitted_variants[] = [
@@ -406,121 +429,118 @@ require_once "../includes/header.php";
                                 <label class="form-check-label font-weight-bold" for="has_variants">Product has variants (Option/Color)</label>
                             </div>
 
-                            <div class="mb-3" id="mainQuantityDiv" style="<?php echo $product['has_variants'] ? 'display:none;' : ''; ?>">
-                                <label for="quantity" class="form-label">Quantity</label>
-                                <input type="number" class="form-control" id="quantity" name="quantity" 
-                                       value="<?php echo $product['quantity']; ?>" <?php echo $product['has_variants'] ? 'readonly' : ''; ?>>
-                                <?php if ($product['has_variants']): ?>
-                                <div class="form-text">Managed by variants</div>
-                                <?php endif; ?>
+                            <!-- Simple Product Fields -->
+                            <div id="simpleProductFields" <?php echo $product['has_variants'] ? 'style="display:none;"' : ''; ?>>
+                                <div class="mb-3">
+                                    <label for="quantity" class="form-label">Quantity *</label>
+                                    <input type="number" class="form-control" id="quantity" name="quantity" 
+                                           value="<?php echo $product['quantity']; ?>" min="0">
+                                </div>
                             </div>
-
+                            
                             <div class="mb-3">
                                 <label for="cost_price" class="form-label">Cost Price ($)</label>
                                 <input type="number" step="0.01" class="form-control" id="cost_price" 
-                                       name="cost_price" value="<?php echo $product['cost_price']; ?>">
+                                       name="cost_price" value="<?php echo $product['cost_price']; ?>" min="0">
                             </div>
                             
                             <div class="mb-3">
                                 <label for="price" class="form-label">Selling Price ($)</label>
                                 <input type="number" step="0.01" class="form-control" id="price" 
-                                       name="price" value="<?php echo $product['price']; ?>">
+                                       name="price" value="<?php echo $product['price']; ?>" min="0">
                             </div>
                             
                             <div class="mb-3">
                                 <label for="min_stock" class="form-label">Minimum Stock Level</label>
                                 <input type="number" class="form-control" id="min_stock" name="min_stock" 
-                                       value="<?php echo $product['min_stock']; ?>">
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="supplier_id" class="form-label">Supplier</label>
-                                <select class="form-select" id="supplier_id" name="supplier_id">
-                                    <option value="">Select Supplier</option>
-                                    <?php 
-                                    $suppliers->execute();
-                                    while ($row = $suppliers->fetch(PDO::FETCH_ASSOC)): 
-                                        $selected = ($product['supplier_id'] == $row['id']) ? 'selected' : '';
-                                        if (!$selected && empty($product['supplier_id']) && $product['supplier'] == $row['name']) $selected = 'selected';
-                                    ?>
-                                        <option value="<?php echo $row['id']; ?>" <?php echo $selected; ?>><?php echo htmlspecialchars($row['name']); ?></option>
-                                    <?php endwhile; ?>
-                                </select>
+                                       value="<?php echo $product['min_stock']; ?>" min="0">
                             </div>
                             
                             <div class="mb-3">
-                                <label for="location" class="form-label">Location</label>
+                                <label for="supplier_id" class="form-label">Supplier</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="supplier_id" name="supplier_id">
+                                        <option value="">Select Supplier</option>
+                                        <?php 
+                                        $suppliers->execute();
+                                        while ($row = $suppliers->fetch(PDO::FETCH_ASSOC)): 
+                                            $selected = ($product['supplier_id'] == $row['id']) ? 'selected' : '';
+                                            if (!$selected && empty($product['supplier_id']) && $product['supplier'] == $row['name']) $selected = 'selected';
+                                        ?>
+                                            <option value="<?php echo $row['id']; ?>" <?php echo $selected; ?>><?php echo htmlspecialchars($row['name']); ?></option>
+                                        <?php endwhile; ?>
+                                    </select>
+                                    <a href="../suppliers/add_supplier.php" class="btn btn-outline-secondary" title="Add New Supplier"><i class="fas fa-plus"></i></a>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="location" class="form-label">Storage Location</label>
                                 <input type="text" class="form-control" id="location" name="location" 
                                        value="<?php echo htmlspecialchars($product['location']); ?>">
                             </div>
                         </div>
                     </div>
-                     <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea class="form-control" id="description" name="description" 
-                                  rows="3"><?php echo htmlspecialchars($product['description']); ?></textarea>
-                    </div>
-
+                    
                     <!-- Variants Section -->
-                    <div id="variantsSection" style="<?php echo $product['has_variants'] ? '' : 'display:none;'; ?>" class="row mt-3">
-                        <div class="col-12">
-                            <hr>
-                            <h6 class="font-weight-bold text-primary mb-3">Product Variants</h6>
-                            <div class="alert alert-info py-2 small">
-                                <i class="fas fa-info-circle"></i> Price and SKU will be auto-filled from main product details. You can override them.
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table table-bordered" id="variantsTable">
-                                    <thead>
+                    <div id="variantsSection" <?php echo $product['has_variants'] ? '' : 'style="display:none;"'; ?>>
+                        <hr>
+                        <h5 class="mb-3">Product Variants</h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="variantsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Size/Option</th>
+                                        <th>Color</th>
+                                        <th>SKU</th>
+                                        <th>Quantity</th>
+                                        <th>Price ($)</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (!empty($variants)): ?>
+                                        <?php foreach ($variants as $index => $variant): ?>
                                         <tr>
-                                            <th>Option (Size)</th>
-                                            <th>Color</th>
-                                            <th>Quantity</th>
-                                            <th>Price (Override)</th>
-                                            <th>SKU</th>
-                                            <th>Action</th>
+                                            <td><input type="hidden" name="variant_id[]" value="<?php echo $variant['id']; ?>"><input type="text" class="form-control" name="variant_size[]" value="<?php echo htmlspecialchars($variant['size']); ?>" placeholder="e.g., Small"></td>
+                                            <td><input type="text" class="form-control" name="variant_color[]" value="<?php echo htmlspecialchars($variant['color']); ?>" placeholder="e.g., Red"></td>
+                                            <td><input type="text" class="form-control" name="variant_sku[]" value="<?php echo htmlspecialchars($variant['sku']); ?>" placeholder="Auto-generated"></td>
+                                            <td><input type="number" class="form-control" name="variant_qty[]" value="<?php echo $variant['quantity']; ?>" min="0"></td>
+                                            <td><input type="number" class="form-control" name="variant_price[]" step="0.01" value="<?php echo $variant['price']; ?>" placeholder="Same as main"></td>
+                                            <td><button type="button" class="btn btn-danger remove-variant"><i class="fas fa-trash"></i></button></td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php if (!empty($variants)): ?>
-                                            <?php foreach ($variants as $v): ?>
-                                                <tr class="variant-row">
-                                                    <input type="hidden" name="variant_id[]" value="<?php echo $v['id']; ?>">
-                                                    <td><input type="text" class="form-control form-control-sm" name="variant_size[]" value="<?php echo htmlspecialchars($v['size']); ?>" placeholder="Option/Size"></td>
-                                                    <td><input type="text" class="form-control form-control-sm" name="variant_color[]" value="<?php echo htmlspecialchars($v['color']); ?>" placeholder="Color"></td>
-                                                    <td><input type="number" class="form-control form-control-sm variant-qty" name="variant_qty[]" value="<?php echo $v['quantity']; ?>" min="0"></td>
-                                                    <td><input type="number" step="0.01" class="form-control form-control-sm variant-price" name="variant_price[]" value="<?php echo $v['price']; ?>" placeholder="Uses Main Price"></td>
-                                                    <td><input type="text" class="form-control form-control-sm variant-sku" name="variant_sku[]" value="<?php echo htmlspecialchars($v['sku']); ?>"></td>
-                                                    <td><button type="button" class="btn btn-danger btn-sm remove-variant"><i class="fas fa-trash"></i></button></td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        <?php else: ?>
-                                            <tr class="variant-row">
-                                                <input type="hidden" name="variant_id[]" value="">
-                                                <td><input type="text" class="form-control form-control-sm" name="variant_size[]" placeholder="Option/Size"></td>
-                                                <td><input type="text" class="form-control form-control-sm" name="variant_color[]" placeholder="Color"></td>
-                                                <td><input type="number" class="form-control form-control-sm variant-qty" name="variant_qty[]" value="0" min="0"></td>
-                                                <td><input type="number" step="0.01" class="form-control form-control-sm variant-price" name="variant_price[]" placeholder="Uses Main Price"></td>
-                                                <td><input type="text" class="form-control form-control-sm variant-sku" name="variant_sku[]" placeholder="Auto-gen"></td>
-                                                <td><button type="button" class="btn btn-danger btn-sm remove-variant"><i class="fas fa-trash"></i></button></td>
-                                            </tr>
-                                        <?php endif; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <button type="button" class="btn btn-success btn-sm" id="addVariantBtn"><i class="fas fa-plus"></i> Add Variant</button>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td><input type="hidden" name="variant_id[]" value=""><input type="text" class="form-control" name="variant_size[]" placeholder="e.g., Small"></td>
+                                            <td><input type="text" class="form-control" name="variant_color[]" placeholder="e.g., Red"></td>
+                                            <td><input type="text" class="form-control" name="variant_sku[]" placeholder="Auto-generated"></td>
+                                            <td><input type="number" class="form-control" name="variant_qty[]" value="0" min="0"></td>
+                                            <td><input type="number" class="form-control" name="variant_price[]" step="0.01" placeholder="Same as main"></td>
+                                            <td><button type="button" class="btn btn-danger remove-variant"><i class="fas fa-trash"></i></button></td>
+                                        </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="6">
+                                            <button type="button" class="btn btn-outline-primary" id="addVariantRow">
+                                                <i class="fas fa-plus"></i> Add Another Variant
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
                         </div>
                     </div>
                     
-                    <div class="row mt-4">
-                        <div class="col-12">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Update Product
-                            </button>
-                            <a href="view_products.php" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Back to Products
-                            </a>
-                        </div>
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Update Product
+                        </button>
+                        <a href="view_products.php" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
                     </div>
                 </form>
             </div>
@@ -528,51 +548,83 @@ require_once "../includes/header.php";
     </div>
     
     <div class="col-md-4">
-        <!-- Info cards logic -->
         <div class="card">
             <div class="card-header">
-                <h6 class="card-title mb-0"><i class="fas fa-info-circle"></i> Info</h6>
+                <h5 class="card-title mb-0">Product Information</h5>
             </div>
             <div class="card-body">
-                <div class="mb-3">
-                    <strong>Total Quantity:</strong><br>
-                    <span class="h4"><?php echo $product['quantity']; ?></span>
-                </div>
-                 <div class="text-center">
-                    <a href="update_stock.php?id=<?php echo $product['id']; ?>" class="btn btn-success btn-sm">
-                        <i class="fas fa-warehouse"></i> Update Stock
-                    </a>
-                </div>
+                <p><strong>Created:</strong> <?php echo date('M j, Y g:i A', strtotime($product['created_at'])); ?></p>
+                <p><strong>Last Updated:</strong> <?php echo date('M j, Y g:i A', strtotime($product['updated_at'])); ?></p>
+                <?php if (!empty($product['barcode'])): ?>
+                    <p><strong>Barcode:</strong> <?php echo htmlspecialchars($product['barcode']); ?></p>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-// Toggle Variants
-const hasVariantsCheckbox = document.getElementById('has_variants');
-const mainQuantityDiv = document.getElementById('mainQuantityDiv');
-const variantsSection = document.getElementById('variantsSection');
-const quantityInput = document.getElementById('quantity');
-
-hasVariantsCheckbox.addEventListener('change', function() {
+// Toggle variants section
+document.getElementById('has_variants').addEventListener('change', function() {
+    const variantsSection = document.getElementById('variantsSection');
+    const simpleProductFields = document.getElementById('simpleProductFields');
+    
     if (this.checked) {
-        mainQuantityDiv.style.display = 'none';
         variantsSection.style.display = 'block';
-        quantityInput.readOnly = true;
+        simpleProductFields.style.display = 'none';
     } else {
-        mainQuantityDiv.style.display = 'block';
         variantsSection.style.display = 'none';
-        quantityInput.readOnly = false;
+        simpleProductFields.style.display = 'block';
     }
 });
 
-// Update variant prices when main price changes
-function updateVariantPrices() {
-    const mainPrice = document.getElementById('price').value;
+// Add variant row
+document.getElementById('addVariantRow').addEventListener('click', function() {
+    const tbody = document.querySelector('#variantsTable tbody');
+    const newRow = document.createElement('tr');
+    
+    newRow.innerHTML = `
+        <td><input type="hidden" name="variant_id[]" value=""><input type="text" class="form-control" name="variant_size[]" placeholder="e.g., Small"></td>
+        <td><input type="text" class="form-control" name="variant_color[]" placeholder="e.g., Red"></td>
+        <td><input type="text" class="form-control" name="variant_sku[]" placeholder="Auto-generated"></td>
+        <td><input type="number" class="form-control" name="variant_qty[]" value="0" min="0"></td>
+        <td><input type="number" class="form-control" name="variant_price[]" step="0.01" placeholder="Same as main"></td>
+        <td><button type="button" class="btn btn-danger remove-variant"><i class="fas fa-trash"></i></button></td>
+    `;
+    
+    tbody.appendChild(newRow);
+    
+    // Add event listener to the new remove button
+    newRow.querySelector('.remove-variant').addEventListener('click', function() {
+        if (tbody.children.length > 1) {
+            tbody.removeChild(newRow);
+        } else {
+            alert('You must have at least one variant row.');
+        }
+    });
+});
+
+// Remove variant row
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.remove-variant')) {
+        const button = e.target.closest('.remove-variant');
+        const row = button.closest('tr');
+        const tbody = document.querySelector('#variantsTable tbody');
+        
+        if (tbody.children.length > 1) {
+            tbody.removeChild(row);
+        } else {
+            alert('You must have at least one variant row.');
+        }
+    }
+});
+
+// Auto-fill variant prices from main product price
+document.getElementById('price').addEventListener('input', function() {
+    const mainPrice = this.value;
     const variantPriceInputs = document.querySelectorAll('input[name="variant_price[]"]');
     
-    // Set price for all variant rows
+    // Set price for all variant rows that don't have a manual value
     variantPriceInputs.forEach(input => {
         // Only auto-fill if the field is empty or if it's the first row and hasn't been manually changed
         if (!input.value || input.classList.contains('auto-filled')) {
@@ -580,69 +632,12 @@ function updateVariantPrices() {
             input.classList.add('auto-filled');
         }
     });
-}
-
-document.getElementById('price').addEventListener('input', updateVariantPrices);
-
-// Initialize variant prices on page load
-document.addEventListener('DOMContentLoaded', function() {
-    updateVariantPrices();
-    
-    // Add event listeners to variant price inputs to remove auto-filled class when manually changed
-    document.querySelectorAll('input[name="variant_price[]"]').forEach(input => {
-        input.addEventListener('input', function() {
-            this.classList.remove('auto-filled');
-        });
-    });
 });
 
-// Add Variant Row
-document.getElementById('addVariantBtn').addEventListener('click', function() {
-    const tbody = document.querySelector('#variantsTable tbody');
-    let row = tbody.querySelector('.variant-row').cloneNode(true);
-    
-    // Get main defaults
-    const mainPrice = document.getElementById('price').value;
-    const mainSku = document.getElementById('sku').value;
-    
-    // Clear inputs and set defaults
-    row.querySelectorAll('input').forEach(input => {
-        if (input.name.includes('qty')) {
-             input.value = '0';
-        } else if (input.name.includes('variant_price')) {
-             input.value = mainPrice; // Auto-fill
-             input.classList.add('auto-filled');
-             // Add event listener to remove auto-filled class when manually changed
-             input.addEventListener('input', function() {
-                 this.classList.remove('auto-filled');
-             });
-        } else if (input.name.includes('variant_sku')) {
-             if (mainSku) input.value = mainSku + '-VAR'; 
-             else input.value = '';
-        } else if(input.name.includes('variant_id')) {
-             input.value = ''; // Clear ID for new row
-        } else {
-             input.value = '';
-        }
-    });
-    
-    tbody.appendChild(row);
-});
-
-// Remove Variant Row
-document.querySelector('#variantsTable').addEventListener('click', function(e) {
-    if (e.target.closest('.remove-variant')) {
-        const tbody = document.querySelector('#variantsTable tbody');
-        if (tbody.querySelectorAll('tr').length > 1) {
-            e.target.closest('tr').remove();
-        } else {
-            const row = e.target.closest('tr');
-             row.querySelectorAll('input').forEach(input => {
-                if (input.name.includes('qty')) input.value = '0';
-                else if (input.name.includes('variant_price')) input.value = '';
-                else input.value = '';
-            });
-        }
+// Remove auto-fill class when user manually changes variant price
+document.addEventListener('input', function(e) {
+    if (e.target.name === 'variant_price[]') {
+        e.target.classList.remove('auto-filled');
     }
 });
 </script>

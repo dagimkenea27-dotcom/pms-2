@@ -35,11 +35,59 @@ if (isset($_GET['delete_id'])) {
     exit();
 }
 
-// Get all products
-$query = "SELECT * FROM products ORDER BY name ASC";
+// Pagination and search variables
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$category_filter = isset($_GET['category']) ? $_GET['category'] : '';
+$records_per_page = 10;
+$offset = ($page - 1) * $records_per_page;
+
+// Build query based on search and filters
+$where_clause = "";
+$params = [];
+
+if (!empty($search)) {
+    $where_clause .= "(name LIKE :search OR sku LIKE :search OR description LIKE :search)";
+    $params[':search'] = "%$search%";
+}
+
+if (!empty($category_filter)) {
+    $and = !empty($where_clause) ? " AND " : "";
+    $where_clause .= "{$and}category = :category";
+    $params[':category'] = $category_filter;
+}
+
+$where_sql = !empty($where_clause) ? "WHERE $where_clause" : "";
+
+// Get total products count for pagination
+$count_query = "SELECT COUNT(*) as total FROM products $where_sql";
+$count_stmt = $db->prepare($count_query);
+foreach ($params as $key => $value) {
+    $count_stmt->bindValue($key, $value);
+}
+$count_stmt->execute();
+$total_products = $count_stmt->fetch(PDO::FETCH_ASSOC)['total'];
+$total_pages = ceil($total_products / $records_per_page);
+
+// Get products with pagination and search
+$query = "SELECT * FROM products $where_sql ORDER BY name ASC LIMIT :limit OFFSET :offset";
 $stmt = $db->prepare($query);
+
+// Bind search/filter parameters
+foreach ($params as $key => $value) {
+    $stmt->bindValue($key, $value);
+}
+
+$stmt->bindValue(":limit", $records_per_page, PDO::PARAM_INT);
+$stmt->bindValue(":offset", $offset, PDO::PARAM_INT);
 $stmt->execute();
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get categories for filter dropdown
+$category_query = "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' ORDER BY category ASC";
+$category_stmt = $db->prepare($category_query);
+$category_stmt->execute();
+$categories = $category_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get low stock count
 $low_stock_query = "SELECT COUNT(*) as count FROM products WHERE quantity <= min_stock AND quantity > 0";
@@ -80,6 +128,44 @@ if (isset($_SESSION['message'])) {
     </div>
 </div>
 
+<!-- Search and Filter Form -->
+<div class="card dashboard-card shadow mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-6">
+                <label for="search" class="form-label">Search Products</label>
+                <input type="text" class="form-control" id="search" name="search" 
+                       placeholder="Search by name, SKU, or description..." 
+                       value="<?php echo htmlspecialchars($search); ?>">
+            </div>
+            <div class="col-md-4">
+                <label for="category" class="form-label">Filter by Category</label>
+                <select class="form-select" id="category" name="category">
+                    <option value="">All Categories</option>
+                    <?php foreach ($categories as $cat): ?>
+                        <option value="<?php echo htmlspecialchars($cat['category']); ?>" 
+                                <?php echo $category_filter == $cat['category'] ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($cat['category']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <div class="btn-group" role="group">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                    <?php if (!empty($search) || !empty($category_filter)): ?>
+                        <a href="view_products.php" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Clear
+                        </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Summary Cards -->
 <div class="row mb-4">
     <div class="col-md-4">
@@ -89,7 +175,7 @@ if (isset($_SESSION['message'])) {
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
                             Total Products</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo count($products); ?></div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $total_products; ?></div>
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-box text-primary fa-2x"></i>
@@ -134,8 +220,13 @@ if (isset($_SESSION['message'])) {
 
 <!-- Products Table -->
 <div class="card dashboard-card shadow mb-4">
-    <div class="card-header py-3">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
         <h6 class="m-0 font-weight-bold text-primary">Products Inventory</h6>
+        <div class="small text-muted">
+            Showing <?php echo min($offset + 1, $total_products); ?> 
+            to <?php echo min($offset + $records_per_page, $total_products); ?> 
+            of <?php echo $total_products; ?> products
+        </div>
     </div>
     <div class="card-body">
         <?php if ($products): ?>
@@ -210,7 +301,7 @@ if (isset($_SESSION['message'])) {
                                     <a href="update_stock.php?id=<?php echo $product['id']; ?>" class="btn btn-outline-success" title="Update Stock">
                                         <i class="fas fa-warehouse"></i>
                                     </a>
-                                    <a href="?delete_id=<?php echo $product['id']; ?>" 
+                                    <a href="?delete_id=<?php echo $product['id']; ?>&page=<?php echo $page; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?><?php echo !empty($category_filter) ? '&category=' . urlencode($category_filter) : ''; ?>" 
                                        class="btn btn-outline-danger" 
                                        title="Delete"
                                        onclick="return confirmDelete('<?php echo addslashes($product['name']); ?>')">
@@ -223,14 +314,71 @@ if (isset($_SESSION['message'])) {
                     </tbody>
                 </table>
             </div>
+            
+            <!-- Pagination -->
+            <?php if ($total_pages > 1): ?>
+            <nav aria-label="Products pagination">
+                <ul class="pagination justify-content-center">
+                    <!-- Previous Button -->
+                    <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="?page=<?php echo $page - 1; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?><?php echo !empty($category_filter) ? '&category=' . urlencode($category_filter) : ''; ?>" tabindex="-1">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
+                    </li>
+                    
+                    <!-- Page Numbers -->
+                    <?php
+                    $start_page = max(1, $page - 2);
+                    $end_page = min($total_pages, $page + 2);
+                    
+                    // Show first page and ellipsis if needed
+                    if ($start_page > 1) {
+                        echo '<li class="page-item"><a class="page-link" href="?page=1' . (!empty($search) ? '&search=' . urlencode($search) : '') . (!empty($category_filter) ? '&category=' . urlencode($category_filter) : '') . '">1</a></li>';
+                        if ($start_page > 2) {
+                            echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                        }
+                    }
+                    
+                    // Page numbers
+                    for ($i = $start_page; $i <= $end_page; $i++) {
+                        $active = ($i == $page) ? 'active' : '';
+                        echo '<li class="page-item ' . $active . '"><a class="page-link" href="?page=' . $i . (!empty($search) ? '&search=' . urlencode($search) : '') . (!empty($category_filter) ? '&category=' . urlencode($category_filter) : '') . '">' . $i . '</a></li>';
+                    }
+                    
+                    // Show last page and ellipsis if needed
+                    if ($end_page < $total_pages) {
+                        if ($end_page < $total_pages - 1) {
+                            echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                        }
+                        echo '<li class="page-item"><a class="page-link" href="?page=' . $total_pages . (!empty($search) ? '&search=' . urlencode($search) : '') . (!empty($category_filter) ? '&category=' . urlencode($category_filter) : '') . '">' . $total_pages . '</a></li>';
+                    }
+                    ?>
+                    
+                    <!-- Next Button -->
+                    <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="?page=<?php echo $page + 1; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?><?php echo !empty($category_filter) ? '&category=' . urlencode($category_filter) : ''; ?>">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <?php endif; ?>
+            
         <?php else: ?>
             <div class="text-center py-5">
                 <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
                 <h4>No products found</h4>
-                <p class="text-muted">Get started by adding your first product.</p>
-                <a href="add_product.php" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Add Your First Product
-                </a>
+                <?php if (!empty($search) || !empty($category_filter)): ?>
+                    <p class="text-muted">No products match your search criteria.</p>
+                    <a href="view_products.php" class="btn btn-primary">
+                        <i class="fas fa-times"></i> Clear Filters
+                    </a>
+                <?php else: ?>
+                    <p class="text-muted">Get started by adding your first product.</p>
+                    <a href="add_product.php" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Your First Product
+                    </a>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
     </div>
@@ -267,5 +415,11 @@ if (isset($_SESSION['message'])) {
         </div>
     </div>
 </div>
+
+<script>
+function confirmDelete(productName) {
+    return confirm(`Are you sure you want to delete the product "${productName}"? This action cannot be undone.`);
+}
+</script>
 
 <?php require_once "../includes/footer.php"; ?>

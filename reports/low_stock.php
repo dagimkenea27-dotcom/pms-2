@@ -6,7 +6,19 @@ require_once "../config/database.php";
 $database = new Database();
 $db = $database->getConnection();
 
-// Get low stock products
+// Pagination setup
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$records_per_page = 10;
+$offset = ($page - 1) * $records_per_page;
+
+// Count total low stock products for pagination
+$count_query = "SELECT COUNT(*) as total FROM products WHERE quantity <= min_stock";
+$count_stmt = $db->prepare($count_query);
+$count_stmt->execute();
+$total_products = $count_stmt->fetch(PDO::FETCH_ASSOC)['total'];
+$total_pages = ceil($total_products / $records_per_page);
+
+// Get low stock products with pagination
 $query = "
     SELECT 
         p.*,
@@ -16,9 +28,12 @@ $query = "
     FROM products p
     LEFT JOIN suppliers s ON p.supplier_id = s.id
     WHERE p.quantity <= p.min_stock
-    ORDER BY p.quantity ASC";
+    ORDER BY p.quantity ASC
+    LIMIT :limit OFFSET :offset";
 
 $stmt = $db->prepare($query);
+$stmt->bindValue(':limit', $records_per_page, PDO::PARAM_INT);
+$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->execute();
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -32,16 +47,21 @@ require_once "../includes/header.php";
     </button>
 </div>
 
-<?php if (count($products) > 0): ?>
+<?php if ($total_products > 0): ?>
     <div class="alert alert-warning alert-dismissible fade show" role="alert">
         <i class="fas fa-info-circle"></i> 
-        <strong>Attention Needed:</strong> There are <?php echo count($products); ?> products below their minimum stock level.
+        <strong>Attention Needed:</strong> There are <?php echo $total_products; ?> products below their minimum stock level.
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 
     <div class="card dashboard-card shadow mb-4">
-        <div class="card-header py-3">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
             <h6 class="m-0 font-weight-bold text-primary">Low Stock Items</h6>
+            <div class="small text-muted">
+                Showing <?php echo min($offset + 1, $total_products); ?> 
+                to <?php echo min($offset + $records_per_page, $total_products); ?> 
+                of <?php echo $total_products; ?> products
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -94,6 +114,55 @@ require_once "../includes/header.php";
                     </tbody>
                 </table>
             </div>
+            
+            <!-- Pagination -->
+            <?php if ($total_pages > 1): ?>
+            <nav aria-label="Products pagination">
+                <ul class="pagination justify-content-center">
+                    <!-- Previous Button -->
+                    <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="?page=<?php echo $page - 1; ?>" tabindex="-1">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
+                    </li>
+                    
+                    <!-- Page Numbers -->
+                    <?php
+                    $start_page = max(1, $page - 2);
+                    $end_page = min($total_pages, $page + 2);
+                    
+                    // Show first page and ellipsis if needed
+                    if ($start_page > 1) {
+                        echo '<li class="page-item"><a class="page-link" href="?page=1">1</a></li>';
+                        if ($start_page > 2) {
+                            echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                        }
+                    }
+                    
+                    // Page numbers
+                    for ($i = $start_page; $i <= $end_page; $i++) {
+                        $active = ($i == $page) ? 'active' : '';
+                        echo '<li class="page-item ' . $active . '"><a class="page-link" href="?page=' . $i . '">' . $i . '</a></li>';
+                    }
+                    
+                    // Show last page and ellipsis if needed
+                    if ($end_page < $total_pages) {
+                        if ($end_page < $total_pages - 1) {
+                            echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                        }
+                        echo '<li class="page-item"><a class="page-link" href="?page=' . $total_pages . '">' . $total_pages . '</a></li>';
+                    }
+                    ?>
+                    
+                    <!-- Next Button -->
+                    <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="?page=<?php echo $page + 1; ?>">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <?php endif; ?>
         </div>
     </div>
 <?php else: ?>

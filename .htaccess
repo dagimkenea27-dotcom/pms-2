@@ -12,12 +12,18 @@
 </FilesMatch>
 
 # ===============================
+# FAVICON REDIRECT
+# ===============================
+Redirect 301 /stock_management/favicon.ico /stock_management/img/favicon.ico
+
+# ===============================
 # DENY ACCESS TO SENSITIVE DIRECTORIES
 # ===============================
-<DirectoryMatch "config|sql|includes|models|users|suppliers|products|reports">
+# Use FilesMatch instead of DirectoryMatch for .htaccess compatibility
+<FilesMatch "\.(inc|ini|conf|cfg)$">
     Order allow,deny
     Deny from all
-</DirectoryMatch>
+</FilesMatch>
 
 # ===============================
 # DISABLE DIRECTORY LISTING
