@@ -63,7 +63,7 @@ if ($_POST) {
     $price = floatval($_POST['price'] ?? 0);
     $cost_price = floatval($_POST['cost_price'] ?? 0);
     $min_stock = intval($_POST['min_stock'] ?? 0);
-    $has_variants = isset($_POST['has_variants']) && $_POST['has_variants'] == '1';
+    $has_variants = isset($_POST['has_variants']) && $_POST['has_variants'] == 1;
     
     // Validation checks
     if (empty($name)) {
@@ -104,7 +104,7 @@ if ($_POST) {
     if ($has_variants) {
          if (isset($_POST['variant_size']) && is_array($_POST['variant_size'])) {
             for ($i = 0; $i < count($_POST['variant_size']); $i++) {
-                $v_id = $_POST['variant_id'][$i] ?? null; // ID for existing variants
+                // $v_id = $_POST['variant_id'][$i] ?? null; // ID for existing variants
                 $v_size = trim($_POST['variant_size'][$i]);
                 $v_color = trim($_POST['variant_color'][$i]);
                 $v_qty = intval($_POST['variant_qty'][$i]);
@@ -143,7 +143,7 @@ if ($_POST) {
                 }
 
                 $submitted_variants[] = [
-                    'id' => $v_id,
+                    // 'id' => $v_id,
                     'size' => $v_size,
                     'color' => $v_color,
                     'qty' => $v_qty,
