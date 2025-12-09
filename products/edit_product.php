@@ -104,7 +104,7 @@ if ($_POST) {
     if ($has_variants) {
          if (isset($_POST['variant_size']) && is_array($_POST['variant_size'])) {
             for ($i = 0; $i < count($_POST['variant_size']); $i++) {
-                // $v_id = $_POST['variant_id'][$i] ?? null; // ID for existing variants
+                $v_id = $_POST['variant_id'][$i] ?? null; // ID for existing variants
                 $v_size = trim($_POST['variant_size'][$i]);
                 $v_color = trim($_POST['variant_color'][$i]);
                 $v_qty = intval($_POST['variant_qty'][$i]);
@@ -143,7 +143,7 @@ if ($_POST) {
                 }
 
                 $submitted_variants[] = [
-                    // 'id' => $v_id,
+                    'id' => $v_id,
                     'size' => $v_size,
                     'color' => $v_color,
                     'qty' => $v_qty,
@@ -275,8 +275,11 @@ if ($_POST) {
                 $upsert = $db->prepare($upsert_sql);
 
                 foreach ($submitted_variants as $sv) {
+                    // Handle the case where ID might be empty (new variants)
+                    $variant_id = !empty($sv['id']) ? $sv['id'] : null;
+                    
                     $upsert->execute([
-                        ':id' => $sv['id'], // If null, inserts. If set, updates.
+                        ':id' => $variant_id,
                         ':pid' => $product['id'],
                         ':sku' => $sv['sku'],
                         ':size' => $sv['size'],
@@ -286,10 +289,11 @@ if ($_POST) {
                         ':min_stock' => $min_stock
                     ]);
                     
-                    if ($sv['id']) {
-                        $processed_ids[] = $sv['id'];
+                    if ($variant_id) {
+                        $processed_ids[] = $variant_id;
                     } else {
                         $new_id = $db->lastInsertId();
+                        $processed_ids[] = $new_id;
                     }
                 }
 
