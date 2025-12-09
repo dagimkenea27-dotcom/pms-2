@@ -23,6 +23,7 @@ $query = "
     SELECT 
         p.id,
         p.sku,
+        p.image,
         p.name,
         p.category,
         p.quantity,
@@ -156,7 +157,7 @@ require_once "../includes/header.php";
                 <table class="table table-striped table-hover" id="valuationTable">
                     <thead class="table-dark">
                         <tr>
-                            <th>SKU</th>
+                            <th>Thumbnail</th>
                             <th>Product Name</th>
                             <th>Category</th>
                             <th>Quantity</th>
@@ -170,7 +171,15 @@ require_once "../includes/header.php";
                     <tbody>
                         <?php foreach ($products as $product): ?>
                         <tr>
-                            <td><strong><?php echo htmlspecialchars($product['sku']); ?></strong></td>
+                            <td>
+                                <?php if (!empty($product['image'])): ?>
+                                    <img src="../<?php echo htmlspecialchars($product['image']); ?>" alt="Product Image" class="img-thumbnail" style="max-height: 50px;">
+                                <?php else: ?>
+                                    <div class="bg-light text-center" style="width: 50px; height: 50px; line-height: 50px;">
+                                        <i class="fas fa-image text-muted"></i>
+                                    </div>
+                                <?php endif; ?>
+                            </td>
                             <td><?php echo htmlspecialchars($product['name']); ?></td>
                             <td><?php echo htmlspecialchars($product['category']); ?></td>
                             <td><?php echo $product['quantity']; ?></td>
@@ -270,6 +279,8 @@ function exportToCSV() {
         let row = [], cols = rows[i].querySelectorAll("td, th");
         
         for (let j = 0; j < cols.length; j++) {
+            // Skip the thumbnail column (first column) for CSV export
+            if (j === 0) continue;
             row.push(cols[j].innerText);
         }
         

@@ -315,21 +315,9 @@ if ($_POST) {
             $message = "Product updated successfully!";
             $message_type = "success";
             
-            // Refresh product data
-            $stmt = $db->prepare("SELECT * FROM products WHERE id = :id");
-            $stmt->bindParam(":id", $product['id']);
-            $stmt->execute();
-            $product = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            // Refresh variants
-            if ($product['has_variants']) {
-                $v_stmt = $db->prepare("SELECT * FROM product_variants WHERE product_id = :pid");
-                $v_stmt->execute([':pid' => $product['id']]);
-                $variants = $v_stmt->fetchAll(PDO::FETCH_ASSOC);
-            } else {
-                $variants = [];
-            }
-
+            // Redirect to view products with the product ID as active
+            header("Location: view_products.php?active_id=" . $product['id']);
+            exit();
         } catch (PDOException $exception) {
             if ($db->inTransaction()) $db->rollBack();
             $message = "Error: " . $exception->getMessage();

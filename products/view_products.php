@@ -39,6 +39,7 @@ if (isset($_GET['delete_id'])) {
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $category_filter = isset($_GET['category']) ? $_GET['category'] : '';
+$active_id = isset($_GET['active_id']) ? (int)$_GET['active_id'] : 0; // Added active_id parameter
 $records_per_page = 10;
 $offset = ($page - 1) * $records_per_page;
 
@@ -235,11 +236,11 @@ if (isset($_SESSION['message'])) {
                     <thead>
                         <tr>
                             <th>Image</th>
-                            <th>SKU</th>
                             <th>Product Name</th>
                             <th>Category</th>
                             <th>Quantity</th>
                             <th>Price</th>
+                            <th>Storage Location</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -248,6 +249,9 @@ if (isset($_SESSION['message'])) {
                         <?php foreach ($products as $product): 
                             $stock_class = '';
                             $stock_status = '';
+                            // Check if this is the active product
+                            $active_class = ($active_id == $product['id']) ? 'table-active' : '';
+                            
                             if ($product['quantity'] == 0) {
                                 $stock_class = 'table-danger';
                                 $stock_status = '<span class="badge bg-danger">Out of Stock</span>';
@@ -257,20 +261,26 @@ if (isset($_SESSION['message'])) {
                             } else {
                                 $stock_status = '<span class="badge bg-success">In Stock</span>';
                             }
+                            
+                            // Combine stock class with active class
+                            $row_classes = trim($stock_class . ' ' . $active_class);
                         ?>
-                        <tr class="<?php echo $stock_class; ?>">
+                        <tr class="<?php echo $row_classes; ?>" id="product-<?php echo $product['id']; ?>">
                             <td>
-                                <?php if (!empty($product['image'])): ?>
-                                    <img src="../<?php echo htmlspecialchars($product['image']); ?>" alt="Product Image" class="img-thumbnail" style="max-height: 50px;">
-                                <?php else: ?>
-                                    <div class="bg-light text-center" style="width: 50px; height: 50px; line-height: 50px;">
-                                        <i class="fas fa-image text-muted"></i>
-                                    </div>
-                                <?php endif; ?>
+                                <a href="view_product.php?id=<?php echo $product['id']; ?>">
+                                    <?php if (!empty($product['image'])): ?>
+                                        <img src="../<?php echo htmlspecialchars($product['image']); ?>" alt="Product Image" class="img-thumbnail" style="max-height: 50px;">
+                                    <?php else: ?>
+                                        <div class="bg-light text-center" style="width: 50px; height: 50px; line-height: 50px;">
+                                            <i class="fas fa-image text-muted"></i>
+                                        </div>
+                                    <?php endif; ?>
+                                </a>
                             </td>
-                            <td><strong><?php echo htmlspecialchars($product['sku']); ?></strong></td>
                             <td>
-                                <strong><?php echo htmlspecialchars($product['name']); ?></strong>
+                                <a href="view_product.php?id=<?php echo $product['id']; ?>" class="text-decoration-none">
+                                    <strong><?php echo htmlspecialchars($product['name']); ?></strong>
+                                </a>
                                 <?php if ($product['description']): ?>
                                     <br><small class="text-muted"><?php echo substr(htmlspecialchars($product['description']), 0, 50); ?>...</small>
                                 <?php endif; ?>
@@ -289,6 +299,7 @@ if (isset($_SESSION['message'])) {
                                     <span class="text-muted">-</span>
                                 <?php endif; ?>
                             </td>
+                            <td><?php echo htmlspecialchars($product['location']); ?></td>
                             <td><?php echo $stock_status; ?></td>
                             <td>
                                 <div class="btn-group btn-group-sm">
@@ -420,6 +431,36 @@ if (isset($_SESSION['message'])) {
 function confirmDelete(productName) {
     return confirm(`Are you sure you want to delete the product "${productName}"? This action cannot be undone.`);
 }
+
+// Scroll to active product row if exists
+<?php if ($active_id > 0): ?>
+window.addEventListener('DOMContentLoaded', function() {
+    var activeRow = document.getElementById('product-<?php echo $active_id; ?>');
+    if (activeRow) {
+        // Scroll to the element with smooth behavior
+        activeRow.scrollIntoView({behavior: "smooth", block: "center"});
+        
+        // Add a temporary highlight effect
+        activeRow.classList.add('highlight');
+        setTimeout(function() {
+            activeRow.classList.remove('highlight');
+        }, 3000);
+    }
+});
+<?php endif; ?>
 </script>
+
+<style>
+/* Add highlight animation */
+@keyframes highlightAnimation {
+    0% { background-color: #fff3cd; }
+    50% { background-color: #fff3cd; }
+    100% { background-color: transparent; }
+}
+
+.highlight {
+    animation: highlightAnimation 3s ease-out;
+}
+</style>
 
 <?php require_once "../includes/footer.php"; ?>
