@@ -7,7 +7,12 @@ class PriceCalculator {
     private const VALUE_TAX_RATE = 0.15;
     private const SHIPMENT_FEE_RATE = 0.10;
     private const PROCESSING_FEE_RATE = 0.05;
-    private const ADDITIONAL_FEE = 200.00;
+    
+    // Delivery fees by location
+    private const DELIVERY_FEES = [
+        'addis_ababa' => 200.00,
+        'jimma' => 400.00
+    ];
     
     // Supported currencies with their default exchange rates to ETB
     private const SUPPORTED_CURRENCIES = [
@@ -25,12 +30,14 @@ class PriceCalculator {
      * @param float $amount Amount in source currency
      * @param float $exchangeRate Exchange rate (source currency to ETB)
      * @param string $sourceCurrency Source currency code (USD, EUR, etc.)
+     * @param string $location Delivery location
      * @param int $userId User ID for history tracking
      * @return array breakdown of costs
      */
-    public function calculate($amount, $exchangeRate, $sourceCurrency = 'USD', $userId = null) {
+    public function calculate($amount, $exchangeRate, $sourceCurrency = 'USD', $location = 'addis_ababa', $userId = null) {
         $amount = floatval($amount);
         $exchangeRate = floatval($exchangeRate);
+        $location = strtolower($location);
         
         // Convert to ETB
         $etbAmount = $amount * $exchangeRate;
@@ -42,7 +49,7 @@ class PriceCalculator {
         $valueTax = 0;
         $shipmentFee = 0;
         $processingFee = 0;
-        $additionalFee = 0;
+        $deliveryFee = 0;
         
         foreach ($taxFees as $config) {
             switch ($config['name']) {
@@ -67,17 +74,13 @@ class PriceCalculator {
                         $processingFee = $config['rate_value'];
                     }
                     break;
-                case 'Delivery Fee':
-                    if ($config['rate_type'] === 'percentage') {
-                        $additionalFee = $etbAmount * $config['rate_value'];
-                    } else {
-                        $additionalFee = $config['rate_value'];
-                    }
-                    break;
             }
         }
         
-        $totalFees = $valueTax + $shipmentFee + $processingFee + $additionalFee;
+        // Get delivery fee based on location
+        $deliveryFee = isset(self::DELIVERY_FEES[$location]) ? self::DELIVERY_FEES[$location] : self::DELIVERY_FEES['addis_ababa'];
+        
+        $totalFees = $valueTax + $shipmentFee + $processingFee + $deliveryFee;
         $totalCost = $etbAmount + $totalFees;
         
         $result = [
@@ -87,7 +90,8 @@ class PriceCalculator {
             'valueTax' => $valueTax,
             'shipmentFee' => $shipmentFee,
             'processingFee' => $processingFee,
-            'additionalFee' => $additionalFee,
+            'deliveryFee' => $deliveryFee,
+            'location' => $location,
             'totalFees' => $totalFees,
             'totalCost' => $totalCost,
             'exchangeRate' => $exchangeRate,
@@ -149,8 +153,7 @@ class PriceCalculator {
             return [
                 ['name' => 'Value Tax', 'rate_type' => 'percentage', 'rate_value' => self::VALUE_TAX_RATE],
                 ['name' => 'Shipment Fee', 'rate_type' => 'percentage', 'rate_value' => self::SHIPMENT_FEE_RATE],
-                ['name' => 'Processing Fee', 'rate_type' => 'percentage', 'rate_value' => self::PROCESSING_FEE_RATE],
-                ['name' => 'Delivery Fee', 'rate_type' => 'fixed', 'rate_value' => self::ADDITIONAL_FEE]
+                ['name' => 'Processing Fee', 'rate_type' => 'percentage', 'rate_value' => self::PROCESSING_FEE_RATE]
             ];
         }
     }

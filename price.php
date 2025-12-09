@@ -28,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $amount = isset($_POST['amount']) ? floatval($_POST['amount']) : 0;
     $exchangeRate = isset($_POST['exchangeRate']) ? floatval($_POST['exchangeRate']) : 0;
     $selectedCurrency = isset($_POST['currency']) ? $_POST['currency'] : 'USD';
+    $selectedLocation = isset($_POST['location']) ? $_POST['location'] : 'addis_ababa';
     
     // Validate currency
     if (!in_array($selectedCurrency, $supportedCurrencies)) {
@@ -35,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($amount <= 0 || $exchangeRate <= 0) {
         $errorMessage = 'Valid amount and exchange rate are required';
     } else {
-        $result = $calculator->calculate($amount, $exchangeRate, $selectedCurrency, $userId);
+        $result = $calculator->calculate($amount, $exchangeRate, $selectedCurrency, $selectedLocation, $userId);
         $exchangeRateValue = $exchangeRate;
     }
 }
@@ -83,6 +84,14 @@ require_once "includes/header.php";
                                step="0.01" min="0" placeholder="0.00" 
                                value="<?php echo isset($_POST['amount']) ? htmlspecialchars($_POST['amount']) : ''; ?>" required>
                     </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="location">Delivery Location</label>
+                    <select id="location" name="location" class="form-control" required>
+                        <option value="addis_ababa" <?php echo (isset($_POST['location']) && $_POST['location'] === 'addis_ababa') ? 'selected' : ''; ?>>Addis Ababa (ETB 200)</option>
+                        <option value="jimma" <?php echo (isset($_POST['location']) && $_POST['location'] === 'jimma') ? 'selected' : ''; ?>>Jimma (ETB 400)</option>
+                    </select>
                 </div>
                 
                 <div class="form-group">
@@ -142,7 +151,14 @@ require_once "includes/header.php";
             
             <div class="result-item">
                 <h3>Delivery Fee</h3>
-                <div class="amount">ETB <?php echo number_format($result['additionalFee'], 2); ?></div>
+                <div class="amount">ETB <?php echo number_format($result['deliveryFee'], 2); ?></div>
+                <div>(<?php 
+                    $locationNames = [
+                        'addis_ababa' => 'Addis Ababa',
+                        'jimma' => 'Jimma'
+                    ];
+                    echo isset($locationNames[$result['location']]) ? $locationNames[$result['location']] : ucfirst($result['location']);
+                ?>)</div>
             </div>
             
             <div class="result-item total">
@@ -171,7 +187,14 @@ require_once "includes/header.php";
             </div>
             <div class="tax-item">
                 <span class="tax-label">Delivery Fee:</span>
-                <span class="tax-value">ETB <?php echo number_format($result['additionalFee'], 2); ?></span>
+                <span class="tax-value">ETB <?php echo number_format($result['deliveryFee'], 2); ?></span>
+                <span class="tax-value">(<?php 
+                    $locationNames = [
+                        'addis_ababa' => 'Addis Ababa',
+                        'jimma' => 'Jimma'
+                    ];
+                    echo isset($locationNames[$result['location']]) ? $locationNames[$result['location']] : ucfirst($result['location']);
+                ?>)</span>
             </div>
             <div class="tax-item">
                 <span class="tax-label">Total Fees:</span>
@@ -244,7 +267,14 @@ require_once "includes/header.php";
             </div>
             <div class="receipt-item">
                 <span class="receipt-item-label">Delivery Fee:</span>
-                <span class="receipt-item-value">ETB <?php echo number_format($result['additionalFee'], 2); ?></span>
+                <span class="receipt-item-value">ETB <?php echo number_format($result['deliveryFee'], 2); ?></span>
+                <span class="receipt-item-value">(<?php 
+                    $locationNames = [
+                        'addis_ababa' => 'Addis Ababa',
+                        'jimma' => 'Jimma'
+                    ];
+                    echo isset($locationNames[$result['location']]) ? $locationNames[$result['location']] : ucfirst($result['location']);
+                ?>)</span>
             </div>
             
             <div class="receipt-item highlight">
