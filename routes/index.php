@@ -235,6 +235,78 @@ class LocationSearch {
     }
 }
 
+// --- HELPER FUNCTIONS ---
+
+/**
+ * Calculate Haversine distance between two points
+ */
+function haversineDistance($lat1, $lon1, $lat2, $lon2) {
+    $R = 6371; // Earth's radius in kilometers
+    $dLat = deg2rad($lat2 - $lat1);
+    $dLon = deg2rad($lon2 - $lon1);
+    $a = sin($dLat/2) * sin($dLat/2) +
+         cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+         sin($dLon/2) * sin($dLon/2);
+    $c = 2 * atan2(sqrt($a), sqrt(1-$a));
+    return $R * $c;
+}
+
+/**
+ * Optimize route using nearest neighbor algorithm
+ */
+function optimizeRoute($warehouse, $points) {
+    if (empty($points)) {
+        return ['route' => [$warehouse, $warehouse], 'total_distance' => 0];
+    }
+    
+    $route = [$warehouse];
+    $current = $warehouse;
+    $remaining = $points;
+    $totalDistance = 0;
+    
+    // Nearest neighbor algorithm
+    while (!empty($remaining)) {
+        $nearest = null;
+        $nearestDistance = INF;
+        $nearestIndex = null;
+        
+        foreach ($remaining as $index => $point) {
+            $distance = haversineDistance(
+                $current['lat'], $current['lon'],
+                $point['lat'], $point['lon']
+            );
+            
+            if ($distance < $nearestDistance) {
+                $nearestDistance = $distance;
+                $nearest = $point;
+                $nearestIndex = $index;
+            }
+        }
+        
+        if ($nearest) {
+            $nearest['distance'] = $nearestDistance;
+            $route[] = $nearest;
+            $totalDistance += $nearestDistance;
+            $current = $nearest;
+            unset($remaining[$nearestIndex]);
+        }
+    }
+    
+    // Return to warehouse
+    $returnDistance = haversineDistance(
+        $current['lat'], $current['lon'],
+        $warehouse['lat'], $warehouse['lon']
+    );
+    $warehouse['distance'] = $returnDistance;
+    $route[] = $warehouse;
+    $totalDistance += $returnDistance;
+    
+    return [
+        'route' => $route,
+        'total_km' => $totalDistance
+    ];
+}
+
 // --- FUNCTIONS ---
 
 function haversine($a, $b) {
@@ -556,9 +628,9 @@ require_once "../includes/header.php";
 <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <style>
-    .map-container { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
-    .input-panel { flex: 1; min-width: 350px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
-    .map-panel { flex: 2; min-width: 500px; }
+    .map-container { display: flex; flex-direction: column; gap: 20px; margin-bottom: 20px; }
+    .input-panel { width: 100%; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+    .map-panel { width: 100%; }
     
     #map { height: 700px; border-radius: 10px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); border: 1px solid #ddd; }
     
@@ -662,9 +734,9 @@ require_once "../includes/header.php";
     
     /* Map controls */
     .map-controls {
-        position: absolute;
-        top: 10px;
-        right: 10px;
+        position: relative;
+        top: 30px;
+        right: 30px;
         z-index: 1000;
         background: white;
         padding: 10px;
@@ -1016,6 +1088,21 @@ require_once "../includes/header.php";
 <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
 <script>
+// Debug script loading
+console.log('Scripts loaded');
+console.log('L:', typeof L);
+if (typeof L !== 'undefined') {
+    console.log('Leaflet version:', L.version);
+    console.log('L.Routing:', typeof L.Routing);
+    if (typeof L.Routing !== 'undefined') {
+        console.log('Leaflet Routing Machine loaded');
+    } else {
+        console.error('Leaflet Routing Machine not loaded');
+    }
+} else {
+    console.error('Leaflet not loaded');
+}
+
 // Global variables
 let map, warehouseMarker = null, searchMarkers = [], routeLayers = [];
 let searchTimeout = null;
@@ -1023,73 +1110,121 @@ let currentSearchQuery = '';
 
 // Initialize map
 function initMap() {
-    // Default to Addis Ababa if no coordinates
-    const defaultLat = <?= $_POST['warehouse_lat'] ?? 9.032 ?>;
-    const defaultLon = <?= $_POST['warehouse_lon'] ?? 38.763 ?>;
-    
-    map = L.map('map').setView([defaultLat, defaultLon], 12);
-    
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap',
-        maxZoom: 19
-    }).addTo(map);
-    
-    // Add geocoder control
-    L.Control.geocoder({
-        defaultMarkGeocode: false,
-        position: 'topleft',
-        placeholder: 'Search locations...',
-        errorMessage: 'Nothing found.'
-    }).on('markgeocode', function(e) {
-        const latlng = e.geocode.center;
-        setWarehouseLocation(latlng.lat, latlng.lng, e.geocode.name);
-        map.setView(latlng, 15);
-    }).addTo(map);
-    
-    // Add click event
-    map.on('click', function(e) {
-        reverseGeocode(e.latlng.lat, e.latlng.lng);
-    });
-    
-    // Initialize if we have warehouse coordinates
-    const whLat = document.getElementById('warehouse-lat').value;
-    const whLon = document.getElementById('warehouse-lon').value;
-    if (whLat && whLon) {
-        setWarehouseLocation(whLat, whLon);
+    try {
+        console.log('Initializing map...');
+        
+        // Check map container
+        const mapContainer = document.getElementById('map');
+        if (!mapContainer) {
+            console.error('Map container not found');
+            return;
+        }
+        
+        console.log('Map container dimensions:', mapContainer.offsetWidth, 'x', mapContainer.offsetHeight);
+        
+        if (mapContainer.offsetWidth === 0 || mapContainer.offsetHeight === 0) {
+            console.warn('Map container has zero dimensions, this may cause display issues');
+        }
+        
+        // Default to Addis Ababa if no coordinates
+        const defaultLat = <?= is_numeric($_POST['warehouse_lat'] ?? '') ? $_POST['warehouse_lat'] : 9.032 ?>;
+        const defaultLon = <?= is_numeric($_POST['warehouse_lon'] ?? '') ? $_POST['warehouse_lon'] : 38.763 ?>;
+        
+        console.log('Creating map with center:', [defaultLat, defaultLon]);
+        
+        map = L.map('map').setView([defaultLat, defaultLon], 12);
+        
+        console.log('Map created:', map);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap',
+            maxZoom: 19
+        }).addTo(map);
+        
+        console.log('Tile layer added');
+        
+        // Add geocoder control
+        L.Control.geocoder({
+            defaultMarkGeocode: false,
+            position: 'topleft',
+            placeholder: 'Search locations...',
+            errorMessage: 'Nothing found.'
+        }).on('markgeocode', function(e) {
+            const latlng = e.geocode.center;
+            setWarehouseLocation(latlng.lat, latlng.lng, e.geocode.name);
+            map.setView(latlng, 15);
+        }).addTo(map);
+        
+        console.log('Geocoder control added');
+        
+        // Add click event
+        map.on('click', function(e) {
+            reverseGeocode(e.latlng.lat, e.latlng.lng);
+        });
+        
+        console.log('Click event handler added');
+        
+        // Initialize if we have warehouse coordinates
+        const whLat = document.getElementById('warehouse-lat').value;
+        const whLon = document.getElementById('warehouse-lon').value;
+        if (whLat && whLon) {
+            console.log('Setting warehouse location:', whLat, whLon);
+            setWarehouseLocation(whLat, whLon);
+        }
+        
+        console.log('Map initialization complete');
+        
+        // Force map resize in case of initial sizing issues
+        setTimeout(function() {
+            if (map) {
+                map.invalidateSize();
+                console.log('Map resized');
+            }
+        }, 100);
+    } catch (error) {
+        console.error('Error initializing map:', error);
     }
 }
-
 // Set warehouse location
 function setWarehouseLocation(lat, lon, name = null) {
-    // Remove existing marker
-    if (warehouseMarker) {
-        map.removeLayer(warehouseMarker);
+    try {
+        console.log('Setting warehouse location:', lat, lon, name);
+        
+        // Remove existing marker
+        if (warehouseMarker) {
+            map.removeLayer(warehouseMarker);
+        }
+        
+        // Add new marker with custom icon
+        const warehouseIcon = L.divIcon({
+            className: 'warehouse-icon',
+            html: '<div style="background: #2c3e50; color: white; padding: 8px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-warehouse"></i></div>',
+            iconSize: [40, 40],
+            iconAnchor: [20, 40]
+        });
+        
+        warehouseMarker = L.marker([lat, lon], {icon: warehouseIcon})
+            .addTo(map)
+            .bindPopup("<strong>Warehouse Location</strong><br>" + (name || `Coordinates: ${lat}, ${lon}`))
+            .openPopup();
+        
+        console.log('Warehouse marker added to map');
+        
+        // Update form fields
+        document.getElementById('warehouse-lat').value = lat;
+        document.getElementById('warehouse-lon').value = lon;
+        if (name) {
+            document.getElementById('warehouse-location').value = name;
+        }
+        
+        // Center map
+        map.setView([lat, lon], 15);
+        
+        console.log('Warehouse location set successfully');
+    } catch (error) {
+        console.error('Error setting warehouse location:', error);
     }
-    
-    // Add new marker with custom icon
-    const warehouseIcon = L.divIcon({
-        className: 'warehouse-icon',
-        html: '<div style="background: #2c3e50; color: white; padding: 8px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-warehouse"></i></div>',
-        iconSize: [40, 40],
-        iconAnchor: [20, 40]
-    });
-    
-    warehouseMarker = L.marker([lat, lon], {icon: warehouseIcon})
-        .addTo(map)
-        .bindPopup("<strong>Warehouse Location</strong><br>" + (name || `Coordinates: ${lat}, ${lon}`))
-        .openPopup();
-    
-    // Update form fields
-    document.getElementById('warehouse-lat').value = lat;
-    document.getElementById('warehouse-lon').value = lon;
-    if (name) {
-        document.getElementById('warehouse-location').value = name;
-    }
-    
-    // Center map
-    map.setView([lat, lon], 15);
 }
-
 // Search functionality
 document.getElementById('warehouse-location').addEventListener('input', function(e) {
     clearTimeout(searchTimeout);
@@ -1334,95 +1469,163 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Initialize map when DOM is loaded
-document.addEventListener('DOMContentLoaded', initMap);
+// Initialize map when DOM is loaded and scripts are ready
+function initializeApp() {
+    try {
+        console.log('Initializing app...');
+        console.log('L:', typeof L);
+        console.log('L.Routing:', typeof L.Routing);
+        
+        if (typeof L === 'undefined') {
+            console.error('Leaflet not loaded yet, waiting...');
+            setTimeout(initializeApp, 100);
+            return;
+        }
+        
+        if (typeof L.Routing === 'undefined') {
+            console.error('Leaflet Routing Machine not loaded yet, waiting...');
+            setTimeout(initializeApp, 100);
+            return;
+        }
+        
+        initMap();
+        
+        <?php if ($driverRoutes): ?>
+        // Check if Leaflet Routing Machine is available
+        if (typeof L !== 'undefined' && typeof L.Routing !== 'undefined') {
+            console.log('Leaflet Routing Machine is available');
+            // Draw routes on map after map is initialized
+            // Wait for map to be fully ready
+            if (typeof map !== 'undefined' && map) {
+                drawRoutesOnMap();
+            } else {
+                // Fallback: try again after a short delay
+                setTimeout(function() {
+                    if (typeof map !== 'undefined' && map) {
+                        drawRoutesOnMap();
+                    } else {
+                        console.error('Map failed to initialize');
+                    }
+                }, 500);
+            }
+        } else {
+            console.error('Leaflet Routing Machine is not available');
+        }
+        <?php endif; ?>
+    } catch (error) {
+        console.error('Error initializing app:', error);
+    }
+}
+
+// Wait for DOM to be loaded and then initialize
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+    // DOM is already loaded
+    setTimeout(initializeApp, 100);
+}
 
 <?php if ($driverRoutes): ?>
-// Draw routes on map
-document.addEventListener('DOMContentLoaded', function() {
-    const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#34495e'];
-    let driverIndex = 0;
-    
-    // Fit bounds to include all points
-    const bounds = L.latLngBounds();
-    
-    <?php foreach ($driverRoutes as $driverIdx => $data): ?>
-        (function(color, index) {
-            const waypoints = [
+// Function to draw routes on map
+function drawRoutesOnMap() {
+    try {
+        console.log('Drawing routes on map...');
+        
+        const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#34495e'];
+        let driverIndex = 0;
+        
+        // Fit bounds to include all points
+        const bounds = L.latLngBounds();
+        
+        console.log('Driver routes data:', <?= json_encode($driverRoutes) ?>);
+        
+        <?php foreach ($driverRoutes as $driverIdx => $data): ?>
+            (function(color, index) {
+                console.log('Processing driver', index, 'with data:', <?= json_encode($data) ?>);
+                
+                const waypoints = [];
                 <?php foreach ($data['route'] as $stop): ?>
-                L.latLng(<?= $stop['lat'] ?>, <?= $stop['lon'] ?>),
-                bounds.extend([<?= $stop['lat'] ?>, <?= $stop['lon'] ?>]);
+                waypoints.push(L.latLng(<?php echo $stop['lat']; ?>, <?php echo $stop['lon']; ?>));
+                bounds.extend([<?php echo $stop['lat']; ?>, <?php echo $stop['lon']; ?>]);
                 <?php endforeach; ?>
-            ];
-            
-            // Custom markers
-            const createMarker = function(i, wp, nWps) {
-                const isWarehouse = i === 0 || i === nWps - 1;
-                const icon = L.divIcon({
-                    className: 'route-marker',
-                    html: `
-                        <div style="
-                            background: ${color};
-                            color: white;
-                            width: 30px;
-                            height: 30px;
-                            border-radius: 50%;
-                            border: 3px solid white;
-                            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            font-weight: bold;
-                        ">
-                            ${isWarehouse ? '<i class="fas fa-warehouse"></i>' : (i)}
-                        </div>`,
-                    iconSize: [30, 30],
-                    iconAnchor: [15, 30]
-                });
                 
-                const marker = L.marker(wp.latLng, {icon: icon});
-                const stop = <?= json_encode($data['route'][$i] ?? []) ?>;
-                const popupContent = `
-                    <div style="min-width: 200px;">
-                        <strong>Driver ${index + 1}</strong><br>
-                        <strong>${stop.display_name || stop.address}</strong><br>
-                        ${stop.address && stop.address !== stop.display_name ? `<small>${stop.address}</small><br>` : ''}
-                        <small>Stop: ${i + 1} of ${nWps}</small><br>
-                        ${i > 0 ? `<small>Distance: ${stop.distance ? stop.distance.toFixed(1) : '0'} km</small>` : ''}
-                    </div>`;
+                console.log('Waypoints for driver', index, ':', waypoints);
                 
-                marker.bindPopup(popupContent);
-                return marker;
-            };
-            
-            const control = L.Routing.control({
-                waypoints: waypoints,
-                routeWhileDragging: false,
-                showAlternatives: false,
-                fitSelectedRoutes: false,
-                lineOptions: {
-                    styles: [
-                        {
-                            color: color,
-                            opacity: 0.7,
-                            weight: 5,
-                            dashArray: '10, 10'
-                        }
-                    ]
-                },
-                createMarker: createMarker
-            }).addTo(map);
-            
-            routeLayers.push(control);
-        })(colors[driverIndex % colors.length], <?= $driverIdx ?>);
-        driverIndex++;
-    <?php endforeach; ?>
-    
-    // Fit bounds with padding
-    if (bounds.isValid()) {
-        map.fitBounds(bounds, {padding: [50, 50]});
+                // Custom markers
+                const createMarker = function(i, wp, nWps) {
+                    const isWarehouse = i === 0 || i === nWps - 1;
+                    const icon = L.divIcon({
+                        className: 'route-marker',
+                        html: `
+                            <div style="
+                                background: ${color};
+                                color: white;
+                                width: 30px;
+                                height: 30px;
+                                border-radius: 50%;
+                                border: 3px solid white;
+                                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-weight: bold;
+                            ">
+                                ${isWarehouse ? '<i class="fas fa-warehouse"></i>' : (i)}
+                            </div>`,
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30]
+                    });
+                    
+                    const marker = L.marker(wp.latLng, {icon: icon});
+                    const stop = <?= json_encode($data['route'][$i] ?? []) ?>;
+                    const popupContent = `
+                        <div style="min-width: 200px;">
+                            <strong>Driver ${index + 1}</strong><br>
+                            <strong>${stop.display_name || stop.address}</strong><br>
+                            ${stop.address && stop.address !== stop.display_name ? `<small>${stop.address}</small><br>` : ''}
+                            <small>Stop: ${i + 1} of ${nWps}</small><br>
+                            ${i > 0 ? `<small>Distance: ${stop.distance ? stop.distance.toFixed(1) : '0'} km</small>` : ''}
+                        </div>`;
+                    
+                    marker.bindPopup(popupContent);
+                    return marker;
+                };
+                
+                const control = L.Routing.control({
+                    waypoints: waypoints,
+                    routeWhileDragging: false,
+                    showAlternatives: false,
+                    fitSelectedRoutes: false,
+                    lineOptions: {
+                        styles: [
+                            {
+                                color: color,
+                                opacity: 0.7,
+                                weight: 5,
+                                dashArray: '10, 10'
+                            }
+                        ]
+                    },
+                    createMarker: createMarker
+                }).addTo(map);
+                
+                routeLayers.push(control);
+                console.log('Added route control for driver', index);
+            })(colors[driverIndex % colors.length], <?= $driverIdx ?>);
+            driverIndex++;
+        <?php endforeach; ?>
+        
+        // Fit bounds with padding
+        if (bounds.isValid()) {
+            map.fitBounds(bounds, {padding: [50, 50]});
+            console.log('Map bounds fitted');
+        }
+        
+        console.log('Routes drawing complete');
+    } catch (error) {
+        console.error('Error drawing routes on map:', error);
     }
-});
+}
 <?php endif; ?>
 </script>
 

@@ -14,7 +14,7 @@
 # ===============================
 # FAVICON REDIRECT
 # ===============================
-Redirect 301 /stock_management/favicon.ico /stock_management/img/favicon.ico
+# Redirect 301 /stock_management/favicon.ico /stock_management/img/favicon.ico
 
 # ===============================
 # DENY ACCESS TO SENSITIVE DIRECTORIES
