@@ -8,9 +8,6 @@
 CREATE DATABASE IF NOT EXISTS inventory_system;
 USE inventory_system;
 
--- Set SQL mode to be more compatible
-SET SESSION sql_mode = '';
-
 -- =============================================
 -- Core Tables
 -- =============================================
@@ -75,11 +72,11 @@ CREATE TABLE IF NOT EXISTS products (
     price DECIMAL(10,2),
     cost_price DECIMAL(10,2),
     min_stock INT DEFAULT 5,
-    supplier_id INT NULL,
+    supplier_id INT,
     supplier VARCHAR(255),
     location VARCHAR(100),
-    category_id INT NULL,
-    brand_id INT NULL,
+    category_id INT,
+    brand_id INT,
     image VARCHAR(255) NULL,
     barcode VARCHAR(100) NULL,
     has_variants BOOLEAN DEFAULT FALSE,
@@ -109,9 +106,9 @@ CREATE TABLE IF NOT EXISTS product_variants (
 -- Stock movements table
 CREATE TABLE IF NOT EXISTS stock_movements (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    product_id INT NULL,
-    variant_id INT NULL,
-    supplier_id INT NULL,
+    product_id INT,
+    variant_id INT DEFAULT NULL,
+    supplier_id INT,
     movement_type ENUM('IN', 'OUT'),
     quantity INT,
     reason VARCHAR(255),
@@ -125,10 +122,10 @@ CREATE TABLE IF NOT EXISTS stock_movements (
 -- Audit logs table
 CREATE TABLE IF NOT EXISTS audit_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NULL,
+    user_id INT,
     action VARCHAR(50) NOT NULL,
     table_name VARCHAR(50),
-    record_id INT NULL,
+    record_id INT,
     details TEXT,
     ip_address VARCHAR(45),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -138,7 +135,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 -- Notifications table
 CREATE TABLE IF NOT EXISTS notifications (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NULL,
+    user_id INT,
     title VARCHAR(255),
     message TEXT,
     is_read BOOLEAN DEFAULT FALSE,
@@ -161,8 +158,8 @@ CREATE TABLE IF NOT EXISTS tax_fee_configs (
 -- Price calculation history table
 CREATE TABLE IF NOT EXISTS price_calculation_history (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    product_id INT NULL,
-    variant_id INT NULL,
+    product_id INT,
+    variant_id INT DEFAULT NULL,
     base_price DECIMAL(10,2),
     calculated_price DECIMAL(10,2),
     tax_amount DECIMAL(10,2),
@@ -180,7 +177,7 @@ CREATE TABLE IF NOT EXISTS routes (
     warehouse_coords JSON,
     driver_count INT DEFAULT 1,
     country_code VARCHAR(10) DEFAULT 'et',
-    created_by INT NULL,
+    created_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
@@ -189,11 +186,11 @@ CREATE TABLE IF NOT EXISTS routes (
 -- Route stops table
 CREATE TABLE IF NOT EXISTS route_stops (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    route_id INT NULL,
+    route_id INT,
     address TEXT NOT NULL,
     coordinates JSON,
     stop_number INT,
-    driver_id INT NULL,
+    driver_id INT,
     distance_from_previous DECIMAL(10,2),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (route_id) REFERENCES routes(id) ON DELETE CASCADE
@@ -202,7 +199,7 @@ CREATE TABLE IF NOT EXISTS route_stops (
 -- Route optimization settings table
 CREATE TABLE IF NOT EXISTS route_optimization_settings (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    route_id INT NULL,
+    route_id INT,
     algorithm VARCHAR(50) DEFAULT 'nearest_neighbor',
     time_windows JSON,
     vehicle_capacity INT,
