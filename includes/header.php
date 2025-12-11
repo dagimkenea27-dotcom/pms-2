@@ -117,6 +117,21 @@ Auth::startSession();
                 </div>
             </li>
 
+            <!-- Nav Item - Drivers & Fleet -->
+            <li class="nav-item <?php echo (strpos($_SERVER['REQUEST_URI'], 'drivers/') !== false || strpos($_SERVER['REQUEST_URI'], 'vehicles/') !== false) ? 'active' : ''; ?>">
+                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseFleet"
+                    aria-expanded="true" aria-controls="collapseFleet">
+                    <i class="fas fa-fw fa-users-cog"></i>
+                    <span>Driver & Fleet</span>
+                </a>
+                <div id="collapseFleet" class="collapse <?php echo (strpos($_SERVER['REQUEST_URI'], 'drivers/') !== false || strpos($_SERVER['REQUEST_URI'], 'vehicles/') !== false) ? 'show' : ''; ?>" aria-labelledby="headingFleet" data-parent="#accordionSidebar">
+                    <div class="py-2 collapse-inner rounded">
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>drivers/index.php">Drivers</a>
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>vehicles/index.php">Vehicles</a>
+                    </div>
+                </div>
+            </li>
+
             <!-- Nav Item - Route Optimizer -->
             <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/') !== false ? 'active' : ''; ?>">
                 <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseRoutes"
@@ -128,6 +143,9 @@ Auth::startSession();
                     <div class="py-2 collapse-inner rounded">
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/index.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>routes/index.php">Optimize Routes</a>
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/manage.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>routes/manage.php">Saved Routes</a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/templates.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>routes/templates.php">Templates</a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'customers/address_book.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>customers/address_book.php">Address Book</a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'settings/route_preferences.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>settings/route_preferences.php">Preferences</a>
                     </div>
                 </div>
             </li>

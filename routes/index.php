@@ -292,14 +292,16 @@ function optimizeRoute($warehouse, $points) {
         }
     }
     
-    // Return to warehouse
+    // Note: We don't add return-to-warehouse point anymore as it creates unwanted markers
+    // The distance calculation still includes the return trip for reporting purposes
     $returnDistance = haversineDistance(
         $current['lat'], $current['lon'],
         $warehouse['lat'], $warehouse['lon']
     );
-    $warehouse['distance'] = $returnDistance;
-    $route[] = $warehouse;
     $totalDistance += $returnDistance;
+    
+    // Return the route without the return-to-warehouse point
+    // This prevents unwanted markers from appearing on the map
     
     return [
         'route' => $route,
@@ -1043,7 +1045,7 @@ require_once "../includes/header.php";
             <div class="driver-header" style="color: <?= $color ?>;">
                 <span><i class="fas fa-truck"></i> Driver <?= $driverIdx + 1 ?></span>
                 <span class="badge bg-light text-dark">
-                    <?= round($data['total_km'], 1) ?> km • <?= count($data['route']) - 1 ?> stops
+                    <?= round($data['total_km'], 1) ?> km • <?= count($data['route']) ?> stops
                 </span>
             </div>
             <div class="table-responsive">
@@ -1086,6 +1088,7 @@ require_once "../includes/header.php";
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
 <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.min.js"></script>
 
 <script>
 // Debug script loading
@@ -1526,6 +1529,12 @@ if (document.readyState === 'loading') {
 }
 
 <?php if ($driverRoutes): ?>
+// Store all route data for interaction
+let allRouteData = [];
+let allMarkers = [];
+let allPolylines = [];
+let focusedRouteIndex = null;
+
 // Function to draw routes on map
 function drawRoutesOnMap() {
     try {
@@ -1544,16 +1553,31 @@ function drawRoutesOnMap() {
                 console.log('Processing driver', index, 'with data:', <?= json_encode($data) ?>);
                 
                 const waypoints = [];
-                <?php foreach ($data['route'] as $stop): ?>
+                const routeStops = <?= json_encode($data['route']) ?>;
+                
+                // Store route data
+                allRouteData[index] = {
+                    color: color,
+                    waypoints: [],
+                    stops: routeStops,
+                    markers: [],
+                    polyline: null,
+                    control: null
+                };
+                
+                <?php foreach ($data['route'] as $stopIdx => $stop): ?>
                 waypoints.push(L.latLng(<?php echo $stop['lat']; ?>, <?php echo $stop['lon']; ?>));
                 bounds.extend([<?php echo $stop['lat']; ?>, <?php echo $stop['lon']; ?>]);
                 <?php endforeach; ?>
                 
+                allRouteData[index].waypoints = waypoints;
+                
                 console.log('Waypoints for driver', index, ':', waypoints);
                 
-                // Custom markers
+                // Custom markers - create markers for all waypoints
                 const createMarker = function(i, wp, nWps) {
-                    const isWarehouse = i === 0 || i === nWps - 1;
+                    
+                    const isWarehouse = i === 0;
                     const icon = L.divIcon({
                         className: 'route-marker',
                         html: `
@@ -1577,7 +1601,7 @@ function drawRoutesOnMap() {
                     });
                     
                     const marker = L.marker(wp.latLng, {icon: icon});
-                    const stop = <?= json_encode($data['route'][$i] ?? []) ?>;
+                    const stop = routeStops[i] || {};
                     const popupContent = `
                         <div style="min-width: 200px;">
                             <strong>Driver ${index + 1}</strong><br>
@@ -1588,9 +1612,12 @@ function drawRoutesOnMap() {
                         </div>`;
                     
                     marker.bindPopup(popupContent);
+                    allRouteData[index].markers.push(marker);
+                    allMarkers.push(marker);
                     return marker;
                 };
                 
+                // Use all waypoints for display (return-to-warehouse point already removed in PHP)
                 const control = L.Routing.control({
                     waypoints: waypoints,
                     routeWhileDragging: false,
@@ -1601,14 +1628,75 @@ function drawRoutesOnMap() {
                             {
                                 color: color,
                                 opacity: 0.7,
-                                weight: 5,
-                                dashArray: '10, 10'
+                                weight: 5
                             }
-                        ]
+                        ],
+                        addWaypoints: false
                     },
                     createMarker: createMarker
                 }).addTo(map);
                 
+                // Add arrow decorators after route is drawn
+                control.on('routesfound', function(e) {
+                    const routes = e.routes;
+                    const route = routes[0];
+                    
+                    // Hide the default routing line immediately
+                    const routeLine = control._line;
+                    if (routeLine) {
+                        map.removeLayer(routeLine);
+                    }
+                    
+                    // No need to remove last marker as we've already excluded the return-to-warehouse point
+                    
+                    // Use coordinates as-is (don't reverse)
+                    const coordinates = route.coordinates;
+                    
+                    // Create polyline with arrows
+                    const polyline = L.polyline(coordinates, {
+                        color: color,
+                        weight: 5,
+                        opacity: 0.7
+                    }).addTo(map);
+                    
+                    // Add arrow decorators
+                    const arrowDecorator = L.polylineDecorator(polyline, {
+                        patterns: [
+                            {
+                                offset: '10%',
+                                repeat: 100,
+                                symbol: L.Symbol.arrowHead({
+                                    pixelSize: 12,
+                                    polygon: false,
+                                    pathOptions: {
+                                        stroke: true,
+                                        weight: 3,
+                                        color: color,
+                                        opacity: 0.9
+                                    }
+                                })
+                            }
+                        ]
+                    }).addTo(map);
+                    
+                    allRouteData[index].polyline = polyline;
+                    allRouteData[index].arrowDecorator = arrowDecorator;
+                    allPolylines.push(polyline);
+                    allPolylines.push(arrowDecorator);
+                    
+                    // Make polyline clickable to focus on this route
+                    polyline.on('click', function() {
+                        focusOnRoute(index);
+                    });
+                    
+                    // Hide the default routing line and container
+                    const routingContainer = control.getContainer();
+                    if (routingContainer) {
+                        routingContainer.style.display = 'none';
+                    }
+                });
+                
+                allRouteData[index].control = control;
                 routeLayers.push(control);
                 console.log('Added route control for driver', index);
             })(colors[driverIndex % colors.length], <?= $driverIdx ?>);
@@ -1626,6 +1714,103 @@ function drawRoutesOnMap() {
         console.error('Error drawing routes on map:', error);
     }
 }
+
+// Focus on a specific route
+function focusOnRoute(routeIndex) {
+    if (focusedRouteIndex === routeIndex) {
+        // Already focused, do nothing
+        return;
+    }
+    
+    focusedRouteIndex = routeIndex;
+    
+    // Hide all other routes
+    allRouteData.forEach((route, index) => {
+        if (index !== routeIndex) {
+            // Hide markers
+            route.markers.forEach(marker => {
+                map.removeLayer(marker);
+            });
+            
+            // Dim polyline
+            if (route.polyline) {
+                route.polyline.setStyle({
+                    opacity: 0.1,
+                    weight: 2
+                });
+            }
+            if (route.arrowDecorator) {
+                map.removeLayer(route.arrowDecorator);
+            }
+        } else {
+            // Highlight focused route
+            if (route.polyline) {
+                route.polyline.setStyle({
+                    opacity: 0.9,
+                    weight: 6
+                });
+            }
+        }
+    });
+    
+    // Fit bounds to focused route
+    const focusedRoute = allRouteData[routeIndex];
+    if (focusedRoute && focusedRoute.waypoints.length > 0) {
+        const routeBounds = L.latLngBounds(focusedRoute.waypoints);
+        map.fitBounds(routeBounds, {padding: [50, 50]});
+    }
+}
+
+// Reset view to show all routes
+function resetRouteView() {
+    if (focusedRouteIndex === null) {
+        return; // Already showing all
+    }
+    
+    focusedRouteIndex = null;
+    
+    // Show all routes
+    allRouteData.forEach((route, index) => {
+        // Show markers
+        route.markers.forEach(marker => {
+            if (!map.hasLayer(marker)) {
+                map.addLayer(marker);
+            }
+        });
+        
+        // Restore polyline
+        if (route.polyline) {
+            route.polyline.setStyle({
+                opacity: 0.7,
+                weight: 5
+            });
+        }
+        
+        // Restore arrows
+        if (route.arrowDecorator && !map.hasLayer(route.arrowDecorator)) {
+            map.addLayer(route.arrowDecorator);
+        }
+    });
+    
+    // Fit bounds to all routes
+    const bounds = L.latLngBounds();
+    allRouteData.forEach(route => {
+        route.waypoints.forEach(wp => {
+            bounds.extend(wp);
+        });
+    });
+    
+    if (bounds.isValid()) {
+        map.fitBounds(bounds, {padding: [50, 50]});
+    }
+}
+
+// ESC key handler
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' || e.keyCode === 27) {
+        resetRouteView();
+    }
+});
 <?php endif; ?>
 </script>
 
