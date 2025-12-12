@@ -219,6 +219,33 @@ if (isset($_SESSION['message'])) {
     </div>
 </div>
 
+<!-- Bulk Actions Toolbar -->
+<div id="bulkActionsToolbar" class="alert alert-info mb-4" style="display: none;">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <i class="fas fa-check-circle"></i>
+            <strong id="selectedCount">0</strong> product(s) selected
+        </div>
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#bulkEditModal">
+                <i class="fas fa-edit"></i> Bulk Edit
+            </button>
+            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#bulkStockModal">
+                <i class="fas fa-warehouse"></i> Update Stock
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="bulkPrintBarcodes()">
+                <i class="fas fa-barcode"></i> Print Barcodes
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
+                <i class="fas fa-trash"></i> Delete
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSelection()">
+                <i class="fas fa-times"></i> Clear Selection
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Products Table -->
 <div class="card dashboard-card shadow mb-4">
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
@@ -235,6 +262,9 @@ if (isset($_SESSION['message'])) {
                 <table class="table table-bordered table-hover" width="100%" cellspacing="0">
                     <thead>
                         <tr>
+                            <th width="30">
+                                <input type="checkbox" id="selectAll" class="form-check-input" title="Select All">
+                            </th>
                             <th>Image</th>
                             <th>Product Name</th>
                             <th>Category</th>
@@ -266,6 +296,11 @@ if (isset($_SESSION['message'])) {
                             $row_classes = trim($stock_class . ' ' . $active_class);
                         ?>
                         <tr class="<?php echo $row_classes; ?>" id="product-<?php echo $product['id']; ?>">
+                            <td>
+                                <input type="checkbox" class="form-check-input product-checkbox" 
+                                       value="<?php echo $product['id']; ?>" 
+                                       data-name="<?php echo htmlspecialchars($product['name']); ?>">
+                            </td>
                             <td>
                                 <a href="view_product.php?id=<?php echo $product['id']; ?>">
                                     <?php if (!empty($product['image'])): ?>
@@ -427,7 +462,344 @@ if (isset($_SESSION['message'])) {
     </div>
 </div>
 
+<!-- BULK OPERATIONS MODALS AND JAVASCRIPT -->
+<!-- This content should be inserted before the closing footer tag in view_products.php -->
+
+<!-- Bulk Edit Modal -->
+<div class="modal fade" id="bulkEditModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="bulkEditForm">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit"></i> Bulk Edit Products</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <small><strong>Note:</strong> Only filled fields will be updated. Leave fields empty to keep existing values.</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Category</label>
+                        <select class="form-select" name="category_id" id="bulk_category">
+                            <option value="">-- No Change --</option>
+                            <?php
+                            $cat_query = "SELECT id, name FROM categories ORDER BY name";
+                            $cat_stmt = $db->prepare($cat_query);
+                            $cat_stmt->execute();
+                            while ($cat = $cat_stmt->fetch(PDO::FETCH_ASSOC)) {
+                                echo '<option value="' . $cat['id'] . '">' . htmlspecialchars($cat['name']) . '</option>';
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Brand</label>
+                        <select class="form-select" name="brand_id" id="bulk_brand">
+                            <option value="">-- No Change --</option>
+                            <?php
+                            $brand_query = "SELECT id, name FROM brands ORDER BY name";
+                            $brand_stmt = $db->prepare($brand_query);
+                            $brand_stmt->execute();
+                            while ($brand = $brand_stmt->fetch(PDO::FETCH_ASSOC)) {
+                                echo '<option value="' . $brand['id'] . '">' . htmlspecialchars($brand['name']) . '</option>';
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Supplier</label>
+                        <select class="form-select" name="supplier_id" id="bulk_supplier">
+                            <option value="">-- No Change --</option>
+                            <?php
+                            $supp_query = "SELECT id, name FROM suppliers ORDER BY name";
+                            $supp_stmt = $db->prepare($supp_query);
+                            $supp_stmt->execute();
+                            while ($supp = $supp_stmt->fetch(PDO::FETCH_ASSOC)) {
+                                echo '<option value="' . $supp['id'] . '">' . htmlspecialchars($supp['name']) . '</option>';
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Storage Location</label>
+                        <input type="text" class="form-control" name="location" id="bulk_location" placeholder="Leave empty for no change">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Price Adjustment</label>
+                        <div class="input-group">
+                            <select class="form-select" name="price_type" id="bulk_price_type" style="max-width: 150px;">
+                                <option value="">No Change</option>
+                                <option value="increase_percent">Increase by %</option>
+                                <option value="decrease_percent">Decrease by %</option>
+                                <option value="set_price">Set Price</option>
+                            </select>
+                            <input type="number" class="form-control" name="price_value" id="bulk_price_value" step="0.01" min="0" placeholder="Value">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Update Products
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Stock Update Modal -->
+<div class="modal fade" id="bulkStockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="bulkStockForm">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-warehouse"></i> Bulk Stock Update</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Operation</label>
+                        <select class="form-select" name="operation" id="stock_operation" required>
+                            <option value="add">Add to Stock</option>
+                            <option value="subtract">Subtract from Stock</option>
+                            <option value="set">Set Stock Level</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" class="form-control" name="quantity" id="stock_quantity" min="0" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Reason/Notes</label>
+                        <textarea class="form-control" name="notes" id="stock_notes" rows="2" placeholder="Optional notes for stock movement"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> Update Stock
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Delete Modal -->
+<div class="modal fade" id="bulkDeleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Bulk Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Are you sure you want to delete the selected products?</strong></p>
+                <p>This action cannot be undone. The following products will be deleted:</p>
+                <ul id="deleteProductList" class="mb-0"></ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="executeBulkDelete()">
+                    <i class="fas fa-trash"></i> Delete Products
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+// Bulk Operations JavaScript
+let selectedProducts = [];
+
+// Create a function to initialize bulk operations
+function initializeBulkOperations() {
+    // Select All functionality
+    const selectAllCheckbox = document.getElementById('selectAll');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function(e) {
+            e.stopPropagation(); // Prevent event bubbling
+            const checkboxes = document.querySelectorAll('.product-checkbox');
+            checkboxes.forEach(cb => cb.checked = this.checked);
+            setTimeout(function() {
+                updateSelectedProducts();
+            }, 10);
+        });
+    }
+
+    // Individual checkbox change - FIXED EVENT HANDLING
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.classList.contains('product-checkbox')) {
+            e.stopPropagation(); // Prevent event bubbling
+            setTimeout(function() {
+                updateSelectedProducts();
+            }, 10); // Small delay to ensure checkbox state is updated
+        }
+    });
+
+    // Bulk Edit Form Submission
+    const bulkEditForm = document.getElementById('bulkEditForm');
+    if (bulkEditForm) {
+        bulkEditForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            formData.append('action', 'bulk_edit');
+            formData.append('product_ids', JSON.stringify(getSelectedIds()));
+            
+            fetch('bulk_operations.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('An error occurred: ' + error);
+            });
+        });
+    }
+
+    // Bulk Stock Update Form Submission
+    const bulkStockForm = document.getElementById('bulkStockForm');
+    if (bulkStockForm) {
+        bulkStockForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            formData.append('action', 'bulk_stock');
+            formData.append('product_ids', JSON.stringify(getSelectedIds()));
+            
+            fetch('bulk_operations.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('An error occurred: ' + error);
+            });
+        });
+    }
+
+    // Bulk Delete - Show product list in modal
+    const bulkDeleteModal = document.getElementById('bulkDeleteModal');
+    if (bulkDeleteModal) {
+        bulkDeleteModal.addEventListener('show.bs.modal', function() {
+            const list = document.getElementById('deleteProductList');
+            list.innerHTML = '';
+            selectedProducts.forEach(product => {
+                const li = document.createElement('li');
+                li.textContent = product.name;
+                list.appendChild(li);
+            });
+        });
+    }
+    
+    // Initialize toolbar visibility on page load
+    updateSelectedProducts();
+}
+
+// Wait for DOM to be fully loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeBulkOperations);
+} else {
+    // DOM is already loaded
+    initializeBulkOperations();
+}
+
+// Helper functions (outside DOMContentLoaded for global access)
+function updateSelectedProducts() {
+    const checkboxes = document.querySelectorAll('.product-checkbox:checked');
+    selectedProducts = Array.from(checkboxes).map(cb => ({
+        id: cb.value,
+        name: cb.dataset.name
+    }));
+    
+    const count = selectedProducts.length;
+    const selectedCountEl = document.getElementById('selectedCount');
+    const bulkToolbarEl = document.getElementById('bulkActionsToolbar');
+    
+    if (selectedCountEl) selectedCountEl.textContent = count;
+    if (bulkToolbarEl) bulkToolbarEl.style.display = count > 0 ? 'block' : 'none';
+    
+    // Update select all checkbox
+    const allCheckboxes = document.querySelectorAll('.product-checkbox');
+    const selectAllCheckbox = document.getElementById('selectAll');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = allCheckboxes.length > 0 && count === allCheckboxes.length;
+        selectAllCheckbox.indeterminate = count > 0 && count < allCheckboxes.length;
+    }
+}
+
+function clearSelection() {
+    document.querySelectorAll('.product-checkbox').forEach(cb => cb.checked = false);
+    const selectAllCheckbox = document.getElementById('selectAll');
+    if (selectAllCheckbox) selectAllCheckbox.checked = false;
+    updateSelectedProducts();
+}
+
+function getSelectedIds() {
+    return selectedProducts.map(p => p.id);
+}
+
+function executeBulkDelete() {
+    const formData = new FormData();
+    formData.append('action', 'bulk_delete');
+    formData.append('product_ids', JSON.stringify(getSelectedIds()));
+    
+    fetch('bulk_operations.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('An error occurred: ' + error);
+    });
+}
+
+function bulkPrintBarcodes() {
+    if (selectedProducts.length === 0) {
+        alert('Please select at least one product');
+        return;
+    }
+    
+    // Open bulk barcode page in new window
+    const ids = getSelectedIds().join(',');
+    window.open('bulk_barcode.php?ids=' + ids, '_blank');
+}
+
+
+
 function confirmDelete(productName) {
     return confirm(`Are you sure you want to delete the product "${productName}"? This action cannot be undone.`);
 }

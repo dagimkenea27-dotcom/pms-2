@@ -68,7 +68,7 @@
         // Auto-dismiss alerts
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
-                const alerts = document.querySelectorAll('.alert');
+                const alerts = document.querySelectorAll('.alert:not(#bulkActionsToolbar)');
                 alerts.forEach(alert => {
                     if (typeof bootstrap !== 'undefined' && bootstrap.Alert) {
                         const bsAlert = new bootstrap.Alert(alert);
