@@ -50,13 +50,14 @@ class BarcodeGenerator {
         for ($i = 0; $i < strlen($barcode); $i++) {
             $bit = $barcode[$i];
             if ($bit == '1') {
-                $svg .= '<rect x="' . $x . '" y="5" width="' . $barWidth . '" height="' . ($height - 10) . '" fill="black"/>';
+                // Reserve bottom 20 units for text
+                $svg .= '<rect x="' . $x . '" y="5" width="' . $barWidth . '" height="' . ($height - 25) . '" fill="black"/>';
             }
             $x += $barWidth;
         }
         
-        // Add text below barcode
-        $svg .= '<text x="' . (strlen($barcode) / 2 + 10) . '" y="' . ($height - 5) . '" font-family="Arial" font-size="8" text-anchor="middle">' . htmlspecialchars($text) . '</text>';
+        // Add text below barcode - Restored with larger font
+        $svg .= '<text x="' . (strlen($barcode) / 2 + 10) . '" y="' . ($height - 5) . '" font-family="Arial, sans-serif" font-weight="bold" font-size="14" text-anchor="middle">' . htmlspecialchars($text) . '</text>';
         $svg .= '</svg>';
         
         return $svg;

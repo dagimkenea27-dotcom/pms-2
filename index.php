@@ -160,6 +160,38 @@ require_once "includes/header.php";
         </div>
     </div>
 
+    <?php
+    // Get reorder alerts count
+    $reorder_stmt = $db->query("
+        SELECT COUNT(*) as count 
+        FROM products p
+        JOIN reorder_settings rs ON p.id = rs.product_id
+        WHERE p.quantity <= rs.reorder_point
+        AND p.reorder_enabled = 1
+    ");
+    $reorder_count = $reorder_stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    ?>
+
+    <!-- Reorder Alerts Card -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <a href="products/reorder_suggestions.php" class="text-decoration-none">
+            <div class="card dashboard-card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Reorder Needed</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $reorder_count; ?></div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
     <!-- Inventory Value Card -->
     <div class="col-xl-3 col-md-6 mb-4">
         <div class="card dashboard-card border-left-success shadow h-100 py-2">

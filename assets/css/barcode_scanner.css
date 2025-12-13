@@ -1,0 +1,204 @@
+/* Barcode Scanner Styles */
+
+.barcode-scanner-viewport {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+    position: relative;
+    min-height: 300px;
+}
+
+.barcode-scanner-viewport video {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Scanner status messages */
+.scanner-status {
+    padding: 10px 15px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    transition: all 0.3s ease;
+    min-height: 20px;
+}
+
+.scanner-status-info {
+    background: #cfe2ff;
+    color: #084298;
+    border: 1px solid #b6d4fe;
+}
+
+.scanner-status-success {
+    background: #d1e7dd;
+    color: #0f5132;
+    border: 1px solid #badbcc;
+    animation: pulse 0.5s ease;
+}
+
+.scanner-status-error {
+    background: #f8d7da;
+    color: #842029;
+    border: 1px solid #f5c2c7;
+}
+
+.scanner-status-warning {
+    background: #fff3cd;
+    color: #664d03;
+    border: 1px solid #ffecb5;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* Scanner controls */
+.scanner-controls {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.scanner-controls .btn {
+    font-weight: 500;
+}
+
+/* Scan line animation */
+.barcode-scanner-viewport::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #00ff00, transparent);
+    animation: scan-line 2s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes scan-line {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(300px); }
+}
+
+/* Barcode scan button in search bar */
+.barcode-scan-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.barcode-scan-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.barcode-scan-btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+/* Mobile responsive */
+@media (max-width: 576px) {
+    .barcode-scanner-viewport {
+        max-width: 100%;
+        min-height: 250px;
+    }
+    
+    @keyframes scan-line {
+        0% { transform: translateY(0); }
+        100% { transform: translateY(250px); }
+    }
+    
+    .scanner-controls .btn {
+        font-size: 14px;
+        padding: 8px 12px;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .barcode-scanner-viewport {
+        border-color: #495057;
+    }
+    
+    .scanner-status-info {
+        background: #052c65;
+        color: #6ea8fe;
+        border-color: #084298;
+    }
+    
+    .scanner-status-success {
+        background: #051b11;
+        color: #75b798;
+        border-color: #0f5132;
+    }
+    
+    .scanner-status-error {
+        background: #2c0b0e;
+        color: #ea868f;
+        border-color: #842029;
+    }
+}
+
+/* Loading spinner for scanner */
+.scanner-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-size: 18px;
+}
+
+.scanner-loading i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Camera permission prompt */
+.camera-permission-prompt {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+}
+
+.camera-permission-prompt i {
+    font-size: 48px;
+    margin-bottom: 15px;
+    color: #adb5bd;
+}
+
+/* Scan success animation */
+@keyframes scan-success {
+    0% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
+}
+
+.scan-success-animation {
+    animation: scan-success 0.6s ease;
+}

@@ -92,7 +92,7 @@ require_once "../includes/header.php";
 <?php if ($product): ?>
 <div class="row">
     <div class="col-md-8">
-        <div class="card">
+        <div class="card" id="printableArea">
             <div class="card-header">
                 <h6 class="card-title mb-0">
                     Barcode for <?php echo htmlspecialchars($variant ? $product['name'] . ' - ' . $variant['size'] . ' ' . $variant['color'] : $product['name']); ?>
@@ -106,7 +106,7 @@ require_once "../includes/header.php";
                     <div class="mb-3">
                         <p><strong>Barcode Data:</strong> <?php echo htmlspecialchars($variant ? $variant['sku'] : $product['sku']); ?></p>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3 d-print-none">
                         <button class="btn btn-primary" onclick="window.print()">
                             <i class="fas fa-print"></i> Print Barcode
                         </button>
@@ -152,14 +152,19 @@ require_once "../includes/header.php";
     body * {
         visibility: hidden;
     }
-    .card, .card * {
+    #printableArea, #printableArea * {
         visibility: visible;
     }
-    .card {
+    #printableArea {
         position: absolute;
         left: 0;
         top: 0;
         width: 100%;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    .d-print-none {
+        display: none !important;
     }
 }
 </style>

@@ -48,7 +48,7 @@ $where_clause = "";
 $params = [];
 
 if (!empty($search)) {
-    $where_clause .= "(name LIKE :search OR sku LIKE :search OR description LIKE :search)";
+    $where_clause .= "(name LIKE :search OR sku LIKE :search OR barcode LIKE :search OR description LIKE :search OR id IN (SELECT product_id FROM product_variants WHERE sku LIKE :search))";
     $params[':search'] = "%$search%";
 }
 
@@ -102,6 +102,9 @@ $out_of_stock_stmt->execute();
 $out_of_stock_count = $out_of_stock_stmt->fetch(PDO::FETCH_ASSOC);
 
 require_once "../includes/header.php";
+?>
+<link rel="stylesheet" href="../assets/css/barcode_scanner.css">
+<?php
 
 // Display session messages
 if (isset($_SESSION['message'])) {
@@ -135,9 +138,14 @@ if (isset($_SESSION['message'])) {
         <form method="GET" class="row g-3">
             <div class="col-md-6">
                 <label for="search" class="form-label">Search Products</label>
-                <input type="text" class="form-control" id="search" name="search" 
-                       placeholder="Search by name, SKU, or description..." 
-                       value="<?php echo htmlspecialchars($search); ?>">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="search" name="search" 
+                           placeholder="Search by name, SKU, or description..." 
+                           value="<?php echo htmlspecialchars($search); ?>">
+                    <button class="btn btn-outline-secondary barcode-scan-btn" type="button" id="barcode-scan-btn" title="Scan Barcode (Ctrl+B)">
+                        <i class="fas fa-barcode"></i>
+                    </button>
+                </div>
             </div>
             <div class="col-md-4">
                 <label for="category" class="form-label">Filter by Category</label>
@@ -834,5 +842,27 @@ window.addEventListener('DOMContentLoaded', function() {
     animation: highlightAnimation 3s ease-out;
 }
 </style>
+
+<!-- Barcode Scanner Scripts -->
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script src="../assets/js/barcode_scanner.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const scanBtn = document.getElementById('barcode-scan-btn');
+        if (scanBtn) {
+            scanBtn.addEventListener('click', function() {
+                showBarcodeScannerModal(function(barcode) {
+                    // On successful scan
+                    const searchInput = document.getElementById('search');
+                    if (searchInput) {
+                        searchInput.value = barcode;
+                        // Submit the form to search
+                        searchInput.closest('form').submit();
+                    }
+                });
+            });
+        }
+    });
+</script>
 
 <?php require_once "../includes/footer.php"; ?>
