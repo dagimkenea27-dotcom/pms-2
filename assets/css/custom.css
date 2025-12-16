@@ -18,6 +18,11 @@
     --text-headers: #4e73df;
     --border-color: #e3e6f0;
     --card-shadow: 0 .15rem 1.75rem 0 rgba(58, 59, 69, .15);
+
+    /* Layout Variables */
+    --sidebar-width: 14rem;
+    --sidebar-collapsed: 6.5rem;
+    --topbar-height: 4.375rem;
 }
 
 /* Dark Mode Overrides */
@@ -47,34 +52,76 @@ body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Wrapper */
+/* ===== Layout ===== */
 #wrapper {
     display: flex;
-    width: 100%;
-    align-items: stretch;
 }
 
-/* Sidebar */
 .sidebar {
-    width: 14rem;
-    min-height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: var(--sidebar-width);
     background: linear-gradient(180deg, #042480 10%, #224abe 100%);
-    background-size: cover;
-    transition: all .3s;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-    z-index: 1000;
+    transition: width 0.3s ease, left 0.3s ease;
+    z-index: 1040;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    /* Firefox */
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+/* Custom Scrollbar for Webkit */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
 }
 
 [data-theme="dark"] .sidebar {
     background: var(--bg-nav);
-    background-size: cover;
 }
 
+/* Expanded state (full sidebar) */
+.sidebar:not(.toggled) {
+    width: 14rem;
+}
+
+/* Collapsed state (icons only) */
 .sidebar.toggled {
+    width: var(--sidebar-collapsed);
+}
+
+.sidebar.toggled .sidebar-brand-text {
+    display: none;
+}
+
+.sidebar.toggled .nav-item .nav-link span {
+    display: none;
+}
+
+.sidebar.toggled .sidebar-heading {
+    display: none;
+}
+
+.sidebar.toggled .nav-item .nav-link {
+    text-align: center;
+    padding: 0.75rem 1rem;
     width: 6.5rem;
-    overflow: hidden;
+}
+
+.sidebar.toggled .nav-item .nav-link i {
+    margin-right: 0;
+    font-size: 1.2rem !important;
+    /* Larger icons when collapsed */
 }
 
 .sidebar .sidebar-brand {
@@ -123,12 +170,20 @@ body {
     padding: 1rem;
     width: 14rem;
     color: rgba(255, 255, 255, .8);
+    transition: all 0.3s ease;
 }
 
 .sidebar .nav-item .nav-link i {
     font-size: .85rem;
     margin-right: .25rem;
     color: rgba(255, 255, 255, .3);
+    transition: all 0.3s ease;
+}
+
+/* Larger icons when sidebar is collapsed */
+.sidebar.toggled .nav-item .nav-link i {
+    font-size: 1.2rem;
+    margin-right: 0;
 }
 
 .sidebar .nav-item .nav-link:hover {
@@ -152,31 +207,54 @@ body {
 
 .sidebar .nav-item .nav-link span {
     font-size: .90rem;
+    transition: opacity 0.3s ease;
+}
+
+/* Hide text smoothly when collapsed */
+.sidebar.toggled .nav-item .nav-link span {
+    opacity: 0;
+    display: none;
 }
 
 /* Content Wrapper */
 #content-wrapper {
+    margin-left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
+    transition: margin-left 0.3s ease, width 0.3s ease;
     background-color: var(--bg-body);
-    width: 100%;
-    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
 }
 
+body.sidebar-toggled #content-wrapper {
+    margin-left: var(--sidebar-collapsed);
+    width: calc(100% - var(--sidebar-collapsed));
+}
+
 #content {
+    padding-top: calc(var(--topbar-height) + 1.5rem);
     flex: 1 0 auto;
 }
 
 /* Topbar */
 .topbar {
-    height: 4.375rem;
-    margin-bottom: 1.5rem;
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-width);
+    right: 0;
+    height: var(--topbar-height);
+    background: var(--bg-nav);
+    z-index: 1030;
+    transition: left 0.3s ease;
     box-shadow: 0 .15rem 1.75rem 0 rgba(58, 59, 69, .15);
-    background-color: var(--bg-nav);
     display: flex;
     align-items: center;
     padding: 0 1.5rem;
+}
+
+body.sidebar-toggled .topbar {
+    left: var(--sidebar-collapsed);
 }
 
 .topbar .nav-item .nav-link {
@@ -192,7 +270,8 @@ body {
 }
 
 .topbar .dropdown-list {
-    width: 19rem !important;
+    width: 100% !important;
+    max-width: 19rem !important;
 }
 
 .topbar .dropdown-toggle::after {
@@ -307,6 +386,11 @@ body {
 
 .sidebar .nav-link:not([data-bs-toggle="collapse"]):after {
     content: none !important;
+    display: none !important;
+}
+
+/* Hide collapse arrows when sidebar is collapsed */
+.sidebar.toggled .nav-link[data-bs-toggle="collapse"]:after {
     display: none !important;
 }
 
@@ -465,14 +549,41 @@ body {
     background-color: transparent;
     border: none;
     color: #d1d3e2;
-    /* Keeping nav text light on sidebar, but topbar needs check */
     font-size: 1.2rem;
     padding: 0.5rem;
     border-radius: 0.35rem;
+    cursor: pointer;
 }
 
 #sidebarToggle:hover {
     color: #858796;
+}
+
+/* Mobile Toggle Button */
+#sidebarToggleTop {
+    background-color: transparent;
+    border: none;
+    color: #d1d3e2;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    border-radius: 0.35rem;
+    cursor: pointer;
+}
+
+#sidebarToggleTop:hover {
+    color: #858796;
+}
+
+@media (max-width: 768px) {
+    #sidebarToggleTop {
+        display: block;
+    }
+}
+
+@media (min-width: 769px) {
+    #sidebarToggleTop {
+        display: none;
+    }
 }
 
 /* Scroll to Top Button */
@@ -489,6 +600,7 @@ body {
     line-height: 46px;
     border-radius: 100%;
     transition: background-color 0.3s;
+    cursor: pointer;
 }
 
 .scroll-to-top:hover {
@@ -554,143 +666,70 @@ footer.sticky-footer .copyright {
     padding-left: 0;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .sidebar {
-        width: 6.5rem;
-    }
-
-    .sidebar .nav-item .nav-link {
-        text-align: center;
-        width: 6.5rem;
-        padding: 0.75rem;
-    }
-
-    .sidebar .nav-item .nav-link span {
-        font-size: 0.65rem;
-        display: block;
-    }
-
-    .sidebar .sidebar-brand-text {
-        display: none;
-    }
-
-    .sidebar .sidebar-heading {
-        display: none;
-    }
-
-    .chart-area {
-        height: 15rem;
-    }
-}
-
-/* --- FIXED LAYOUT IMPLEMENTATION --- */
-
-/* Fix the sidebar */
-.sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1040;
-    height: 100vh;
-    overflow-y: auto;
-}
-
-/* Adjust wrapper to account for fixed sidebar */
-#content-wrapper {
-    margin-left: 14rem;
-    /* Match sidebar width */
-    width: calc(100% - 14rem);
-    transition: margin-left 0.3s cubic-bezier(0.18, 1.25, 0.4, 1), width 0.3s cubic-bezier(0.18, 1.25, 0.4, 1);
-}
-
-/* Fix the topbar */
-.topbar {
-    position: fixed;
-    top: 0;
-    right: 0;
-    left: 14rem;
-    /* Starts where sidebar ends */
-    z-index: 1030;
-    transition: left 0.3s cubic-bezier(0.18, 1.25, 0.4, 1);
-}
-
-/* Push content down so it's not hidden behind topbar */
-#content .container-fluid {
-    padding-top: 1.5rem;
-    margin-top: 5.875rem;
-    /* Topbar height (4.375rem) + margin (1.5rem) */
-}
-
-/* --- TOGGLED STATE --- */
-/* When sidebar is toggled (small) */
-.sidebar.toggled {
-    width: 6.5rem;
-}
-
-/* Adjust wrapper when sidebar is toggled */
-body.sidebar-toggled #content-wrapper {
-    margin-left: 6.5rem;
-    width: calc(100% - 6.5rem);
-}
-
-/* Adjust topbar when sidebar is toggled */
-body.sidebar-toggled .topbar {
-    left: 6.5rem;
-}
-
-/* --- MOBILE RESPONSIVE --- */
+/* ===== Mobile ===== */
 @media (max-width: 768px) {
 
-    /* On mobile, sidebar behaves differently */
-    /* On mobile, sidebar behaves differently - Use Overlay */
     .sidebar {
-        position: fixed;
         left: -14rem;
-        /* Hidden by default */
-        top: 0;
-        bottom: 0;
-        width: 14rem;
-        z-index: 1050;
-        transition: left 0.3s ease-in-out;
+        width: var(--sidebar-width);
     }
 
-    /* Open state */
     .sidebar.toggled {
         left: 0;
-        width: 14rem;
-        transform: none;
     }
 
-    #content-wrapper {
+    /* Reset wrappers for mobile */
+    #content-wrapper,
+    body.sidebar-toggled #content-wrapper {
         margin-left: 0 !important;
         width: 100% !important;
     }
 
     .topbar {
         left: 0 !important;
-        width: 100%;
+    }
+
+    body.sidebar-toggled::after {
+        content: "";
         position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .5);
+        z-index: 1035;
     }
 
-    /* Hide brand text on mobile when closed (standard behavior) but when open show it */
+    /* --- MOBILE ICON-ONLY MODE --- */
+
+    /* When toggled on mobile, show as collapsed (icon only) overlay */
+    .sidebar.toggled {
+        width: 6.5rem !important;
+        /* Force mini width */
+    }
+
+    /* Hide Brand Text */
     .sidebar.toggled .sidebar-brand-text {
-        display: inline !important;
+        display: none !important;
     }
 
-    .sidebar .nav-item .nav-link {
+    /* Hide Navigation Text */
+    .sidebar.toggled .nav-item .nav-link span {
+        display: none !important;
+    }
+
+    /* Hide Section Headings */
+    .sidebar.toggled .sidebar-heading {
+        display: none !important;
+    }
+
+    /* Center Icons */
+    .sidebar.toggled .nav-item .nav-link {
+        text-align: center !important;
         width: 100%;
-        text-align: left;
+        padding: 0.75rem 1rem;
     }
 
-    .sidebar .nav-item .nav-link span {
-        font-size: 0.85rem;
-        display: inline;
+    .sidebar.toggled .nav-item .nav-link i {
+        margin-right: 0 !important;
+        font-size: 1.2rem;
+        /* Larger icons for touch */
     }
-}
-
-/* Ensure tables are responsive on all devices */
-.table-responsive {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
 }

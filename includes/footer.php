@@ -5,6 +5,13 @@
 
             <!-- Footer -->
             <footer class="sticky-footer bg-white">
+                <div class="row">
+                    <div class="col-12 text-center mb-2">
+                        <a href="<?php echo BASE_URL; ?>about.php" class="text-secondary small mx-2">About Us</a>
+                        <span class="text-muted small">|</span>
+                        <a href="<?php echo BASE_URL; ?>support.php" class="text-secondary small mx-2">Support</a>
+                    </div>
+                </div>
                 <div class="container my-auto">
                     <div class="copyright text-center my-auto">
                         <span>Copyright &copy; Inventory Management System 2025</span>
@@ -140,46 +147,9 @@
         </div>
     </div>
 
+    <script src="<?php echo BASE_URL; ?>assets/js/sidebar.js"></script>
+    
     <script>
-        // Toggle sidebar
-        document.addEventListener('DOMContentLoaded', function() {
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const sidebarToggleTop = document.getElementById('sidebarToggleTop');
-            const sidebar = document.querySelector('.sidebar');
-            
-            if (sidebarToggle) {
-                sidebarToggle.addEventListener('click', function() {
-                    sidebar.classList.toggle('toggled');
-                });
-            }
-            
-            if (sidebarToggleTop) {
-                sidebarToggleTop.addEventListener('click', function() {
-                    sidebar.classList.toggle('toggled');
-                });
-            }
-            
-            // Scroll to top button
-            const scrollToTopButton = document.querySelector('.scroll-to-top');
-            if (scrollToTopButton) {
-                window.addEventListener('scroll', function() {
-                    if (window.pageYOffset > 100) {
-                        scrollToTopButton.style.display = 'block';
-                    } else {
-                        scrollToTopButton.style.display = 'none';
-                    }
-                });
-                
-                scrollToTopButton.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    window.scrollTo({
-                        top: 0,
-                        behavior: 'smooth'
-                    });
-                });
-            }
-        });
-
         // Auto-dismiss alerts
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
