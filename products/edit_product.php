@@ -12,6 +12,9 @@ $database = new Database();
 $db = $database->getConnection();
 $audit = new AuditLog($db);
 
+// Helper functions
+require_once "../includes/functions.php";
+
 // Get categories, brands, suppliers for dropdowns
 $categories = $db->query("SELECT id, name FROM categories ORDER BY name ASC");
 $brands = $db->query("SELECT id, name FROM brands ORDER BY name ASC");
@@ -20,15 +23,6 @@ $suppliers = $db->query("SELECT id, name FROM suppliers ORDER BY name ASC");
 $message = '';
 $message_type = '';
 $errors = [];
-
-// Helper to get name from ID - Moved outside POST handler to prevent redefinition errors
-function getName($db, $table, $id) {
-    if (!$id) return null;
-    $stmt = $db->prepare("SELECT name FROM $table WHERE id = ?");
-    $stmt->execute([$id]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return $row ? $row['name'] : null;
-}
 
 // Get product data
 $product = null;
@@ -72,16 +66,22 @@ if ($_POST) {
     
     if (empty($sku)) {
         $errors[] = "SKU is required.";
-    } else if ($sku != $product['sku']) {
-        // Check if new SKU already exists
+    } else {
+        // Check if new SKU already exists in products (excluding current)
         $check_query = "SELECT id FROM products WHERE sku = :sku AND id != :id";
         $check_stmt = $db->prepare($check_query);
         $check_stmt->bindParam(":sku", $sku);
         $check_stmt->bindParam(":id", $product['id']);
         $check_stmt->execute();
         
-        if ($check_stmt->rowCount() > 0) {
-            $errors[] = "SKU already exists. Please use a unique SKU.";
+        // Check if SKU exists in variants (any variant)
+        $check_v_query = "SELECT id FROM product_variants WHERE sku = :sku";
+        $check_v_stmt = $db->prepare($check_v_query);
+        $check_v_stmt->bindParam(":sku", $sku);
+        $check_v_stmt->execute();
+        
+        if ($check_stmt->rowCount() > 0 || $check_v_stmt->rowCount() > 0) {
+            $errors[] = "SKU '$sku' already exists (in products or variants). Please use a unique SKU.";
         }
     }
     
@@ -116,7 +116,7 @@ if ($_POST) {
                 }
                 
                 if (empty($v_sku)) {
-                     $v_sku = $sku . '-' . strtoupper(substr($v_size ? $v_size : 'X', 0, 3)) . '-' . strtoupper(substr($v_color ? $v_color : 'X', 0, 3)) . '-' . ($i+1);
+                     $v_sku = generateSKU($db);
                 }
 
                 // Check duplicate SKU among variants in this submit
@@ -133,13 +133,20 @@ if ($_POST) {
                     $v_check = $db->prepare("SELECT id FROM product_variants WHERE sku = ? AND id != ?");
                     $v_check->execute([$v_sku, $v_id]);
                 } else {
-                    // Adding new variant - check if SKU exists anywhere
+                    // Adding new variant - check if SKU exists anywhere in variants
                     $v_check = $db->prepare("SELECT id FROM product_variants WHERE sku = ?");
                     $v_check->execute([$v_sku]);
                 }
                 
-                if ($v_check->rowCount() > 0) {
-                    $errors[] = "Variant SKU already exists: " . $v_sku;
+                // Check duplicate SKU in DB (products table) - exclude current parent product IF checking against parent (rare case if inputing same SKU)
+                // Actually, a variant SKU should NOT match distinct product SKUs.
+                // It specifically shouldn't match ANY product SKU ideally, but technically if it matches its OWN parent that *might* be confusing but is sometimes allowed in some systems. 
+                // However, user requested "solid" relationship, usually implies globally unique SKU.
+                $p_check = $db->prepare("SELECT id FROM products WHERE sku = ?");
+                $p_check->execute([$v_sku]);
+
+                if ($v_check->rowCount() > 0 || $p_check->rowCount() > 0) {
+                     $errors[] = "Variant SKU '$v_sku' already exists (in products or variants).";
                 }
 
                 $submitted_variants[] = [
@@ -359,8 +366,13 @@ require_once "../includes/header.php";
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="sku" class="form-label">SKU *</label>
-                                <input type="text" class="form-control" id="sku" name="sku" required 
-                                       value="<?php echo htmlspecialchars($product['sku']); ?>">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="sku" name="sku" required 
+                                           value="<?php echo htmlspecialchars($product['sku']); ?>">
+                                    <button class="btn btn-outline-secondary" type="button" id="generateSKU" title="Generate New Numeric SKU">
+                                        <i class="fas fa-random"></i>
+                                    </button>
+                                </div>
                             </div>
                             
                             <div class="mb-3">
@@ -594,6 +606,22 @@ document.getElementById('addVariantRow').addEventListener('click', function() {
             alert('You must have at least one variant row.');
         }
     });
+    
+    // Apply auto-fill to the new price input
+    const newPriceInput = newRow.querySelector('input[name="variant_price[]"]');
+    if (newPriceInput) {
+        // Auto-fill with main price if it's empty
+        const mainPrice = document.getElementById('price').value;
+        if (!newPriceInput.value && mainPrice) {
+            newPriceInput.value = mainPrice;
+            newPriceInput.classList.add('auto-filled');
+        }
+        
+        // Add event listener to remove auto-filled class on manual input
+        newPriceInput.addEventListener('input', function() {
+            this.classList.remove('auto-filled');
+        });
+    }
 });
 
 // Remove variant row
@@ -612,24 +640,76 @@ document.addEventListener('click', function(e) {
 });
 
 // Auto-fill variant prices from main product price
-document.getElementById('price').addEventListener('input', function() {
-    const mainPrice = this.value;
+function updateVariantPrices() {
+    const mainPrice = document.getElementById('price').value;
     const variantPriceInputs = document.querySelectorAll('input[name="variant_price[]"]');
     
     // Set price for all variant rows that don't have a manual value
     variantPriceInputs.forEach(input => {
-        // Only auto-fill if the field is empty or if it's the first row and hasn't been manually changed
+        // Only auto-fill if the field is empty or if it was auto-filled before
         if (!input.value || input.classList.contains('auto-filled')) {
             input.value = mainPrice;
-            input.classList.add('auto-filled');
+            // Only add the class if the field was empty (not for existing values)
+            if (!input.value) {
+                input.classList.add('auto-filled');
+            }
         }
     });
+}
+
+// Call once on page load to populate initial values
+document.addEventListener('DOMContentLoaded', function() {
+    // Only auto-fill if we're adding new variants (no existing prices)
+    const hasExistingPrices = Array.from(document.querySelectorAll('input[name="variant_price[]"]'))
+        .some(input => input.value && !isNaN(parseFloat(input.value)));
+    
+    if (!hasExistingPrices) {
+        updateVariantPrices();
+    }
 });
+
+// Update when main price changes
+document.getElementById('price').addEventListener('input', updateVariantPrices);
 
 // Remove auto-fill class when user manually changes variant price
 document.addEventListener('input', function(e) {
     if (e.target.name === 'variant_price[]') {
         e.target.classList.remove('auto-filled');
+    }
+});
+
+// Add event listeners to existing variant price inputs
+document.addEventListener('DOMContentLoaded', function() {
+    const variantPriceInputs = document.querySelectorAll('input[name="variant_price[]"]');
+    variantPriceInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            this.classList.remove('auto-filled');
+        });
+    });
+});
+// Generate SKU
+document.getElementById('generateSKU').addEventListener('click', function() {
+    if (confirm('Are you sure you want to generate a new SKU? This will replace the existing one.')) {
+        const skuInput = document.getElementById('sku');
+        // Generate 11 digits: Timestamp (10) + Random (1)
+        const timestamp = Math.floor(Date.now() / 1000); 
+        const random = Math.floor(Math.random() * 10); // 0-9
+        const code11 = timestamp + '' + random;
+        
+        // Calculate Check Digit
+        let sum = 0;
+        for (let i = 0; i < 11; i++) {
+            const digit = parseInt(code11[i]);
+            if ((i + 1) % 2 !== 0) { // Odd position
+                sum += digit * 3;
+            } else {
+                sum += digit;
+            }
+        }
+        const mod = sum % 10;
+        const checkDigit = (mod === 0) ? 0 : (10 - mod);
+        
+        skuInput.value = code11 + '' + checkDigit;
     }
 });
 </script>

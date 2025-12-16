@@ -2,6 +2,7 @@
 require_once dirname(__DIR__) . '/config/paths.php';
 require_once CONFIG_PATH . 'database.php';
 require_once CONFIG_PATH . 'auth.php';
+require_once dirname(__DIR__) . '/includes/functions.php';
 Auth::startSession();
 ?>
 <!DOCTYPE html>
@@ -36,7 +37,7 @@ Auth::startSession();
             <li class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
                 <a class="nav-link" href="<?php echo BASE_URL; ?>index.php">
                     <i class="fas fa-fw fa-tachometer-alt"></i>
-                    <span>Dashboard</span>
+                    <span><?php echo __('dashboard'); ?></span>
                 </a>
             </li>
 
@@ -45,7 +46,7 @@ Auth::startSession();
 
             <!-- Heading -->
             <div class="sidebar-heading">
-                Product Management
+                <?php echo __('product_management'); ?>
             </div>
 
             <!-- Nav Item - Pricing -->
@@ -53,12 +54,12 @@ Auth::startSession();
                 <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapsePricing"
                     aria-expanded="true" aria-controls="collapsePricing">
                     <i class="fas fa-fw fa-tag"></i>
-                    <span>Pricing</span>
+                    <span><?php echo __('pricing'); ?></span>
                 </a>
                 <div id="collapsePricing" class="collapse <?php echo strpos($_SERVER['REQUEST_URI'], 'price') !== false ? 'show' : ''; ?>" aria-labelledby="headingPricing" data-parent="#accordionSidebar">
                     <div class="py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>price.php">Price Calculator</a>
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>price_analytics.php">Price Analytics</a>
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>price.php"><?php echo __('price_calculator'); ?></a>
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>price_analytics.php"><?php echo __('price_analytics'); ?></a>
                     </div>
                 </div>
             </li>
@@ -68,13 +69,13 @@ Auth::startSession();
                 <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseCatalog"
                     aria-expanded="true" aria-controls="collapseCatalog">
                     <i class="fas fa-fw fa-box-open"></i>
-                    <span>Catalog</span>
+                    <span><?php echo __('catalog'); ?></span>
                 </a>
                 <div id="collapseCatalog" class="collapse <?php echo ((strpos($_SERVER['REQUEST_URI'], 'products/') !== false && strpos($_SERVER['REQUEST_URI'], 'stock_') === false) || strpos($_SERVER['REQUEST_URI'], 'categories/') !== false || strpos($_SERVER['REQUEST_URI'], 'brands/') !== false) ? 'show' : ''; ?>" aria-labelledby="headingCatalog" data-parent="#accordionSidebar">
                     <div class="py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>products/view_products.php">Products</a>
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>categories/">Categories</a>
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>brands/">Brands</a>
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>products/view_products.php"><?php echo __('products'); ?></a>
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>categories/"><?php echo __('categories'); ?></a>
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>brands/"><?php echo __('brands'); ?></a>
                     </div>
                 </div>
             </li>
@@ -84,7 +85,7 @@ Auth::startSession();
 
             <!-- Heading -->
             <div class="sidebar-heading">
-                Stock Operations
+                <?php echo __('stock_operations'); ?>
             </div>
 
             <!-- Nav Item - Stock Movements -->
@@ -92,12 +93,12 @@ Auth::startSession();
                 <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseStock"
                     aria-expanded="true" aria-controls="collapseStock">
                     <i class="fas fa-fw fa-exchange-alt"></i>
-                    <span>Stock Operations</span>
+                    <span><?php echo __('stock_operations'); ?></span>
                 </a>
                 <div id="collapseStock" class="collapse <?php echo (strpos($_SERVER['REQUEST_URI'], 'products/stock_in') !== false || strpos($_SERVER['REQUEST_URI'], 'products/stock_out') !== false) ? 'show' : ''; ?>" aria-labelledby="headingStock" data-parent="#accordionSidebar">
                     <div class="py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>products/stock_in.php">Stock In</a>
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>products/stock_out.php">Stock Out</a>
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>products/stock_in.php"><?php echo __('stock_in'); ?></a>
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>products/stock_out.php"><?php echo __('stock_out'); ?></a>
                     </div>
                 </div>
             </li>
@@ -107,12 +108,12 @@ Auth::startSession();
                 <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseSuppliers"
                     aria-expanded="true" aria-controls="collapseSuppliers">
                     <i class="fas fa-fw fa-truck"></i>
-                    <span>Suppliers</span>
+                    <span><?php echo __('suppliers'); ?></span>
                 </a>
                 <div id="collapseSuppliers" class="collapse <?php echo strpos($_SERVER['REQUEST_URI'], 'suppliers/') !== false ? 'show' : ''; ?>" aria-labelledby="headingSuppliers" data-parent="#accordionSidebar">
                     <div class="py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>suppliers/view_suppliers.php">View Suppliers</a>
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>suppliers/add_supplier.php">Add Supplier</a>
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>suppliers/view_suppliers.php"><?php echo __('view_suppliers'); ?></a>
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>suppliers/add_supplier.php"><?php echo __('add_supplier'); ?></a>
                     </div>
                 </div>
             </li>
@@ -122,12 +123,12 @@ Auth::startSession();
                 <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseFleet"
                     aria-expanded="true" aria-controls="collapseFleet">
                     <i class="fas fa-fw fa-users-cog"></i>
-                    <span>Driver & Fleet</span>
+                    <span><?php echo __('driver_fleet'); ?></span>
                 </a>
                 <div id="collapseFleet" class="collapse <?php echo (strpos($_SERVER['REQUEST_URI'], 'drivers/') !== false || strpos($_SERVER['REQUEST_URI'], 'vehicles/') !== false) ? 'show' : ''; ?>" aria-labelledby="headingFleet" data-parent="#accordionSidebar">
                     <div class="py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>drivers/index.php">Drivers</a>
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>vehicles/index.php">Vehicles</a>
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>drivers/index.php"><?php echo __('drivers'); ?></a>
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>vehicles/index.php"><?php echo __('vehicles'); ?></a>
                     </div>
                 </div>
             </li>
@@ -137,15 +138,15 @@ Auth::startSession();
                 <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseRoutes"
                     aria-expanded="true" aria-controls="collapseRoutes">
                     <i class="fas fa-fw fa-map-marked-alt"></i>
-                    <span>Route Management</span>
+                    <span><?php echo __('route_management'); ?></span>
                 </a>
                 <div id="collapseRoutes" class="collapse <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/') !== false ? 'show' : ''; ?>" aria-labelledby="headingRoutes" data-parent="#accordionSidebar">
                     <div class="py-2 collapse-inner rounded">
-                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/index.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>routes/index.php">Optimize Routes</a>
-                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/manage.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>routes/manage.php">Saved Routes</a>
-                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/templates.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>routes/templates.php">Templates</a>
-                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'customers/address_book.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>customers/address_book.php">Address Book</a>
-                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'settings/route_preferences.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>settings/route_preferences.php">Preferences</a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/index.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>routes/index.php"><?php echo __('optimize_routes'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/manage.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>routes/manage.php"><?php echo __('saved_routes'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/templates.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>routes/templates.php"><?php echo __('templates'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'customers/address_book.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>customers/address_book.php"><?php echo __('address_book'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'settings/route_preferences.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>settings/route_preferences.php"><?php echo __('preferences'); ?></a>
                     </div>
                 </div>
             </li>
@@ -155,7 +156,7 @@ Auth::startSession();
 
             <!-- Heading -->
             <div class="sidebar-heading">
-                Reports & Analytics
+                <?php echo __('reports_analytics'); ?>
             </div>
 
             <!-- Nav Item - Reports -->
@@ -163,21 +164,21 @@ Auth::startSession();
             <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'reports/stock_movement.php') !== false ? 'active' : ''; ?>">
                 <a class="nav-link" href="<?php echo BASE_URL; ?>reports/stock_movement.php">
                     <i class="fas fa-fw fa-chart-line"></i>
-                    <span>Stock Movement</span>
+                    <span><?php echo __('stock_movement'); ?></span>
                 </a>
             </li>
 
             <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'reports/low_stock.php') !== false ? 'active' : ''; ?>">
                 <a class="nav-link" href="<?php echo BASE_URL; ?>reports/low_stock.php">
                     <i class="fas fa-fw fa-exclamation-triangle"></i>
-                    <span>Low Stock Items</span>
+                    <span><?php echo __('low_stock_items'); ?></span>
                 </a>
             </li>
 
             <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'reports/stock_valuation.php') !== false ? 'active' : ''; ?>">
                 <a class="nav-link" href="<?php echo BASE_URL; ?>reports/stock_valuation.php">
                     <i class="fas fa-fw fa-chart-pie"></i>
-                    <span>Stock Valuation</span>
+                    <span><?php echo __('stock_valuation'); ?></span>
                 </a>
             </li>
 
@@ -186,7 +187,7 @@ Auth::startSession();
 
             <!-- Heading -->
             <div class="sidebar-heading">
-                Administration
+                <?php echo __('administration'); ?>
             </div>
 
             <!-- Nav Item - Admin Tools -->
@@ -195,13 +196,13 @@ Auth::startSession();
                 <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseAdmin"
                     aria-expanded="true" aria-controls="collapseAdmin">
                     <i class="fas fa-fw fa-cogs"></i>
-                    <span>Admin Tools</span>
+                    <span><?php echo __('admin_tools'); ?></span>
                 </a>
                 <div id="collapseAdmin" class="collapse <?php echo (strpos($_SERVER['REQUEST_URI'], 'users/') !== false || strpos($_SERVER['REQUEST_URI'], 'admin/') !== false || strpos($_SERVER['REQUEST_URI'], 'tax_fee_admin.php') !== false) ? 'show' : ''; ?>" aria-labelledby="headingAdmin" data-parent="#accordionSidebar">
                     <div class="py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>users/view_users.php">User Management</a>
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>admin/audit_logs.php">Audit Logs</a>
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>tax_fee_admin.php">Tax/Fee Config</a>
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>users/view_users.php"><?php echo __('user_management'); ?></a>
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>admin/audit_logs.php"><?php echo __('audit_logs'); ?></a>
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>tax_fee_admin.php"><?php echo __('tax_fee_config'); ?></a>
                     </div>
                 </div>
             </li>
@@ -240,8 +241,26 @@ Auth::startSession();
                         $recent_notifs = $notification->getRecent($current_user['id']);
                     ?>
                     
-                    <!-- Left Side: Notifications -->
-                    <ul class="navbar-nav me-auto">
+                    <!-- Right Side: Toggles and User Profile -->
+                    <ul class="navbar-nav ms-auto">
+                        <!-- Dark Mode Toggle -->
+                        <li class="nav-item mx-1">
+                            <a class="nav-link" href="#" onclick="toggleTheme(); return false;" title="Toggle Dark Mode">
+                                <i class="fas fa-moon" id="darkModeIcon"></i>
+                            </a>
+                        </li>
+                        
+                        <!-- Language Switcher -->
+                        <li class="nav-item dropdown no-arrow mx-1">
+                             <a class="nav-link dropdown-toggle" href="#" id="langDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-globe"></i>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in" aria-labelledby="langDropdown">
+                                <a class="dropdown-item <?php echo get_current_lang() == 'en' ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>language_switch.php?lang=en">English</a>
+                                <a class="dropdown-item <?php echo get_current_lang() == 'ja' ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>language_switch.php?lang=ja">日本語</a>
+                            </div>
+                        </li>
+
                         <!-- Notifications Dropdown -->
                         <li class="nav-item dropdown no-arrow mx-1">
                             <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button"
@@ -256,7 +275,7 @@ Auth::startSession();
                             <div class="dropdown-list dropdown-menu dropdown-menu-start shadow animated--grow-in"
                                 aria-labelledby="alertsDropdown">
                                 <h6 class="dropdown-header bg-primary text-white border-0 py-2">
-                                    Alerts Center
+                                    <?php echo __('alerts_center'); ?>
                                 </h6>
                                 <div id="alertList">
                                     <?php if ($recent_notifs->rowCount() > 0): ?>
@@ -275,16 +294,14 @@ Auth::startSession();
                                         </a>
                                         <?php endwhile; ?>
                                     <?php else: ?>
-                                        <a class="dropdown-item text-center small text-gray-500" href="#">No new alerts</a>
+                                        <a class="dropdown-item text-center small text-gray-500" href="#"><?php echo __('no_new_alerts'); ?></a>
                                     <?php endif; ?>
                                 </div>
-                                <a class="dropdown-item text-center small text-gray-500 py-2 bg-light border-top" href="<?php echo BASE_URL; ?>notifications.php">Show All Alerts</a>
+                                <a class="dropdown-item text-center small text-gray-500 py-2 bg-light border-top" href="<?php echo BASE_URL; ?>notifications.php"><?php echo __('show_all_alerts'); ?></a>
                             </div>
                         </li>
-                    </ul>
 
-                    <!-- Right Side: User Profile -->
-                    <ul class="navbar-nav ms-auto">
+
                         <li class="nav-item dropdown no-arrow">
                             
                             <!-- Notification Poller Script -->
@@ -351,16 +368,16 @@ Auth::startSession();
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="<?php echo BASE_URL; ?>profile.php">
                                     <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
-                                    Profile
+                                    <?php echo __('profile'); ?>
                                 </a>
                                 <a class="dropdown-item" href="<?php echo BASE_URL; ?>settings.php">
                                     <i class="fas fa-cog fa-sm fa-fw mr-2 text-gray-400"></i>
-                                    Settings
+                                    <?php echo __('settings'); ?>
                                 </a>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="<?php echo BASE_URL; ?>logout.php">
                                     <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
-                                    Logout
+                                    <?php echo __('logout'); ?>
                                 </a>
                             </div>
                         </li>
@@ -370,7 +387,7 @@ Auth::startSession();
                         <li class="nav-item">
                             <a class="nav-link" href="<?php echo BASE_URL; ?>login.php">
                                 <i class="fas fa-sign-in-alt fa-sm fa-fw mr-2 text-gray-400"></i>
-                                Login
+                                <?php echo __('login'); ?>
                             </a>
                         </li>
                     </ul>

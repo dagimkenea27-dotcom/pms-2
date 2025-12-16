@@ -1,182 +1,487 @@
 /**
- * Barcode Scanner Component
- * Reusable barcode scanner using Html5-QRCode library
- * Supports camera scanning and USB barcode scanners
+ * Enhanced Barcode Scanner
+ * Uses html5-qrcode library with improved features
  */
 
-class BarcodeScanner {
-    constructor(options = {}) {
-        this.options = {
-            containerId: options.containerId || 'barcode-scanner-container',
-            onScanSuccess: options.onScanSuccess || this.defaultOnSuccess,
-            onScanError: options.onScanError || this.defaultOnError,
-            fps: options.fps || 10,
-            qrbox: options.qrbox || { width: 250, height: 150 },
-            supportedFormats: options.supportedFormats || [
+const BarcodeScanner = {
+    html5QrcodeScanner: null,
+    isScanning: false,
+    currentCameraId: null,
+    lastScannedCode: null,
+    config: {
+        fps: 15,
+        qrbox: {
+            width: 300,
+            height: 150,
+            default: true
+        },
+        aspectRatio: 1.0,
+        disableFlip: false,
+        rememberLastUsedCamera: true,
+        showTorchButtonIfSupported: true,
+        showZoomSliderIfSupported: true
+    },
+
+    // Initialize and bind events
+    init: function () {
+        console.log('Enhanced Barcode Scanner Initialized');
+        this.bindEvents();
+        this.loadUserPreferences();
+    },
+
+    bindEvents: function () {
+        // Global listener for opening scanner
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.start-barcode-scanner')) {
+                e.preventDefault();
+                this.openModal();
+            }
+        });
+
+        // Modal events
+        const modalEl = document.getElementById('barcodeScannerModal');
+        if (modalEl) {
+            modalEl.addEventListener('hidden.bs.modal', () => {
+                this.stopScanner();
+            });
+
+            modalEl.addEventListener('shown.bs.modal', () => {
+                this.updateStatus('Ready to scan', '');
+                document.getElementById('last_scanned').style.display = 'none';
+            });
+        }
+
+        // File input change with preview
+        const fileInput = document.getElementById('scanner_image_file');
+        if (fileInput) {
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    // Show preview
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const preview = document.getElementById('preview_image');
+                        preview.src = e.target.result;
+                        preview.style.display = 'block';
+
+                        // Auto-scan after preview
+                        setTimeout(() => {
+                            this.handleFileUpload(file);
+                        }, 500);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // Camera Start Button
+        const startBtn = document.getElementById('btn_start_camera');
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                this.startCamera();
+            });
+        }
+
+        // Preferences
+        document.getElementById('scanner_auto_close')?.addEventListener('change', (e) => {
+            this.savePreference('autoClose', e.target.checked);
+        });
+
+        document.getElementById('scanner_beep')?.addEventListener('change', (e) => {
+            this.savePreference('playBeep', e.target.checked);
+        });
+    },
+
+    loadUserPreferences: function () {
+        const autoClose = localStorage.getItem('barcodeScanner_autoClose');
+        const playBeep = localStorage.getItem('barcodeScanner_playBeep');
+
+        if (autoClose !== null) {
+            document.getElementById('scanner_auto_close').checked = autoClose === 'true';
+        }
+        if (playBeep !== null) {
+            document.getElementById('scanner_beep').checked = playBeep === 'true';
+        }
+    },
+
+    savePreference: function (key, value) {
+        localStorage.setItem(`barcodeScanner_${key}`, value);
+    },
+
+    getPreference: function (key, defaultValue) {
+        const value = localStorage.getItem(`barcodeScanner_${key}`);
+        return value !== null ? value === 'true' : defaultValue;
+    },
+
+    openModal: function () {
+        const modal = new bootstrap.Modal(document.getElementById('barcodeScannerModal'));
+        modal.show();
+
+        // Reset UI
+        this.updateStatus('Ready to scan', '');
+        document.getElementById('scanner_video_container').style.display = 'block';
+        document.getElementById('scanner_upload_container').style.display = 'none';
+        document.getElementById('btn_start_camera').style.display = 'inline-block';
+        document.getElementById('btn_toggle_upload').style.display = 'inline-block';
+        document.getElementById('btn_stop_camera').style.display = 'none';
+
+        // Clear preview
+        const preview = document.getElementById('preview_image');
+        preview.src = '';
+        preview.style.display = 'none';
+
+        // Clear file input
+        const fileInput = document.getElementById('scanner_image_file');
+        if (fileInput) fileInput.value = '';
+    },
+
+    startCamera: async function () {
+        if (this.isScanning) return;
+
+        const readerId = "reader";
+
+        try {
+            if (typeof Html5Qrcode === 'undefined') {
+                throw new Error("Scanner library not loaded. Please refresh.");
+            }
+
+            // Define formats
+            const formats = [
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.EAN_13,
                 Html5QrcodeSupportedFormats.CODE_128,
                 Html5QrcodeSupportedFormats.CODE_39,
-                Html5QrcodeSupportedFormats.EAN_13,
-                Html5QrcodeSupportedFormats.EAN_8,
-                Html5QrcodeSupportedFormats.UPC_A,
-                Html5QrcodeSupportedFormats.UPC_E
-            ]
-        };
+                Html5QrcodeSupportedFormats.CODE_93,
+                Html5QrcodeSupportedFormats.QR_CODE
+            ];
 
-        this.scanner = null;
-        this.isScanning = false;
-        this.lastScanTime = 0;
-        this.scanCooldown = 2000; // 2 seconds between scans
-    }
+            this.config.formatsToSupport = formats;
+            this.html5QrcodeScanner = new Html5Qrcode(readerId, {
+                formatsToSupport: formats,
+                verbose: false
+            });
 
-    /**
-     * Initialize the scanner
-     */
-    async init() {
-        try {
-            this.scanner = new Html5Qrcode(this.options.containerId);
-            return true;
-        } catch (error) {
-            console.error('Failed to initialize scanner:', error);
-            return false;
-        }
-    }
+            const cameras = await Html5Qrcode.getCameras();
 
-    /**
-     * Start scanning with camera
-     */
-    async startCamera(cameraId = null) {
-        if (this.isScanning) {
-            console.warn('Scanner already running');
-            return;
-        }
+            if (cameras && cameras.length) {
+                // Try to get last used camera
+                let cameraId = this.getLastCameraId();
 
-        const config = {
-            fps: this.options.fps,
-            qrbox: this.options.qrbox,
-            formatsToSupport: this.options.supportedFormats
-        };
+                if (!cameraId) {
+                    // Prefer back camera
+                    cameraId = cameras[0].id;
+                    const backCamera = cameras.find(cam =>
+                        cam.label.toLowerCase().includes('back') ||
+                        cam.label.toLowerCase().includes('rear') ||
+                        cam.label.toLowerCase().includes('environment')
+                    );
+                    if (backCamera) {
+                        cameraId = backCamera.id;
+                    }
+                }
 
-        try {
-            if (cameraId) {
-                await this.scanner.start(
+                this.currentCameraId = cameraId;
+                this.updateStatus('Starting camera...', 'searching');
+
+                await this.html5QrcodeScanner.start(
                     cameraId,
-                    config,
-                    this.handleScanSuccess.bind(this),
-                    this.handleScanFailure.bind(this)
+                    this.config,
+                    (decodedText, decodedResult) => {
+                        this.handleScanSuccess(decodedText, decodedResult);
+                    },
+                    (errorMessage) => {
+                        // Ignore "no code found" errors
+                        if (!errorMessage.includes('No QR code')) {
+                            console.debug('Scan error:', errorMessage);
+                        }
+                    }
                 );
+
+                this.isScanning = true;
+                this.updateStatus('Scanning... Point at barcode', 'searching');
+
+                // Update UI
+                document.getElementById('btn_start_camera').style.display = 'none';
+                document.getElementById('btn_toggle_upload').style.display = 'none';
+                document.getElementById('btn_stop_camera').style.display = 'inline-block';
+
             } else {
-                await this.scanner.start(
-                    { facingMode: "environment" }, // Use back camera on mobile
-                    config,
-                    this.handleScanSuccess.bind(this),
-                    this.handleScanFailure.bind(this)
-                );
+                this.updateStatus('No cameras found', 'error');
+                this.showNoCameraMessage();
             }
-
-            this.isScanning = true;
-            this.showStatus('Scanner ready. Point camera at barcode.', 'info');
-        } catch (error) {
-            console.error('Failed to start camera:', error);
-            this.showStatus('Failed to start camera. Please check permissions.', 'error');
-            throw error;
+        } catch (err) {
+            console.error('Camera start error:', err);
+            this.updateStatus('Error: ' + err.message, 'error');
         }
-    }
+    },
 
-    /**
-     * Stop scanning
-     */
-    async stop() {
-        if (!this.isScanning) return;
+    getLastCameraId: function () {
+        return localStorage.getItem('barcodeScanner_lastCameraId');
+    },
 
-        try {
-            await this.scanner.stop();
+    saveLastCameraId: function (cameraId) {
+        localStorage.setItem('barcodeScanner_lastCameraId', cameraId);
+    },
+
+    showNoCameraMessage: function () {
+        this.updateStatus(`
+            <div class="text-center">
+                <i class="fas fa-video-slash fa-2x mb-2"></i><br>
+                No camera detected.<br>
+                <small class="text-muted">Try uploading an image instead.</small>
+            </div>
+        `, 'error');
+    },
+
+    stopScanner: async function () {
+        if (this.html5QrcodeScanner && this.isScanning) {
+            try {
+                await this.html5QrcodeScanner.stop();
+                this.html5QrcodeScanner.clear();
+            } catch (ignore) {
+                // Ignore stop errors
+            }
             this.isScanning = false;
-            this.showStatus('Scanner stopped', 'info');
-        } catch (error) {
-            console.error('Failed to stop scanner:', error);
         }
-    }
 
-    /**
-     * Handle successful scan
-     */
-    handleScanSuccess(decodedText, decodedResult) {
-        // Prevent duplicate scans
-        const now = Date.now();
-        if (now - this.lastScanTime < this.scanCooldown) {
-            return;
+        // Update UI
+        document.getElementById('btn_start_camera').style.display = 'inline-block';
+        document.getElementById('btn_toggle_upload').style.display = 'inline-block';
+        document.getElementById('btn_stop_camera').style.display = 'none';
+        this.updateStatus('Scanner stopped', '');
+    },
+
+    toggleUpload: function () {
+        const videoContainer = document.getElementById('scanner_video_container');
+        const uploadContainer = document.getElementById('scanner_upload_container');
+
+        if (videoContainer.style.display === 'block') {
+            videoContainer.style.display = 'none';
+            uploadContainer.style.display = 'block';
+            document.getElementById('btn_toggle_upload').innerHTML = '<i class="fas fa-camera"></i> Use Camera';
+        } else {
+            videoContainer.style.display = 'block';
+            uploadContainer.style.display = 'none';
+            document.getElementById('btn_toggle_upload').innerHTML = '<i class="fas fa-upload"></i> Upload Image';
         }
-        this.lastScanTime = now;
+    },
 
-        // Play success sound
-        this.playBeep();
+    handleFileUpload: async function (file) {
+        if (!file) return;
 
-        // Show success message
-        this.showStatus(`Scanned: ${decodedText}`, 'success');
-
-        // Call user callback
-        this.options.onScanSuccess(decodedText, decodedResult);
-    }
-
-    /**
-     * Handle scan failure (not an error, just no barcode detected)
-     */
-    handleScanFailure(error) {
-        // This is called frequently when no barcode is in view
-        // We don't need to do anything here
-    }
-
-    /**
-     * Default success handler
-     */
-    defaultOnSuccess(decodedText, decodedResult) {
-        console.log('Barcode scanned:', decodedText);
-    }
-
-    /**
-     * Default error handler
-     */
-    defaultOnError(error) {
-        console.error('Scan error:', error);
-    }
-
-    /**
-     * Get available cameras
-     */
-    async getCameras() {
         try {
-            const devices = await Html5Qrcode.getCameras();
-            return devices;
-        } catch (error) {
-            console.error('Failed to get cameras:', error);
-            return [];
+            if (typeof Html5Qrcode === 'undefined') {
+                throw new Error("Scanner library not loaded.");
+            }
+
+            this.updateStatus('Processing image...', 'searching');
+
+            const tempScanner = new Html5Qrcode("reader");
+            const result = await tempScanner.scanFile(file, true);
+
+            this.handleScanSuccess(result);
+
+        } catch (err) {
+            console.error('File scan error:', err);
+            this.updateStatus('No barcode found in image', 'error');
         }
-    }
+    },
 
-    /**
-     * Show status message
-     */
-    showStatus(message, type = 'info') {
-        const statusEl = document.getElementById('scanner-status');
-        if (statusEl) {
-            statusEl.textContent = message;
-            statusEl.className = `scanner-status scanner-status-${type}`;
+    handleScanSuccess: function (decodedText, decodedResult = null) {
+        console.log("Scan success: " + decodedText);
+        this.lastScannedCode = decodedText;
 
-            // Auto-hide after 3 seconds for success messages
-            if (type === 'success') {
-                setTimeout(() => {
-                    statusEl.textContent = '';
-                    statusEl.className = 'scanner-status';
-                }, 3000);
+        // Show last scanned
+        document.getElementById('last_scanned').style.display = 'block';
+        document.getElementById('last_scanned_value').textContent = decodedText;
+
+        // Play beep if enabled
+        if (this.getPreference('playBeep', true)) {
+            this.playBeep();
+        }
+
+        this.updateStatus(`Scanned: ${decodedText}... Searching product`, 'success');
+
+        // Check if we need to redirect to update stock
+        // We do this by querying the search endpoint first to get the ID
+        fetch(`../products/search_by_barcode.php?barcode=${encodeURIComponent(decodedText)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data) {
+                    const product = data.data.product;
+                    const variant = data.data.variant;
+
+                    let redirectUrl = `../products/update_stock.php?id=${product.id}`;
+
+                    if (data.data.type === 'variant' && variant) {
+                        redirectUrl += `&variant_id=${variant.id}`;
+                    }
+
+                    this.updateStatus('Product found! Redirecting...', 'success');
+
+                    // Small delay to let the user see the success message
+                    setTimeout(() => {
+                        window.location.href = redirectUrl;
+                    }, 500);
+
+                } else {
+                    // Fallback to populating search fields if not found or other error
+                    this.updateStatus(`Product not found via API. Populating search...`, 'warning');
+                    this.populateSearchFields(decodedText);
+                }
+            })
+            .catch(err => {
+                console.error('Search error:', err);
+                // Fallback on error
+                this.populateSearchFields(decodedText);
+            });
+
+        // Save scan history
+        this.saveToHistory(decodedText, decodedResult?.result?.format?.formatName);
+
+        // Auto-close if enabled
+        if (this.getPreference('autoClose', true)) {
+            setTimeout(() => {
+                this.autoCloseModal();
+            }, 1000);
+        }
+    },
+
+    populateSearchFields: function (decodedText) {
+        // Try different selectors
+        const selectors = [
+            'input[name="search_barcode"]',
+            'input[name="barcode"]',
+            '#barcode_search',
+            '#barcode',
+            '.barcode-input',
+            'input[type="text"][placeholder*="barcode" i]',
+            'input[type="text"][placeholder*="scan" i]',
+            'input[type="text"][id*="barcode" i]',
+            'input[type="text"][name*="barcode" i]'
+        ];
+
+        let populated = false;
+
+        for (const selector of selectors) {
+            const inputs = document.querySelectorAll(selector);
+            inputs.forEach(input => {
+                if (input && !input.disabled && input.type === 'text') {
+                    input.value = decodedText;
+                    input.focus();
+
+                    // Trigger events
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+                    // Trigger form submission if it's a search form
+                    const form = input.closest('form');
+                    if (form && (form.id.includes('search') ||
+                        form.className.includes('search') ||
+                        form.action.includes('search'))) {
+                        setTimeout(() => {
+                            const submitBtn = form.querySelector('[type="submit"]');
+                            if (submitBtn) {
+                                submitBtn.click();
+                            }
+                        }, 500);
+                    }
+
+                    populated = true;
+                }
+            });
+        }
+
+        // Product-specific handling
+        const productId = document.querySelector('[data-product-id]')?.getAttribute('data-product-id');
+        if (productId) {
+            this.updateProductBarcode(productId, decodedText);
+        }
+
+        // Global callback
+        if (typeof window.onBarcodeScanned === 'function') {
+            window.onBarcodeScanned(decodedText);
+        }
+
+        // Dispatch custom event
+        const event = new CustomEvent('barcode-scanned', {
+            detail: {
+                code: decodedText,
+                timestamp: new Date().toISOString()
+            }
+        });
+        document.dispatchEvent(event);
+    },
+
+    updateProductBarcode: function (productId, barcode) {
+        // AJAX implementation to update product barcode
+        if (typeof fetch === 'function') {
+            fetch('../products/update_barcode.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `id=${productId}&barcode=${encodeURIComponent(barcode)}`
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        this.updateStatus('Barcode saved to product!', 'success');
+                    }
+                })
+                .catch(error => {
+                    console.error('Update error:', error);
+                });
+        }
+    },
+
+    autoCloseModal: function () {
+        const modalEl = document.getElementById('barcodeScannerModal');
+        if (modalEl) {
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) {
+                this.stopScanner();
+                modal.hide();
             }
         }
-    }
+    },
 
-    /**
-     * Play beep sound on successful scan
-     */
-    playBeep() {
-        // Create a simple beep using Web Audio API
+    updateStatus: function (msg, type) {
+        const el = document.getElementById('scanner_status_text');
+        if (el) {
+            el.innerHTML = msg;
+            el.className = 'scanner-status status-' + type;
+
+            // Update status card border
+            const statusCard = document.getElementById('scanner_status');
+            statusCard.className = 'card border-' + (type || 'secondary');
+        }
+    },
+
+    saveToHistory: function (code, format = 'Unknown') {
+        try {
+            const history = JSON.parse(localStorage.getItem('barcodeScanHistory') || '[]');
+            history.unshift({
+                code: code,
+                format: format,
+                timestamp: new Date().toISOString(),
+                url: window.location.href
+            });
+
+            // Keep only last 50 scans
+            if (history.length > 50) {
+                history.pop();
+            }
+
+            localStorage.setItem('barcodeScanHistory', JSON.stringify(history));
+        } catch (e) {
+            console.error('Failed to save scan history:', e);
+        }
+    },
+
+    playBeep: function () {
         try {
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const oscillator = audioContext.createOscillator();
@@ -188,149 +493,27 @@ class BarcodeScanner {
             oscillator.frequency.value = 800;
             oscillator.type = 'sine';
 
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
             gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
 
             oscillator.start(audioContext.currentTime);
             oscillator.stop(audioContext.currentTime + 0.1);
-        } catch (error) {
-            // Silently fail if audio not supported
+        } catch (e) {
+            console.warn('Audio context not supported');
+            // Fallback: Create audio element
+            const audio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ');
+            audio.volume = 0.1;
+            audio.play().catch(() => { });
         }
     }
+};
 
-    /**
-     * Clean up resources
-     */
-    async destroy() {
-        await this.stop();
-        this.scanner = null;
-    }
+// Toggle function for upload/camera
+function toggleUpload() {
+    BarcodeScanner.toggleUpload();
 }
 
-/**
- * Create and show barcode scanner modal
- */
-function showBarcodeScannerModal(onScanCallback) {
-    // Create modal HTML
-    const modalHTML = `
-        <div class="modal fade" id="barcodeScannerModal" tabindex="-1" aria-labelledby="barcodeScannerModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="barcodeScannerModalLabel">
-                            <i class="fas fa-barcode"></i> Scan Barcode
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div id="scanner-status" class="scanner-status mb-3"></div>
-                        <div id="barcode-scanner-container" class="barcode-scanner-viewport"></div>
-                        <div class="scanner-controls mt-3">
-                            <select id="camera-select" class="form-select mb-2">
-                                <option value="">Loading cameras...</option>
-                            </select>
-                            <div class="d-flex gap-2">
-                                <button id="start-scan-btn" class="btn btn-success flex-fill">
-                                    <i class="fas fa-play"></i> Start Scanner
-                                </button>
-                                <button id="stop-scan-btn" class="btn btn-danger flex-fill" style="display: none;">
-                                    <i class="fas fa-stop"></i> Stop Scanner
-                                </button>
-                            </div>
-                        </div>
-                        <div class="alert alert-info mt-3">
-                            <small>
-                                <i class="fas fa-info-circle"></i> 
-                                <strong>Tip:</strong> Hold the barcode steady in front of the camera. 
-                                The scanner will automatically detect and read it.
-                            </small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // Remove existing modal if present
-    const existingModal = document.getElementById('barcodeScannerModal');
-    if (existingModal) {
-        existingModal.remove();
-    }
-
-    // Add modal to body
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-
-    // Initialize scanner
-    const scanner = new BarcodeScanner({
-        containerId: 'barcode-scanner-container',
-        onScanSuccess: (decodedText, decodedResult) => {
-            // Call user callback
-            onScanCallback(decodedText, decodedResult);
-
-            // Close modal after successful scan
-            const modal = bootstrap.Modal.getInstance(document.getElementById('barcodeScannerModal'));
-            if (modal) {
-                modal.hide();
-            }
-        }
-    });
-
-    // Get modal element
-    const modalEl = document.getElementById('barcodeScannerModal');
-    const modal = new bootstrap.Modal(modalEl);
-
-    // Load cameras when modal opens
-    modalEl.addEventListener('shown.bs.modal', async () => {
-        await scanner.init();
-
-        const cameras = await scanner.getCameras();
-        const cameraSelect = document.getElementById('camera-select');
-
-        if (cameras && cameras.length > 0) {
-            cameraSelect.innerHTML = cameras.map((camera, index) =>
-                `<option value="${camera.id}">${camera.label || `Camera ${index + 1}`}</option>`
-            ).join('');
-        } else {
-            cameraSelect.innerHTML = '<option value="">No cameras found</option>';
-        }
-    });
-
-    // Clean up when modal closes
-    modalEl.addEventListener('hidden.bs.modal', async () => {
-        await scanner.destroy();
-        modalEl.remove();
-    });
-
-    // Start button handler
-    document.getElementById('start-scan-btn').addEventListener('click', async () => {
-        const cameraId = document.getElementById('camera-select').value;
-        try {
-            await scanner.startCamera(cameraId);
-            document.getElementById('start-scan-btn').style.display = 'none';
-            document.getElementById('stop-scan-btn').style.display = 'block';
-        } catch (error) {
-            alert('Failed to start camera. Please check permissions.');
-        }
-    });
-
-    // Stop button handler
-    document.getElementById('stop-scan-btn').addEventListener('click', async () => {
-        await scanner.stop();
-        document.getElementById('start-scan-btn').style.display = 'block';
-        document.getElementById('stop-scan-btn').style.display = 'none';
-    });
-
-    // Show modal
-    modal.show();
-}
-
-// Keyboard shortcut to open scanner (Ctrl+B or Cmd+B)
-document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-        e.preventDefault();
-        const scanBtn = document.getElementById('barcode-scan-btn');
-        if (scanBtn) {
-            scanBtn.click();
-        }
-    }
+// Auto-init
+document.addEventListener('DOMContentLoaded', () => {
+    BarcodeScanner.init();
 });

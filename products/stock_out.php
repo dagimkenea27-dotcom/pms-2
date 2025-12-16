@@ -9,8 +9,22 @@ $database = new Database();
 $db = $database->getConnection();
 $audit = new AuditLog($db);
 
+// Handle AJAX request for variants
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'get_variants' && isset($_GET['product_id'])) {
+    header('Content-Type: application/json');
+    try {
+        $stmt = $db->prepare("SELECT id, size, color, sku, quantity FROM product_variants WHERE product_id = ? AND quantity > 0");
+        $stmt->execute([$_GET['product_id']]);
+        $variants = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['success' => true, 'variants' => $variants]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+    exit;
+}
+
 // Get all products for selection
-$query = "SELECT id, sku, name, quantity FROM products WHERE quantity > 0 ORDER BY name ASC";
+$query = "SELECT id, sku, name, quantity, has_variants FROM products WHERE quantity > 0 ORDER BY name ASC";
 $stmt = $db->prepare($query);
 $stmt->execute();
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -25,69 +39,123 @@ if ($_POST) {
         $quantity = intval($_POST['quantity']);
         $reason = $_POST['reason'];
         $reference = $_POST['reference'];
+        $variant_id = !empty($_POST['variant_id']) ? $_POST['variant_id'] : null;
         
         if ($quantity <= 0) {
             throw new Exception("Quantity must be greater than zero.");
         }
         
-        // Check if enough stock is available
-        $check_query = "SELECT quantity FROM products WHERE id = :id";
+        // Get product details
+        $check_query = "SELECT quantity, has_variants FROM products WHERE id = :id";
         $check_stmt = $db->prepare($check_query);
         $check_stmt->bindParam(":id", $product_id);
         $check_stmt->execute();
-        $current_quantity = $check_stmt->fetch(PDO::FETCH_ASSOC)['quantity'];
+        $product = $check_stmt->fetch(PDO::FETCH_ASSOC);
         
-        if ($current_quantity < $quantity) {
-            throw new Exception("Not enough stock available. Current stock: " . $current_quantity);
+        if (!$product) {
+            throw new Exception("Product not found.");
         }
         
-        // Update product quantity
-        $update_query = "UPDATE products SET quantity = quantity - :quantity WHERE id = :id";
-        $update_stmt = $db->prepare($update_query);
-        $update_stmt->bindParam(":quantity", $quantity);
-        $update_stmt->bindParam(":id", $product_id);
-        
-        if ($update_stmt->execute()) {
-            // Log the stock movement
+        $db->beginTransaction();
+
+        if ($product['has_variants']) {
+            if (empty($variant_id)) {
+                throw new Exception("Please select a variant for this product.");
+            }
+            
+            // Validate variant stock
+            $v_stmt = $db->prepare("SELECT quantity, sku, size, color FROM product_variants WHERE id = ?");
+            $v_stmt->execute([$variant_id]);
+            $variant = $v_stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$variant) {
+                throw new Exception("Variant not found.");
+            }
+            
+            if ($variant['quantity'] < $quantity) {
+                throw new Exception("Not enough stock for this variant. Available: " . $variant['quantity']);
+            }
+            
+            // Deduct from variant
+            $update_v = $db->prepare("UPDATE product_variants SET quantity = quantity - ? WHERE id = ?");
+            $update_v->execute([$quantity, $variant_id]);
+            
+            // Deduct from main product (aggregate)
+            $update_p = $db->prepare("UPDATE products SET quantity = quantity - ? WHERE id = ?");
+            $update_p->execute([$quantity, $product_id]);
+            
+            // Log movement
+            $movement_query = "INSERT INTO stock_movements 
+                              (product_id, variant_id, movement_type, quantity, reason, reference) 
+                              VALUES (:pid, :vid, 'OUT', :qty, :reason, :ref)";
+            $m_stmt = $db->prepare($movement_query);
+            $m_stmt->execute([
+                ':pid' => $product_id,
+                ':vid' => $variant_id,
+                ':qty' => $quantity,
+                ':reason' => $reason,
+                ':ref' => $reference
+            ]);
+            
+            $log_desc = "Removed $quantity from product ID $product_id (Variant: {$variant['size']} {$variant['color']}). Reason: $reason";
+
+        } else {
+            // Simple product logic
+            if ($product['quantity'] < $quantity) {
+                throw new Exception("Not enough stock available. Current stock: " . $product['quantity']);
+            }
+            
+            // Update product quantity
+            $update_query = "UPDATE products SET quantity = quantity - :quantity WHERE id = :id";
+            $update_stmt = $db->prepare($update_query);
+            $update_stmt->bindParam(":quantity", $quantity);
+            $update_stmt->bindParam(":id", $product_id);
+            $update_stmt->execute();
+            
+            // Log stock movement
             $movement_query = "INSERT INTO stock_movements 
                               (product_id, movement_type, quantity, reason, reference) 
                               VALUES (:product_id, 'OUT', :quantity, :reason, :reference)";
             $movement_stmt = $db->prepare($movement_query);
-            $movement_stmt->bindParam(":product_id", $product_id);
-            $movement_stmt->bindParam(":quantity", $quantity);
-            $movement_stmt->bindParam(":reason", $reason);
-            $movement_stmt->bindParam(":reference", $reference);
+            $movement_stmt->execute([
+                ':product_id' => $product_id,
+                ':quantity' => $quantity,
+                ':reason' => $reason,
+                ':reference' => $reference
+            ]);
             
-            if ($movement_stmt->execute()) {
-                // Check if stock is low (threshold: 10)
-                $new_quantity = $current_quantity - $quantity;
-                if ($new_quantity <= 10) {
-                    require_once "../models/Notification.php";
-                    $notification = new Notification($db);
-                    $notifMsg = "Low Stock Alert: Product ID $product_id is down to $new_quantity units.";
-                    $notification->notifyAdmins($notifMsg, "products/view_products.php", "warning");
-                }
-                
-                $message = "Stock removed successfully!";
-                $message_type = "success";
-                
-                // Log to AuditLog
-                if (Auth::isLoggedIn()) {
-                    $user = Auth::getCurrentUser();
-                    $audit->log($user['id'], "STOCK_OUT", "Removed $quantity from product ID $product_id. Reason: $reason");
-                }
-                
-                // Refresh product list
-                $stmt = $db->prepare($query);
-                $stmt->execute();
-                $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            } else {
-                throw new Exception("Failed to log stock movement.");
-            }
-        } else {
-            throw new Exception("Failed to update product quantity.");
+            $log_desc = "Removed $quantity from product ID $product_id. Reason: $reason";
         }
+
+        $db->commit();
+        
+        // Check low stock (threshold: 10) - treating aggregate for now
+        $new_quantity = $product['quantity'] - $quantity;
+        if ($new_quantity <= 10) {
+            require_once "../models/Notification.php";
+            $notification = new Notification($db);
+            $notifMsg = "Low Stock Alert: Product ID $product_id is down to $new_quantity units.";
+            $notification->notifyAdmins($notifMsg, "products/view_products.php", "warning");
+        }
+        
+        $message = "Stock removed successfully!";
+        $message_type = "success";
+        
+        // Log to AuditLog
+        if (Auth::isLoggedIn()) {
+            $user = Auth::getCurrentUser();
+            $audit->log($user['id'], "STOCK_OUT", $log_desc);
+        }
+        
+        // Refresh product list
+        $stmt = $db->prepare($query);
+        $stmt->execute();
+        $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
     } catch (Exception $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
         $message = "Error: " . $e->getMessage();
         $message_type = "danger";
     }
@@ -123,12 +191,19 @@ require_once "../includes/header.php";
                         <select class="form-select" id="product_id" name="product_id" required>
                             <option value="">Choose a product</option>
                             <?php foreach ($products as $product): ?>
-                            <option value="<?php echo $product['id']; ?>">
+                            <option value="<?php echo $product['id']; ?>" data-has-variants="<?php echo $product['has_variants']; ?>">
                                 <?php echo htmlspecialchars($product['sku']); ?> - 
                                 <?php echo htmlspecialchars($product['name']); ?> 
-                                (Available: <?php echo $product['quantity']; ?>)
+                                (Total: <?php echo $product['quantity']; ?>)
                             </option>
                             <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" id="variant_container" style="display:none;">
+                        <label for="variant_id" class="form-label">Select Variant *</label>
+                        <select class="form-select" id="variant_id" name="variant_id">
+                            <option value="">Choose a variant</option>
                         </select>
                     </div>
                     
@@ -175,23 +250,57 @@ require_once "../includes/header.php";
             <div class="card-body">
                 <p>Use this form to remove stock from existing products:</p>
                 <ol>
-                    <li>Select the product you want to remove stock from</li>
-                    <li>Enter the quantity you want to remove</li>
-                    <li>Specify the reason for removing stock</li>
-                    <li>Add any relevant reference numbers</li>
-                    <li>Click "Remove Stock" to complete the process</li>
+                    <li>Select the product you want to remove stock from.</li>
+                    <li><strong>If the product has variants</strong> (Size/Color), a dropdown will appear to select the specific item.</li>
+                    <li>Enter the quantity you want to remove.</li>
+                    <li>Specify the reason for removing stock.</li>
+                    <li>Click "Remove Stock" to complete the process.</li>
                 </ol>
                 <p class="text-muted">
-                    <i class="fas fa-info-circle"></i> This action will decrease the product's quantity 
-                    and create a record in the stock movement history.
+                    <i class="fas fa-info-circle"></i> This action will decrease the specific variant's stock AND the total product quantity.
                 </p>
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i> 
-                    <strong>Note:</strong> You cannot remove more stock than is currently available.
-                </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.getElementById('product_id').addEventListener('change', function() {
+    const productId = this.value;
+    const option = this.options[this.selectedIndex];
+    const hasVariants = option.getAttribute('data-has-variants') == '1';
+    const variantContainer = document.getElementById('variant_container');
+    const variantSelect = document.getElementById('variant_id');
+    
+    // Reset variant select
+    variantSelect.innerHTML = '<option value="">Choose a variant</option>';
+    
+    if (hasVariants && productId) {
+        // Show variant dropdown
+        variantContainer.style.display = 'block';
+        variantSelect.setAttribute('required', 'required');
+        
+        // Fetch variants
+        fetch(`stock_out.php?ajax=get_variants&product_id=${productId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    data.variants.forEach(v => {
+                        const option = document.createElement('option');
+                        option.value = v.id;
+                        option.textContent = `${v.size} ${v.color} (Qty: ${v.quantity})`;
+                        variantSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(err => console.error('Error fetching variants:', err));
+            
+    } else {
+        // Hide variant dropdown
+        variantContainer.style.display = 'none';
+        variantSelect.removeAttribute('required');
+    }
+});
+</script>
 
 <?php require_once "../includes/footer.php"; ?>

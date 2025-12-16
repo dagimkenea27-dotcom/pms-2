@@ -643,30 +643,54 @@ body.sidebar-toggled .topbar {
 @media (max-width: 768px) {
 
     /* On mobile, sidebar behaves differently */
+    /* On mobile, sidebar behaves differently - Use Overlay */
     .sidebar {
-        width: 6.5rem;
+        position: fixed;
+        left: -14rem;
+        /* Hidden by default */
+        top: 0;
+        bottom: 0;
+        width: 14rem;
+        z-index: 1050;
+        transition: left 0.3s ease-in-out;
+    }
+
+    /* Open state */
+    .sidebar.toggled {
+        left: 0;
+        width: 14rem;
+        transform: none;
     }
 
     #content-wrapper {
-        margin-left: 6.5rem;
-        width: calc(100% - 6.5rem);
+        margin-left: 0 !important;
+        width: 100% !important;
     }
 
     .topbar {
-        left: 6.5rem;
-    }
-
-    /* If toggled on mobile (usually hides sidebar completely) */
-    .sidebar.toggled {
-        transform: translateX(-100%);
-    }
-
-    body.sidebar-toggled #content-wrapper {
-        margin-left: 0;
+        left: 0 !important;
         width: 100%;
+        position: fixed;
     }
 
-    body.sidebar-toggled .topbar {
-        left: 0;
+    /* Hide brand text on mobile when closed (standard behavior) but when open show it */
+    .sidebar.toggled .sidebar-brand-text {
+        display: inline !important;
     }
+
+    .sidebar .nav-item .nav-link {
+        width: 100%;
+        text-align: left;
+    }
+
+    .sidebar .nav-item .nav-link span {
+        font-size: 0.85rem;
+        display: inline;
+    }
+}
+
+/* Ensure tables are responsive on all devices */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }

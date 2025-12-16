@@ -3,6 +3,7 @@ require_once "config/database.php";
 require_once "models/User.php";
 require_once "models/Notification.php"; // Added notification model
 require_once "config/auth.php";
+require_once "includes/functions.php";
 
 Auth::startSession();
 
@@ -13,16 +14,13 @@ if (Auth::isLoggedIn()) {
 }
 
 $message = '';
-$error = '';
+$errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $database = new Database();
-    $db = $database->getConnection();
-    $user = new User($db);
-    $notification = new Notification($db); // Initialize notification
-    
-    $user->username = $_POST['username'] ?? '';
-    // ... (rest of user setup)
+    // CSRF Validation
+    if (!isset($_POST['csrf_token']) || !Auth::validateCSRF($_POST['csrf_token'])) {
+        $error = "Security check failed. Please refresh the page and try again.";
+    } else {
     $user->password = $_POST['password'] ?? '';
     $user->email = $_POST['email'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
@@ -56,7 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $error = "Unable to register. Please try again.";
         }
     }
+    }
 }
+
+$csrf_token = Auth::generateCSRF();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -573,6 +574,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 </head>
 <body>
     <div class="register-container">
+        <div style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+             <a href="language_switch.php?lang=en" class="btn btn-sm btn-light <?php echo get_current_lang() == 'en' ? 'active' : ''; ?>">EN</a>
+             <a href="language_switch.php?lang=ja" class="btn btn-sm btn-light <?php echo get_current_lang() == 'ja' ? 'active' : ''; ?>">JP</a>
+        </div>
         <div class="background-pattern"></div>
         
         <div class="register-card">
@@ -580,23 +585,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <div class="brand-icon">
                     <i class="fas fa-user-plus"></i>
                 </div>
-                <h1 class="h3 mb-2">Join Inventory System</h1>
-                <p class="opacity-90 mb-0">Create your account in minutes</p>
+                <h1 class="h3 mb-2"><?php echo __('join_inventory_system'); ?></h1>
+                <p class="opacity-90 mb-0"><?php echo __('create_account_minutes'); ?></p>
             </div>
             
             <div class="card-body">
                 <div class="progress-steps">
                     <div class="step active" id="step1">
                         <div class="step-icon">1</div>
-                        <div class="step-label">Personal Info</div>
+                        <div class="step-label"><?php echo __('personal_info'); ?></div>
                     </div>
                     <div class="step" id="step2">
                         <div class="step-icon">2</div>
-                        <div class="step-label">Account Details</div>
+                        <div class="step-label"><?php echo __('account_details'); ?></div>
                     </div>
                     <div class="step" id="step3">
                         <div class="step-icon">3</div>
-                        <div class="step-label">Complete</div>
+                        <div class="step-label"><?php echo __('complete'); ?></div>
                     </div>
                 </div>
                 
@@ -617,15 +622,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <?php endif; ?>
 
                 <form method="POST" action="" id="registerForm" novalidate>
+                    <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                     <div class="form-section">
                         <h3 class="section-title">
-                            <i class="fas fa-user-circle"></i> Personal Information
+                            <i class="fas fa-user-circle"></i> <?php echo __('personal_info'); ?>
                         </h3>
                         
                         <div class="form-row">
                             <div>
                                 <label for="first_name" class="form-label">
-                                    <i class="fas fa-user"></i> First Name <span class="required">*</span>
+                                    <i class="fas fa-user"></i> <?php echo __('first_name'); ?> <span class="required">*</span>
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-user"></i></span>
@@ -643,7 +649,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             
                             <div>
                                 <label for="last_name" class="form-label">
-                                    <i class="fas fa-user"></i> Last Name <span class="required">*</span>
+                                    <i class="fas fa-user"></i> <?php echo __('last_name'); ?> <span class="required">*</span>
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-user"></i></span>
@@ -663,12 +669,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     
                     <div class="form-section">
                         <h3 class="section-title">
-                            <i class="fas fa-id-card"></i> Account Information
+                            <i class="fas fa-id-card"></i> <?php echo __('account_details'); ?>
                         </h3>
                         
                         <div class="mb-4">
                             <label for="username" class="form-label">
-                                <i class="fas fa-at"></i> Username <span class="required">*</span>
+                                <i class="fas fa-at"></i> <?php echo __('username'); ?> <span class="required">*</span>
                             </label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-at"></i></span>
@@ -691,7 +697,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         
                         <div class="mb-4">
                             <label for="email" class="form-label">
-                                <i class="fas fa-envelope"></i> Email Address <span class="required">*</span>
+                                <i class="fas fa-envelope"></i> <?php echo __('email_address'); ?> <span class="required">*</span>
                             </label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-envelope"></i></span>
@@ -712,7 +718,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         
                         <div class="mb-4">
                             <label for="password" class="form-label">
-                                <i class="fas fa-lock"></i> Password <span class="required">*</span>
+                                <i class="fas fa-lock"></i> <?php echo __('password'); ?> <span class="required">*</span>
                             </label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-lock"></i></span>
@@ -732,36 +738,36 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <div class="strength-meter">
                                     <div class="strength-fill" id="strengthFill"></div>
                                 </div>
-                                <div class="strength-text" id="strengthText">Password strength</div>
+                                <div class="strength-text" id="strengthText"><?php echo __('password_strength'); ?></div>
                             </div>
                             
                             <ul class="requirements-list" id="passwordRequirements">
                                 <li id="reqLength">
                                     <i class="fas fa-circle"></i>
-                                    <span>At least 8 characters</span>
+                                    <span><?php echo __('at_least_8_chars'); ?></span>
                                 </li>
                                 <li id="reqUpper">
                                     <i class="fas fa-circle"></i>
-                                    <span>One uppercase letter</span>
+                                    <span><?php echo __('one_uppercase'); ?></span>
                                 </li>
                                 <li id="reqLower">
                                     <i class="fas fa-circle"></i>
-                                    <span>One lowercase letter</span>
+                                    <span><?php echo __('one_lowercase'); ?></span>
                                 </li>
                                 <li id="reqNumber">
                                     <i class="fas fa-circle"></i>
-                                    <span>One number</span>
+                                    <span><?php echo __('one_number'); ?></span>
                                 </li>
                                 <li id="reqSpecial">
                                     <i class="fas fa-circle"></i>
-                                    <span>One special character</span>
+                                    <span><?php echo __('one_special_char'); ?></span>
                                 </li>
                             </ul>
                         </div>
 
                         <div class="mb-4">
                             <label for="confirm_password" class="form-label">
-                                <i class="fas fa-lock"></i> Confirm Password <span class="required">*</span>
+                                <i class="fas fa-lock"></i> <?php echo __('confirm_password'); ?> <span class="required">*</span>
                             </label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-lock"></i></span>
@@ -783,8 +789,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="terms" required>
                                 <label class="form-check-label small" for="terms">
-                                    I agree to the <a href="terms.php" class="text-decoration-none">Terms of Service</a> 
-                                    and <a href="privacy.php" class="text-decoration-none">Privacy Policy</a>
+                                    <?php echo __('i_agree_to'); ?> <a href="terms.php" class="text-decoration-none"><?php echo __('terms_of_service'); ?></a> 
+                                    <?php echo __('and'); ?> <a href="privacy.php" class="text-decoration-none"><?php echo __('privacy_policy'); ?></a>
                                 </label>
                             </div>
                         </div>
@@ -793,10 +799,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <div class="d-grid gap-3">
                         <button type="submit" class="btn btn-register" id="submitBtn">
                             <span id="btnText">
-                                <i class="fas fa-user-plus me-2"></i> Create Account
+                                <i class="fas fa-user-plus me-2"></i> <?php echo __('create_account'); ?>
                             </span>
                             <span id="btnLoading" class="d-none">
-                                <span class="loading"></span> Creating account...
+                                <span class="loading"></span> <?php echo __('creating_account'); ?>
                             </span>
                         </button>
                     </div>
@@ -804,8 +810,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 
                 <div class="form-footer">
                     <p class="mb-0">
-                        Already have an account? 
-                        <a href="login.php" class="fw-bold">Sign in here</a>
+                        <?php echo __('already_have_account'); ?> 
+                        <a href="login.php" class="fw-bold"><?php echo __('login_here'); ?></a>
                     </p>
                 </div>
             </div>

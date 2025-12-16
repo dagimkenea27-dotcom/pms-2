@@ -36,7 +36,14 @@ $total_suppliers = $count_stmt->fetch(PDO::FETCH_ASSOC)['total'];
 $total_pages = ceil($total_suppliers / $records_per_page);
 
 // Get suppliers with pagination and search
-$query = "SELECT * FROM suppliers $where_sql ORDER BY name ASC LIMIT :limit OFFSET :offset";
+// Get suppliers with pagination and search, including product count
+$query = "SELECT s.*, COUNT(p.id) as product_count 
+          FROM suppliers s 
+          LEFT JOIN products p ON s.id = p.supplier_id 
+          $where_sql 
+          GROUP BY s.id 
+          ORDER BY s.name ASC 
+          LIMIT :limit OFFSET :offset";
 $stmt = $db->prepare($query);
 
 // Bind search parameters
@@ -141,11 +148,8 @@ endif; ?>
                     </thead>
                     <tbody>
                         <?php foreach ($suppliers as $supplier): 
-                            // Count products for this supplier
-                            $product_count_query = "SELECT COUNT(*) as count FROM products WHERE supplier_id = ?";
-                            $product_count_stmt = $db->prepare($product_count_query);
-                            $product_count_stmt->execute([$supplier['id']]);
-                            $product_count = $product_count_stmt->fetch(PDO::FETCH_ASSOC)['count'];
+                            // Use pre-calculated count from main query
+                            $product_count = $supplier['product_count'];
                         ?>
                         <tr>
                             <td>

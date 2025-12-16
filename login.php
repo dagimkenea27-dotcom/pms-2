@@ -2,8 +2,13 @@
 require_once "config/database.php";
 require_once "models/User.php";
 require_once "config/auth.php";
+require_once "includes/functions.php";
 
 Auth::startSession();
+
+$database = new Database();
+$db = $database->getConnection();
+$user = new User($db);
 
 // If already logged in, redirect to dashboard
 if (Auth::isLoggedIn()) {
@@ -17,18 +22,12 @@ if (isset($_GET['timeout']) && $_GET['timeout'] == 1) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $database = new Database();
-    $db = $database->getConnection();
-    $user = new User($db);
-    
-    $username = $_POST['username'] ?? '';
-    $password = $_POST['password'] ?? '';
-    
-    if (empty($username) || empty($password)) {
-        $error = "Please enter both username and password.";
+    // CSRF Validation
+    if (!isset($_POST['csrf_token']) || !Auth::validateCSRF($_POST['csrf_token'])) {
+        $error = "Security check failed. Please refresh the page and try again.";
     } else {
-        $user->username = $username;
-        $user->password = $password;
+        $user->username = $_POST['username'];
+        $user->password = $_POST['password'];
         
         // Attempt login using the User model's login method
         if ($user->login()) {
@@ -42,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
 }
+$csrf_token = Auth::generateCSRF();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -393,13 +393,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </style>
 </head>
 <body>
-    <div class="login-wrapper">
+    <div class="login-wrapper" style="position: relative;">
+        <!-- Language Switcher -->
+        <div style="position: absolute; top: 1rem; right: 1rem; z-index: 100;">
+             <a href="language_switch.php?lang=en" class="btn btn-sm btn-light <?php echo get_current_lang() == 'en' ? 'active' : ''; ?>">EN</a>
+             <a href="language_switch.php?lang=ja" class="btn btn-sm btn-light <?php echo get_current_lang() == 'ja' ? 'active' : ''; ?>">JP</a>
+        </div>
         <div class="login-left">
             <div class="brand-showcase">
                 <div class="brand-icon-lg">
                     <i class="fas fa-boxes"></i>
                 </div>
-                <h1 class="display-5 fw-bold mb-3">Welcome Back</h1>
+                <h1 class="display-5 fw-bold mb-3"><?php echo __('welcome_back'); ?></h1>
                 <p class="lead opacity-90 mb-4">
                     Streamline your inventory management with our powerful system.
                     Track, manage, and optimize your stock efficiently.
@@ -427,8 +432,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <div class="brand-icon">
                         <i class="fas fa-boxes"></i>
                     </div>
-                    <h3 class="h4 mb-2">Inventory System</h3>
-                    <p class="opacity-90 mb-0">Sign in to continue</p>
+                    <h3 class="h4 mb-2"><?php echo __('inventory_system'); ?></h3>
+                    <p class="opacity-90 mb-0"><?php echo __('sign_in_to_continue'); ?></p>
                 </div>
                 
                 <div class="card-body">
@@ -441,9 +446,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <?php endif; ?>
 
                     <form method="POST" action="" id="loginForm">
+                        <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                         <div class="mb-4">
                             <label for="username" class="form-label">
-                                <i class="fas fa-user"></i> Username
+                                <i class="fas fa-user"></i> <?php echo __('username'); ?>
                             </label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-user"></i></span>
@@ -455,13 +461,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                        required 
                                        autofocus 
                                        autocomplete="username"
-                                       placeholder="Enter your username">
+                                       placeholder="<?php echo __('enter_username'); ?>">
                             </div>
                         </div>
                         
                         <div class="mb-4">
                             <label for="password" class="form-label">
-                                <i class="fas fa-lock"></i> Password
+                                <i class="fas fa-lock"></i> <?php echo __('password'); ?>
                             </label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-lock"></i></span>
@@ -471,21 +477,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                        name="password" 
                                        required 
                                        autocomplete="current-password"
-                                       placeholder="Enter your password">
+                                       placeholder="<?php echo __('enter_password'); ?>">
                                 <button type="button" class="password-toggle" id="togglePassword">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
                             <div class="mt-2 text-end">
-                                <a href="forgot-password.php" class="small text-decoration-none">Forgot password?</a>
+                                <a href="forgot-password.php" class="small text-decoration-none"><?php echo __('forgot_password'); ?></a>
                             </div>
                         </div>
                         
                         <div class="d-grid gap-3">
                             <button type="submit" class="btn btn-login" id="submitBtn">
-                                <span id="btnText">Sign In</span>
+                                <span id="btnText"><?php echo __('sign_in'); ?></span>
                                 <span id="btnLoading" class="d-none">
-                                    <span class="loading me-2"></span> Authenticating...
+                                    <span class="loading me-2"></span> <?php echo __('authenticating'); ?>
                                 </span>
                             </button>
                             
@@ -494,14 +500,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             </div>
                             
                             <a href="register.php" class="btn btn-outline-primary">
-                                <i class="fas fa-user-plus me-2"></i> Create New Account
+                                <i class="fas fa-user-plus me-2"></i> <?php echo __('create_new_account'); ?>
                             </a>
                         </div>
                     </form>
                     
                     <div class="form-footer">
                         <p class="mb-0">
-                            Need help? <a href="mailto:support@inventory.com">Contact Support</a>
+                            <?php echo __('need_help'); ?> <a href="mailto:support@inventory.com"><?php echo __('contact_support'); ?></a>
                         </p>
                     </div>
                 </div>

@@ -21,219 +21,9 @@ define('MAX_ADDRESSES', 500);
 
 // --- CLASSES ---
 
-class RateLimiter {
-    private static $lastCall = 0;
-    
-    public static function wait($minInterval = GEOCODE_RATE_LIMIT) {
-        $now = microtime(true);
-        $elapsed = $now - self::$lastCall;
-        
-        if ($elapsed < $minInterval) {
-            usleep(($minInterval - $elapsed) * 1000000);
-        }
-        
-        self::$lastCall = microtime(true);
-    }
-}
-
-class LocationSearch {
-    private $cache = [];
-    private $cacheFile = '../cache/locations.json';
-    
-    public function __construct() {
-        $this->loadCache();
-    }
-    
-    private function loadCache() {
-        if (file_exists($this->cacheFile)) {
-            $data = file_get_contents($this->cacheFile);
-            $this->cache = json_decode($data, true) ?? [];
-        }
-    }
-    
-    private function saveCache() {
-        // Keep only last 1000 cached items to prevent file from growing too large
-        if (count($this->cache) > 1000) {
-            $this->cache = array_slice($this->cache, -1000, 1000, true);
-        }
-        file_put_contents($this->cacheFile, json_encode($this->cache));
-    }
-    
-    public function geocode($query, $countrycode = 'et', $useCache = true) {
-        $cacheKey = md5(strtolower(trim($query)) . '|' . $countrycode);
-        
-        // Check cache first
-        if ($useCache && isset($this->cache[$cacheKey])) {
-            $cached = $this->cache[$cacheKey];
-            // Cache valid for 30 days
-            if (time() - $cached['timestamp'] < 2592000) {
-                return $cached['data'];
-            }
-        }
-        
-        RateLimiter::wait();
-        
-        $base = 'https://nominatim.openstreetmap.org/search';
-        $params = http_build_query([
-            'q' => $query,
-            'format' => 'json',
-            'limit' => 5, // Get more results for better accuracy
-            'countrycodes' => $countrycode,
-            'addressdetails' => 1,
-            'accept-language' => 'en'
-        ]);
-        $url = $base . '?' . $params;
-        
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_USERAGENT => 'DeliveryRoutePlanner/2.0 (contact@example.com)',
-            CURLOPT_TIMEOUT => 10,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_HTTPHEADER => ['Accept: application/json']
-        ]);
-        
-        $resp = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        
-        if ($httpCode !== 200 || empty($resp)) {
-            error_log("Geocoding failed for query: $query, HTTP Code: $httpCode");
-            return null;
-        }
-        
-        $results = json_decode($resp, true);
-        if (!$results || empty($results)) {
-            return null;
-        }
-        
-        // Return first result and cache it
-        $result = [
-            'lat' => floatval($results[0]['lat']),
-            'lon' => floatval($results[0]['lon']),
-            'display_name' => $results[0]['display_name'],
-            'address' => $results[0]['address'] ?? []
-        ];
-        
-        // Cache the result
-        $this->cache[$cacheKey] = [
-            'data' => $result,
-            'timestamp' => time()
-        ];
-        $this->saveCache();
-        
-        return $result;
-    }
-    
-    public function search($query, $countrycode = 'et', $limit = 10) {
-        if (strlen(trim($query)) < 2) {
-            return [];
-        }
-        
-        RateLimiter::wait(0.2); // Faster search rate limit
-        
-        $base = 'https://nominatim.openstreetmap.org/search';
-        $params = http_build_query([
-            'q' => $query,
-            'format' => 'json',
-            'limit' => $limit,
-            'countrycodes' => $countrycode,
-            'addressdetails' => 1,
-            'accept-language' => 'en',
-            'dedupe' => 1
-        ]);
-        $url = $base . '?' . $params;
-        
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_USERAGENT => 'DeliveryRoutePlanner/2.0 Search',
-            CURLOPT_TIMEOUT => 8,
-            CURLOPT_SSL_VERIFYPEER => true
-        ]);
-        
-        $resp = curl_exec($ch);
-        curl_close($ch);
-        
-        $results = json_decode($resp, true);
-        if (!$results) {
-            return [];
-        }
-        
-        // Format results with more details
-        $formatted = [];
-        foreach ($results as $item) {
-            $formatted[] = [
-                'lat' => floatval($item['lat']),
-                'lon' => floatval($item['lon']),
-                'display_name' => $item['display_name'],
-                'type' => $item['type'] ?? 'unknown',
-                'importance' => $item['importance'] ?? 0,
-                'address' => $item['address'] ?? []
-            ];
-        }
-        
-        // Sort by importance
-        usort($formatted, function($a, $b) {
-            return $b['importance'] <=> $a['importance'];
-        });
-        
-        return $formatted;
-    }
-    
-    public function reverseGeocode($lat, $lon) {
-        $cacheKey = md5("reverse|{$lat}|{$lon}");
-        
-        if (isset($this->cache[$cacheKey])) {
-            $cached = $this->cache[$cacheKey];
-            if (time() - $cached['timestamp'] < 2592000) {
-                return $cached['data'];
-            }
-        }
-        
-        RateLimiter::wait();
-        
-        $base = 'https://nominatim.openstreetmap.org/reverse';
-        $params = http_build_query([
-            'lat' => $lat,
-            'lon' => $lon,
-            'format' => 'json',
-            'zoom' => 18,
-            'addressdetails' => 1
-        ]);
-        $url = $base . '?' . $params;
-        
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_USERAGENT => 'DeliveryRoutePlanner/2.0 Reverse',
-            CURLOPT_TIMEOUT => 8
-        ]);
-        
-        $resp = curl_exec($ch);
-        curl_close($ch);
-        
-        $result = json_decode($resp, true);
-        if (!$result) {
-            return null;
-        }
-        
-        $formatted = [
-            'lat' => $lat,
-            'lon' => $lon,
-            'display_name' => $result['display_name'] ?? "Location at $lat, $lon",
-            'address' => $result['address'] ?? []
-        ];
-        
-        $this->cache[$cacheKey] = [
-            'data' => $formatted,
-            'timestamp' => time()
-        ];
-        $this->saveCache();
-        
-        return $formatted;
-    }
-}
+// --- CLASSES ---
+require_once "../lib/RateLimiter.php";
+require_once "../lib/LocationSearch.php";
 
 // --- HELPER FUNCTIONS ---
 
@@ -628,161 +418,280 @@ require_once "../includes/header.php";
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-    .map-container { display: flex; flex-direction: column; gap: 20px; margin-bottom: 20px; }
-    .input-panel { width: 100%; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
-    .map-panel { width: 100%; }
+    /* Premium UI Styles */
+    :root {
+        --primary-gradient: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+        --glass-bg: rgba(255, 255, 255, 0.95);
+        --card-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        --hover-shadow: 0 0.5rem 2rem 0 rgba(58, 59, 69, 0.25);
+    }
+
+    body {
+        background-color: #f8f9fc;
+    }
+
+    .page-header {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 1rem;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 2rem;
+        border-left: 5px solid #4e73df;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .map-container { 
+        display: grid; 
+        grid-template-columns: 350px 1fr; 
+        gap: 1.5rem; 
+        margin-bottom: 2rem;
+        height: calc(100vh - 200px);
+        min-height: 700px;
+    }
+
+    .input-panel { 
+        background: white; 
+        padding: 0; 
+        border-radius: 1rem; 
+        box-shadow: var(--card-shadow); 
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        height: 100%;
+    }
+
+    .input-panel-header {
+        padding: 1.25rem;
+        background: #f8f9fc;
+        border-bottom: 1px solid #e3e6f0;
+        font-weight: 700;
+        color: #4e73df;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .input-panel-body {
+        padding: 1.25rem;
+        overflow-y: auto;
+        flex: 1;
+    }
     
-    #map { height: 700px; border-radius: 10px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); border: 1px solid #ddd; }
+    .map-panel { 
+        width: 100%; 
+        height: 100%;
+        position: relative;
+        border-radius: 1rem;
+        overflow: hidden;
+        box-shadow: var(--card-shadow);
+    }
+    
+    #map { 
+        height: 100%; 
+        width: 100%; 
+        z-index: 1;
+    }
     
     /* Search functionality */
-    .search-container { position: relative; margin-bottom: 15px; }
+    .search-container { position: relative; margin-bottom: 1rem; }
+    .search-input-group {
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    .search-input-group .form-control {
+        border: none;
+        padding: 0.75rem 1rem;
+    }
+    .search-input-group .btn {
+        border: none;
+        padding: 0.75rem 1rem;
+        background: white;
+        color: #4e73df;
+    }
     .search-results {
         position: absolute;
-        top: 100%;
+        top: calc(100% + 5px);
         left: 0;
         right: 0;
         background: white;
-        border: 1px solid #ddd;
-        border-radius: 4px;
+        border: 1px solid #e3e6f0;
+        border-radius: 0.5rem;
         max-height: 300px;
         overflow-y: auto;
         z-index: 1000;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        box-shadow: var(--hover-shadow);
         display: none;
     }
     .search-result-item {
-        padding: 12px 15px;
+        padding: 0.75rem 1rem;
         cursor: pointer;
-        border-bottom: 1px solid #f0f0f0;
-        transition: background 0.2s;
+        border-bottom: 1px solid #f8f9fc;
+        transition: all 0.2s;
     }
     .search-result-item:hover {
-        background: #f8f9fa;
+        background: #f1f3f9;
+        padding-left: 1.25rem;
     }
-    .search-result-item:last-child {
-        border-bottom: none;
+    .search-result-name { font-weight: 600; color: #2c3e50; }
+    .search-result-details { font-size: 0.8rem; color: #858796; }
+    
+    /* Cards and Routes */
+    .routes-header {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 1rem;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
-    .search-result-name {
-        font-weight: 500;
-        color: #333;
-    }
-    .search-result-details {
-        font-size: 12px;
-        color: #666;
-        margin-top: 3px;
-    }
-    .search-result-type {
-        display: inline-block;
-        padding: 2px 6px;
-        background: #e9ecef;
-        border-radius: 3px;
-        font-size: 11px;
-        margin-left: 5px;
+
+    .routes-stats {
+        display: flex;
+        gap: 2rem;
     }
     
-    /* Improved card layout */
-    .routes-container { 
+    .stat-item {
+        text-align: center;
+    }
+    .stat-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #4e73df;
+    }
+    .stat-label {
+        font-size: 0.8rem;
+        color: #858796;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .routes-grid { 
         display: grid; 
-        grid-template-columns: repeat(auto-fill, minmax(450px, 1fr)); 
-        gap: 20px; 
-        margin-top: 30px; 
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); 
+        gap: 1.5rem; 
+        margin-top: 1.5rem; 
     }
     .driver-card { 
-        padding: 20px; 
-        border-radius: 8px; 
-        border-left: 5px solid #ccc; 
+        border-radius: 1rem; 
+        border: none;
         background: white; 
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: var(--card-shadow);
+        transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+        overflow: hidden;
     }
     .driver-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transform: translateY(-5px);
+        box-shadow: var(--hover-shadow);
     }
     .driver-header { 
-        font-weight: bold; 
-        font-size: 1.2em; 
-        margin-bottom: 15px; 
+        padding: 1rem 1.5rem;
+        background: #fff;
+        border-bottom: 1px solid #e3e6f0;
+        font-weight: 700; 
         display: flex; 
         justify-content: space-between;
         align-items: center;
     }
     
-    .badge-wh { 
-        background: #2c3e50; 
-        color: white; 
-        padding: 3px 8px; 
-        border-radius: 4px; 
-        font-size: 0.85em;
-    }
-    .badge-stop { 
-        background: #6c757d; 
-        color: white; 
-        padding: 3px 8px; 
-        border-radius: 4px;
-        font-size: 0.85em;
-    }
-    
-    /* Route actions */
-    .route-actions { display: flex; gap: 8px; }
-    .action-buttons { display: flex; gap: 10px; margin-top: 15px; }
-    .action-buttons .btn { flex: 1; }
+    .badge-wh { background: #2c3e50; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+    .badge-stop { background: #6c757d; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; min-width: 24px; text-align: center; }
     
     /* Form enhancements */
-    .form-label { font-weight: 500; margin-bottom: 5px; }
-    .form-control:focus { border-color: #4a90e2; box-shadow: 0 0 0 0.2rem rgba(74, 144, 226, 0.25); }
+    .form-group-title {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: #858796;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+    .form-control, .form-select {
+        border-radius: 0.5rem;
+        padding: 0.6rem 1rem;
+        border: 1px solid #d1d3e2;
+        font-size: 0.9rem;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #bac8f3;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+    }
+    textarea.form-control {
+        resize: none;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+    }
     
     /* Map controls */
-    .map-controls {
-        position: relative;
-        top: 30px;
-        right: 30px;
+    .map-controls-custom {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
         z-index: 1000;
         background: white;
-        padding: 10px;
-        border-radius: 5px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
     }
-    
-    /* Loading indicator */
-    .loading {
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        border: 3px solid #f3f3f3;
-        border-top: 3px solid #3498db;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-left: 10px;
-        vertical-align: middle;
+    .map-btn {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        background: white;
+        color: #4e73df;
+        border-radius: 0.35rem;
+        transition: all 0.2s;
+        cursor: pointer;
     }
+    .map-btn:hover { background: #f1f3f9; color: #224abe; }
     
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+    /* Loading */
+    .loading-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(255,255,255,0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        backdrop-filter: blur(2px);
     }
     
     /* Responsive */
-    @media (max-width: 768px) {
-        .map-container { flex-direction: column; }
-        .input-panel, .map-panel { min-width: 100%; }
-        .routes-container { grid-template-columns: 1fr; }
+    @media (max-width: 992px) {
+        .map-container { display: flex; flex-direction: column; height: auto; }
+        .input-panel { height: auto; max-height: 600px; }
+        .map-panel { height: 500px; }
     }
 </style>
 
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-map-marked-alt"></i> Multi-Driver Route Optimizer</h1>
+<div class="page-header">
     <div>
-        <a href="manage.php" class="btn btn-primary shadow-sm">
-            <i class="fas fa-bookmark"></i> Manage Saved Routes
+        <h1 class="h3 mb-1 text-gray-800"><i class="fas fa-route text-primary me-2"></i> Route Optimizer</h1>
+        <p class="mb-0 text-muted small">Intelligent routing for optimized delivery reliability</p>
+    </div>
+    <div>
+        <a href="manage.php" class="btn btn-outline-primary shadow-sm me-2">
+            <i class="fas fa-bookmark me-1"></i> Saved Routes
         </a>
-        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#helpModal">
-            <i class="fas fa-question-circle"></i> Help
+        <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#helpModal">
+            <i class="fas fa-question-circle me-1"></i> Help
         </button>
     </div>
 </div>
+
 
 <!-- Help Modal -->
 <div class="modal fade" id="helpModal" tabindex="-1">
@@ -815,273 +724,281 @@ require_once "../includes/header.php";
 
 <div class="map-container">
     <div class="input-panel">
-        <form method="POST" id="routeForm">
-            <div class="mb-4">
-                <label class="form-label">Warehouse Location:</label>
-                <div class="search-container">
-                    <div class="input-group">
-                        <input type="text" class="form-control" 
-                               name="start" 
-                               id="warehouse-location" 
-                               value="<?= htmlspecialchars($_POST['start'] ?? '') ?>" 
-                               placeholder="Search for location or enter coordinates..."
-                               autocomplete="off">
-                        <button class="btn btn-outline-primary" type="button" id="search-location-btn">
-                            <i class="fas fa-search"></i>
-                        </button>
-                        <button class="btn btn-outline-secondary" type="button" id="use-current-location" title="Use Current Location">
-                            <i class="fas fa-location-arrow"></i>
-                        </button>
+        <div class="input-panel-header">
+            <i class="fas fa-sliders-h"></i> Configuration
+        </div>
+        <div class="input-panel-body">
+            <form method="POST" id="routeForm">
+                <div class="mb-4">
+                    <div class="form-group-title">Start Location</div>
+                    <div class="search-container">
+                        <div class="search-input-group d-flex">
+                            <input type="text" class="form-control" 
+                                   name="start" 
+                                   id="warehouse-location" 
+                                   value="<?= htmlspecialchars($_POST['start'] ?? '') ?>" 
+                                   placeholder="Search warehouse..."
+                                   autocomplete="off">
+                            <button class="btn" type="button" id="search-location-btn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                            <button class="btn" type="button" id="use-current-location" title="Use Current Location">
+                                <i class="fas fa-location-arrow"></i>
+                            </button>
+                        </div>
+                        <div id="search-results" class="search-results"></div>
                     </div>
-                    <div id="search-results" class="search-results"></div>
+                    <input type="hidden" name="warehouse_lat" id="warehouse-lat" value="<?= htmlspecialchars($_POST['warehouse_lat'] ?? '') ?>">
+                    <input type="hidden" name="warehouse_lon" id="warehouse-lon" value="<?= htmlspecialchars($_POST['warehouse_lon'] ?? '') ?>">
                 </div>
-                <div class="mt-2">
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle"></i> Type to search, click map, or enter coordinates: <code>latitude, longitude</code>
-                    </small>
-                </div>
-                <input type="hidden" name="warehouse_lat" id="warehouse-lat" value="<?= htmlspecialchars($_POST['warehouse_lat'] ?? '') ?>">
-                <input type="hidden" name="warehouse_lon" id="warehouse-lon" value="<?= htmlspecialchars($_POST['warehouse_lon'] ?? '') ?>">
-            </div>
 
-            <div class="row g-3 mb-4">
-                <div class="col-md-6">
-                    <label class="form-label">Number of Drivers:</label>
-                    <input type="number" class="form-control" name="drivers" min="1" max="<?= MAX_DRIVERS ?>" 
-                           value="<?= htmlspecialchars($_POST['drivers'] ?? '1') ?>">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Optimization Algorithm:</label>
-                    <select name="algorithm" class="form-control">
-                        <option value="nearest_neighbor" <?= (($_POST['algorithm'] ?? '') == 'nearest_neighbor') ? 'selected' : '' ?>>Nearest Neighbor</option>
-                        <option value="savings" <?= (($_POST['algorithm'] ?? '') == 'savings') ? 'selected' : '' ?>>Savings Algorithm</option>
-                        <option value="genetic" <?= (($_POST['algorithm'] ?? '') == 'genetic') ? 'selected' : '' ?>>Genetic Algorithm</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="mb-4">
-                <label class="form-label">Customer Addresses <small class="text-muted">(One per line, max <?= MAX_ADDRESSES ?>)</small>:</label>
-                <textarea class="form-control" name="addresses" rows="12" 
-                          placeholder="Enter delivery addresses, one per line&#10;Example:&#10;123 Main St, Addis Ababa&#10;Bole Road, Addis Ababa&#10;Or use coordinates: 9.032, 38.763"><?= htmlspecialchars($_POST['addresses'] ?? '') ?></textarea>
-                <div class="mt-2">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" id="sample-addresses">
-                        <i class="fas fa-vial"></i> Load Sample Addresses
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" id="clear-addresses">
-                        <i class="fas fa-trash"></i> Clear All
-                    </button>
-                </div>
-            </div>
-
-            <div class="mb-4">
-                <label class="form-label">Country Code:</label>
-                <input type="text" class="form-control" name="countrycode" maxlength="2" 
-                       value="<?= htmlspecialchars($_POST['countrycode'] ?? 'et') ?>" 
-                       placeholder="et for Ethiopia, us for USA, etc.">
-            </div>
-
-            <div class="action-buttons">
-                <button type="submit" name="optimize" class="btn btn-success btn-lg">
-                    <i class="fas fa-route"></i> Optimize Routes
-                </button>
-            </div>
-        </form>
-        
-        <?php if ($driverRoutes): ?>
-            <hr class="my-4">
-            <form method="POST" id="saveForm">
-                <div class="mb-3">
-                    <label class="form-label">Save Route As:</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" name="route_name" 
-                               placeholder="Enter route name (e.g., 'Monday Morning Deliveries')" required>
-                        <button type="submit" name="save_route" class="btn btn-info">
-                            <i class="fas fa-save"></i> Save
-                        </button>
+                <div class="row g-3 mb-4">
+                    <div class="col-6">
+                        <div class="form-group-title">Drivers</div>
+                        <input type="number" class="form-control" name="drivers" min="1" max="<?= MAX_DRIVERS ?>" 
+                               value="<?= htmlspecialchars($_POST['drivers'] ?? '1') ?>">
+                    </div>
+                    <div class="col-6">
+                        <div class="form-group-title">Algorithm</div>
+                        <select name="algorithm" class="form-select">
+                            <option value="nearest_neighbor" <?= (($_POST['algorithm'] ?? '') == 'nearest_neighbor') ? 'selected' : '' ?>>Nearest Neighbor</option>
+                            <option value="savings" <?= (($_POST['algorithm'] ?? '') == 'savings') ? 'selected' : '' ?>>Savings</option>
+                            <option value="genetic" <?= (($_POST['algorithm'] ?? '') == 'genetic') ? 'selected' : '' ?>>Genetic</option>
+                        </select>
                     </div>
                 </div>
-                
-                <!-- Hidden fields to store route data -->
-                <input type="hidden" name="start" value="<?= htmlspecialchars($_POST['start'] ?? '') ?>">
-                <input type="hidden" name="drivers" value="<?= htmlspecialchars($_POST['drivers'] ?? '1') ?>">
-                <input type="hidden" name="countrycode" value="<?= htmlspecialchars($_POST['countrycode'] ?? 'et') ?>">
-                <?php foreach ($driverRoutes as $driverIdx => $data): ?>
-                    <input type="hidden" name="driver_routes[<?= $driverIdx ?>]" 
-                           value="<?= htmlspecialchars(json_encode($data['route'])) ?>">
-                <?php endforeach; ?>
+
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="form-group-title mb-0">Destinations</div>
+                        <div>
+                            <button type="button" class="btn btn-xs btn-link text-decoration-none p-0 me-2" id="sample-addresses">Sample</button>
+                            <button type="button" class="btn btn-xs btn-link text-danger text-decoration-none p-0" id="clear-addresses">Clear</button>
+                        </div>
+                    </div>
+                    <textarea class="form-control" name="addresses" rows="8" 
+                              placeholder="Enter addresses (one per line)&#10;Addis Ababa, Bole&#10;Addis Ababa, Piassa"><?= htmlspecialchars($_POST['addresses'] ?? '') ?></textarea>
+                </div>
+
+                <div class="mb-4">
+                    <div class="form-group-title">Region</div>
+                    <input type="text" class="form-control" name="countrycode" maxlength="2" 
+                           value="<?= htmlspecialchars($_POST['countrycode'] ?? 'et') ?>" 
+                           placeholder="Country Code (e.g. et)">
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" name="optimize" class="btn btn-primary py-2 fw-bold" style="background: var(--primary-gradient); border: none;">
+                        <i class="fas fa-magic me-2"></i> Optimize Routes
+                    </button>
+                </div>
             </form>
             
-            <div class="export-buttons mt-3">
-                <a href="?export=csv&format=csv" class="btn btn-secondary">
-                    <i class="fas fa-file-csv"></i> Export to CSV
-                </a>
-                <button onclick="window.print()" class="btn btn-secondary">
-                    <i class="fas fa-print"></i> Print Route
-                </button>
-                <button onclick="shareRoute()" class="btn btn-secondary">
-                    <i class="fas fa-share-alt"></i> Share
-                </button>
-            </div>
-        <?php endif; ?>
-        
-        <!-- Messages -->
-        <?php if ($successMessage): ?>
-            <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
-                <i class="fas fa-check-circle"></i> <?= $successMessage ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        <?php endif; ?>
-        
-        <?php if ($loadedRouteMessage): ?>
-            <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
-                <i class="fas fa-check-circle"></i> <?= $loadedRouteMessage ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        <?php endif; ?>
-        
-        <?php if ($warnings): ?>
-            <div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
-                <i class="fas fa-exclamation-triangle"></i> 
-                <ul class="mb-0"><?php foreach ($warnings as $w) echo "<li>$w</li>"; ?></ul>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        <?php endif; ?>
-        
-        <?php if ($errors): ?>
-            <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
-                <i class="fas fa-exclamation-circle"></i>
-                <ul class="mb-0"><?php foreach ($errors as $e) echo "<li>$e</li>"; ?></ul>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        <?php endif; ?>
-        
-        <!-- Saved Routes -->
-        <?php if (!empty($savedRoutes)): ?>
-            <div class="saved-routes mt-4">
-                <h5><i class="fas fa-history"></i> Recent Routes</h5>
-                <div class="list-group">
-                    <?php foreach (array_slice($savedRoutes, 0, 3) as $savedRoute): ?>
-                        <div class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong><?= htmlspecialchars($savedRoute['name']) ?></strong><br>
-                                    <small class="text-muted">
-                                        <?= date('M j, Y g:i A', strtotime($savedRoute['created_at'])) ?> • 
-                                        <?= $savedRoute['driver_count'] ?> driver(s) • 
-                                        <?= $savedRoute['stop_count'] ?? 0 ?> stops
-                                    </small>
-                                </div>
-                                <div class="route-actions">
-                                    <a href="?load_route=<?= $savedRoute['id'] ?>" class="btn btn-sm btn-info" title="Load">
-                                        <i class="fas fa-folder-open"></i>
-                                    </a>
-                                    <a href="../reports/route_report.php?id=<?= $savedRoute['id'] ?>" 
-                                       class="btn btn-sm btn-warning" title="View Report" target="_blank">
-                                        <i class="fas fa-chart-bar"></i>
-                                    </a>
-                                    <a href="?delete_route=<?= $savedRoute['id'] ?>" 
-                                       class="btn btn-sm btn-danger" 
-                                       title="Delete"
-                                       onclick="return confirm('Delete this route?')">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                </div>
-                            </div>
+            <?php if ($driverRoutes): ?>
+                <hr class="my-4">
+                <form method="POST" id="saveForm">
+                    <div class="mb-3">
+                        <div class="form-group-title">Save Route</div>
+                        <div class="search-input-group d-flex">
+                            <input type="text" class="form-control" name="route_name" 
+                                   placeholder="Route Name" required>
+                            <button type="submit" name="save_route" class="btn text-success">
+                                <i class="fas fa-save"></i>
+                            </button>
                         </div>
+                    </div>
+                    
+                    <input type="hidden" name="start" value="<?= htmlspecialchars($_POST['start'] ?? '') ?>">
+                    <input type="hidden" name="drivers" value="<?= htmlspecialchars($_POST['drivers'] ?? '1') ?>">
+                    <input type="hidden" name="countrycode" value="<?= htmlspecialchars($_POST['countrycode'] ?? 'et') ?>">
+                    <?php foreach ($driverRoutes as $driverIdx => $data): ?>
+                        <input type="hidden" name="driver_routes[<?= $driverIdx ?>]" 
+                               value="<?= htmlspecialchars(json_encode($data['route'])) ?>">
                     <?php endforeach; ?>
+                </form>
+                
+                <div class="d-grid gap-2 mt-3">
+                    <a href="?export=csv&format=csv" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-file-csv me-1"></i> Export CSV
+                    </a>
+                    <div class="d-flex gap-2">
+                        <button onclick="window.print()" class="btn btn-outline-secondary btn-sm flex-fill">
+                            <i class="fas fa-print me-1"></i> Print
+                        </button>
+                        <button onclick="shareRoute()" class="btn btn-outline-secondary btn-sm flex-fill">
+                            <i class="fas fa-share-alt me-1"></i> Share
+                        </button>
+                    </div>
                 </div>
-                <?php if (count($savedRoutes) > 3): ?>
-                    <div class="text-center mt-2">
-                        <a href="manage.php" class="btn btn-sm btn-outline-primary">
-                            View All (<?= count($savedRoutes) ?>)
-                        </a>
+            <?php endif; ?>
+            
+            <div id="messages-area" class="mt-3">
+                <!-- Messages will be moved here -->
+                <?php if ($successMessage): ?>
+                    <div class="alert alert-success py-2 fs-7"><i class="fas fa-check-circle me-1"></i> <?= $successMessage ?></div>
+                <?php endif; ?>
+                <?php if ($loadedRouteMessage): ?>
+                    <div class="alert alert-info py-2 fs-7"><i class="fas fa-info-circle me-1"></i> <?= $loadedRouteMessage ?></div>
+                <?php endif; ?>
+                <?php if ($warnings): ?>
+                    <div class="alert alert-warning py-2 fs-7">
+                        <ul class="mb-0 ps-3"><?php foreach ($warnings as $w) echo "<li>$w</li>"; ?></ul>
+                    </div>
+                <?php endif; ?>
+                <?php if ($errors): ?>
+                    <div class="alert alert-danger py-2 fs-7">
+                        <ul class="mb-0 ps-3"><?php foreach ($errors as $e) echo "<li>$e</li>"; ?></ul>
                     </div>
                 <?php endif; ?>
             </div>
-        <?php endif; ?>
+            
+            <!-- Saved Routes Mini List -->
+            <?php if (!empty($savedRoutes)): ?>
+                <div class="mt-4 pt-3 border-top">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="form-group-title mb-0">Recent Routes</div>
+                        <a href="manage.php" class="text-decoration-none small">View All</a>
+                    </div>
+                    <div class="d-flex flex-column gap-2">
+                        <?php foreach (array_slice($savedRoutes, 0, 3) as $savedRoute): ?>
+                            <div class="p-2 border rounded bg-light hover-bg-white transition-all">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="text-truncate me-2">
+                                        <div class="fw-bold small text-truncate"><?= htmlspecialchars($savedRoute['name']) ?></div>
+                                        <div class="text-muted" style="font-size: 0.7rem;">
+                                            <?= date('M j', strtotime($savedRoute['created_at'])) ?> • <?= $savedRoute['driver_count'] ?> Dr
+                                        </div>
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="?load_route=<?= $savedRoute['id'] ?>" class="btn btn-light border py-0 px-2" title="Load"><i class="fas fa-folder-open text-primary"></i></a>
+                                        <a href="?delete_route=<?= $savedRoute['id'] ?>" class="btn btn-light border py-0 px-2" onclick="return confirm('Delete?')" title="Delete"><i class="fas fa-trash text-danger"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
     </div>
 
     <div class="map-panel">
         <div id="map"></div>
-        <div class="map-controls">
-            <div class="btn-group-vertical">
-                <button class="btn btn-sm btn-light" onclick="map.zoomIn()" title="Zoom In">
-                    <i class="fas fa-plus"></i>
-                </button>
-                <button class="btn btn-sm btn-light" onclick="map.zoomOut()" title="Zoom Out">
-                    <i class="fas fa-minus"></i>
-                </button>
-                <button class="btn btn-sm btn-light" onclick="locateUser()" title="My Location">
-                    <i class="fas fa-location-arrow"></i>
-                </button>
-                <button class="btn btn-sm btn-light" onclick="clearMap()" title="Clear Map">
-                    <i class="fas fa-trash"></i>
-                </button>
+        <div class="map-controls-custom">
+            <button class="map-btn" onclick="map.zoomIn()" title="Zoom In"><i class="fas fa-plus"></i></button>
+            <button class="map-btn" onclick="map.zoomOut()" title="Zoom Out"><i class="fas fa-minus"></i></button>
+            <button class="map-btn" onclick="locateUser()" title="My Location"><i class="fas fa-crosshairs"></i></button>
+            <button class="map-btn" onclick="resetRouteView()" title="Fit Route"><i class="fas fa-expand-arrows-alt"></i></button>
+            <button class="map-btn text-danger" onclick="clearMap()" title="Clear Map"><i class="fas fa-trash"></i></button>
+        </div>
+        <div id="loading-overlay" class="loading-overlay" style="display: none;">
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status"></div>
+                <div class="mt-2 fw-bold text-gray-800">Processing...</div>
             </div>
         </div>
     </div>
 </div>
 
 <?php if ($driverRoutes): ?>
-    <div class="routes-container">
-        <h2><i class="fas fa-route"></i> Optimized Routes</h2>
-        <p class="text-muted">Total distance: <?= 
-            round(array_sum(array_column($driverRoutes, 'total_km')), 2) ?> km | 
-            Total stops: <?= 
-            count($driverRoutes, COUNT_RECURSIVE) - count($driverRoutes) * 2 ?> | 
-            Average per driver: <?= 
-            round(array_sum(array_column($driverRoutes, 'total_km')) / count($driverRoutes), 2) ?> km
-        </p>
-        
-        <?php 
-        $colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#34495e'];
-        $i = 0;
-        foreach ($driverRoutes as $driverIdx => $data): 
-            $color = $colors[$i % count($colors)];
-            $i++;
-        ?>
-        <div class="driver-card" style="border-left-color: <?= $color ?>;">
-            <div class="driver-header" style="color: <?= $color ?>;">
-                <span><i class="fas fa-truck"></i> Driver <?= $driverIdx + 1 ?></span>
-                <span class="badge bg-light text-dark">
-                    <?= round($data['total_km'], 1) ?> km • <?= count($data['route']) ?> stops
-                </span>
+    <div class="routes-header d-block">
+        <div class="d-md-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="h4 mb-1 text-gray-800"><i class="fas fa-check-circle text-success me-2"></i>Optimized Delivery Plan</h2>
+                <div class="text-muted small">Generated on <?= date('M d, Y g:i A') ?></div>
             </div>
-            <div class="table-responsive">
-                <table class="table table-sm table-hover">
-                    <thead class="table-light">
-                        <tr><th>#</th><th>Location</th><th>Distance</th><th>Cumulative</th></tr>
-                    </thead>
-                    <tbody>
-                        <?php 
-                        $cumulative = 0;
-                        foreach ($data['route'] as $k => $stop): 
-                            $cumulative += isset($stop['distance']) ? $stop['distance'] : 0;
-                        ?>
-                        <tr>
-                            <td>
-                                <?php if ($k == 0): ?>
-                                    <span class="badge-wh">WH</span>
-                                <?php else: ?>
-                                    <span class="badge-stop" style="background: <?= $color ?>"><?= $k ?></span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <div class="fw-medium"><?= htmlspecialchars($stop['display_name'] ?? $stop['address']) ?></div>
-                                <?php if ($stop['address'] != ($stop['display_name'] ?? '')): ?>
-                                    <small class="text-muted"><?= htmlspecialchars($stop['address']) ?></small>
-                                <?php endif; ?>
-                            </td>
-                            <td><?= isset($stop['distance']) ? round($stop['distance'], 1).' km' : '–' ?></td>
-                            <td><?= round($cumulative, 1) ?> km</td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <div class="routes-stats mt-3 mt-md-0">
+                <div class="stat-item">
+                    <div class="stat-value"><?= count($driverRoutes) ?></div>
+                    <div class="stat-label">Drivers</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value"><?= count($driverRoutes, COUNT_RECURSIVE) - count($driverRoutes) * 2 ?></div>
+                    <div class="stat-label">Stops</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value"><?= round(array_sum(array_column($driverRoutes, 'total_km')), 1) ?> <span class="small text-muted">km</span></div>
+                    <div class="stat-label">Total Dist</div>
+                </div>
             </div>
         </div>
-        <?php endforeach; ?>
+        
+        <div class="routes-grid">
+            <?php 
+            $colors = ['#4e73df', '#e74a3b', '#1cc88a', '#f6c23e', '#36b9cc', '#858796', '#6610f2', '#fd7e14'];
+            $i = 0;
+            foreach ($driverRoutes as $driverIdx => $data): 
+                $color = $colors[$i % count($colors)];
+                $i++;
+            ?>
+            <div class="driver-card">
+                <div class="driver-header" style="border-left: 5px solid <?= $color ?>;">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle text-white d-flex align-items-center justify-content-center me-2" 
+                             style="width: 32px; height: 32px; background: <?= $color ?>;">
+                            <i class="fas fa-truck fa-sm"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-uppercase text-gray-500 font-weight-bold">Driver <?= $driverIdx + 1 ?></div>
+                            <div class="h6 mb-0 font-weight-bold text-gray-800"><?= count($data['route']) ?> Stops</div>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="h6 mb-0 font-weight-bold text-primary"><?= round($data['total_km'], 1) ?> km</div>
+                    </div>
+                </div>
+                
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="bg-light sticky-top">
+                                <tr>
+                                    <th style="width: 50px;" class="pl-3">#</th>
+                                    <th>Location</th>
+                                    <th class="text-end pr-3">Dist</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php 
+                                $cumulative = 0;
+                                foreach ($data['route'] as $k => $stop): 
+                                    $cumulative += isset($stop['distance']) ? $stop['distance'] : 0;
+                                ?>
+                                <tr onclick="focusOnRoute(<?= $driverIdx ?>); map.setView([<?= $stop['lat'] ?>, <?= $stop['lon'] ?>], 16);" style="cursor: pointer;">
+                                    <td class="pl-3 align-middle">
+                                        <?php if ($k == 0): ?>
+                                            <span class="badge bg-dark">WH</span>
+                                        <?php else: ?>
+                                            <span class="badge rounded-circle" style="background: <?= $color ?>; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"><?= $k ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="align-middle">
+                                        <div class="small fw-bold text-truncate" style="max-width: 200px;"><?= htmlspecialchars($stop['display_name'] ?? $stop['address']) ?></div>
+                                        <?php if ($stop['address'] != ($stop['display_name'] ?? '')): ?>
+                                            <div class="text-muted text-xs text-truncate" style="max-width: 200px;"><?= htmlspecialchars($stop['address']) ?></div>
+                                        <?php endif; ?>
+                                        <div class="text-xs text-muted mt-1">
+                                            <?= ($k == 0) ? '<i class="fas fa-flag-checkered text-success"></i> Start' : '<i class="fas fa-map-marker-alt text-gray-400"></i> Stop ' . $k ?>
+                                        </div>
+                                    </td>
+                                    <td class="text-end pr-3 align-middle">
+                                        <div class="small fw-bold"><?= isset($stop['distance']) ? round($stop['distance'], 1) : '0' ?> km</div>
+                                        <div class="text-xs text-muted"><?= round($cumulative, 1) ?> km total</div>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer bg-light p-2 text-center">
+                        <button class="btn btn-sm btn-link text-decoration-none" onclick="focusOnRoute(<?= $driverIdx ?>)">
+                            <i class="fas fa-eye me-1"></i> Focus on Route
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
     </div>
 <?php endif; ?>
 

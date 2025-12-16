@@ -196,19 +196,21 @@ require_once "../includes/header.php";
                 <form method="POST" action="">
                     <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
                     
-                    <?php if ($product['has_variants']): ?>
                     <div class="mb-3">
                         <label for="variant_id" class="form-label">Variant *</label>
                         <select class="form-select" id="variant_id" name="variant_id" required>
                             <option value="">Select Variant</option>
-                            <?php foreach ($variants as $v): ?>
-                                <option value="<?php echo $v['id']; ?>">
+                            <?php 
+                            $selected_variant = isset($_GET['variant_id']) ? $_GET['variant_id'] : '';
+                            foreach ($variants as $v): 
+                                $is_selected = ($v['id'] == $selected_variant) ? 'selected' : '';
+                            ?>
+                                <option value="<?php echo $v['id']; ?>" <?php echo $is_selected; ?>>
                                     <?php echo htmlspecialchars($v['sku'] . ' (' . $v['size'] . '/' . $v['color'] . ') - Qty: ' . $v['quantity']); ?> 
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <?php endif; ?>
 
                     <div class="mb-3">
                         <label class="form-label">Movement Type *</label>

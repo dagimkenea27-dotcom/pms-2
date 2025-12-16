@@ -45,6 +45,55 @@ $recent_movements_stmt = $db->prepare($recent_movements_query);
 $recent_movements_stmt->execute();
 $recent_movements = $recent_movements_stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Get Daily Stock Trends (Last 30 Days)
+$daily_trend_query = "
+    SELECT DATE(created_at) as date, 
+           SUM(CASE WHEN movement_type = 'IN' THEN quantity ELSE 0 END) as stock_in,
+           SUM(CASE WHEN movement_type = 'OUT' THEN quantity ELSE 0 END) as stock_out
+    FROM stock_movements 
+    WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    GROUP BY DATE(created_at)
+    ORDER BY date ASC";
+$daily_trend_stmt = $db->query($daily_trend_query);
+$daily_trends = $daily_trend_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Prepare data for JS
+$chart_labels = [];
+$chart_data_in = [];
+$chart_data_out = [];
+foreach ($daily_trends as $day) {
+    $chart_labels[] = date('M j', strtotime($day['date']));
+    $chart_data_in[] = $day['stock_in'];
+    $chart_data_out[] = $day['stock_out'];
+}
+
+// Get Top Selling Products (Last 30 Days)
+$top_products_query = "
+    SELECT p.name, SUM(sm.quantity) as total_sold
+    FROM stock_movements sm
+    JOIN products p ON sm.product_id = p.id
+    WHERE sm.movement_type = 'OUT' 
+    AND sm.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    GROUP BY sm.product_id
+    ORDER BY total_sold DESC
+    LIMIT 5";
+$top_products_stmt = $db->query($top_products_query);
+$top_products = $top_products_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get Top Suppliers (Last 30 Days by Volume In)
+$top_suppliers_query = "
+    SELECT s.name, SUM(sm.quantity) as total_supplied
+    FROM stock_movements sm
+    JOIN products p ON sm.product_id = p.id
+    JOIN suppliers s ON p.supplier_id = s.id
+    WHERE sm.movement_type = 'IN'
+    AND sm.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    GROUP BY s.id
+    ORDER BY total_supplied DESC
+    LIMIT 5";
+$top_suppliers_stmt = $db->query($top_suppliers_query);
+$top_suppliers = $top_suppliers_stmt->fetchAll(PDO::FETCH_ASSOC);
+
 // Get current user info
 $current_user = Auth::getCurrentUser();
 
@@ -221,7 +270,28 @@ require_once "includes/header.php";
                 <h6 class="m-0 font-weight-bold text-primary">Top Selling Products (Last 30 Days)</h6>
             </div>
             <div class="card-body">
-                <p class="text-muted text-center">Data visualization features temporarily disabled.</p>
+                <?php if ($top_products && count($top_products) > 0): ?>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-end">Sold (Qty)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($top_products as $prod): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($prod['name']); ?></td>
+                                    <td class="text-end font-weight-bold"><?php echo number_format($prod['total_sold']); ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php else: ?>
+                    <p class="text-muted text-center py-3">No sales recorded yet.</p>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -307,7 +377,28 @@ require_once "includes/header.php";
                 <h6 class="m-0 font-weight-bold text-primary">Top Suppliers (Last 30 Days)</h6>
             </div>
             <div class="card-body">
-                <p class="text-muted text-center">Data visualization features temporarily disabled.</p>
+                <?php if ($top_suppliers && count($top_suppliers) > 0): ?>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless">
+                            <thead>
+                                <tr>
+                                    <th>Supplier</th>
+                                    <th class="text-end">Received (Qty)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($top_suppliers as $sup): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($sup['name']); ?></td>
+                                    <td class="text-end font-weight-bold text-success">+<?php echo number_format($sup['total_supplied']); ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php else: ?>
+                    <p class="text-muted text-center py-3">No stock received yet.</p>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -332,6 +423,70 @@ require_once "includes/header.php";
             dailyChart.style.display = 'none';
             monthlyChart.style.display = 'block';
         }
+    }
+
+    // Daily Stock Trends Chart
+    var ctxDaily = document.getElementById("dailyStockChart");
+    if (ctxDaily) {
+        var myDailyChart = new Chart(ctxDaily, {
+            type: 'bar',
+            data: {
+                labels: <?php echo json_encode($chart_labels); ?>,
+                datasets: [
+                    {
+                        label: "Stock In",
+                        backgroundColor: "#1cc88a",
+                        hoverBackgroundColor: "#17a673",
+                        borderColor: "#1cc88a",
+                        data: <?php echo json_encode($chart_data_in); ?>,
+                    },
+                    {
+                        label: "Stock Out",
+                        backgroundColor: "#e74a3b",
+                        hoverBackgroundColor: "#be2617",
+                        borderColor: "#e74a3b",
+                        data: <?php echo json_encode($chart_data_out); ?>,
+                    }
+                ],
+            },
+            options: {
+                maintainAspectRatio: false,
+                layout: {
+                    padding: { left: 10, right: 25, top: 25, bottom: 0 }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false, drawBorder: false },
+                        ticks: { maxTicksLimit: 7 }
+                    },
+                    y: {
+                        ticks: {
+                            maxTicksLimit: 5,
+                            padding: 10,
+                        },
+                        grid: {
+                            color: "rgb(234, 236, 244)",
+                            zeroLineColor: "rgb(234, 236, 244)",
+                            drawBorder: false,
+                            borderDash: [2],
+                            zeroLineBorderDash: [2]
+                        }
+                    },
+                },
+                legend: { display: true },
+                tooltips: {
+                    backgroundColor: "rgb(255,255,255)",
+                    bodyFontColor: "#858796",
+                    titleFontColor: '#6e707e',
+                    borderColor: '#dddfeb',
+                    borderWidth: 1,
+                    xPadding: 15,
+                    yPadding: 15,
+                    displayColors: false,
+                    caretPadding: 10,
+                },
+            }
+        });
     }
 
     // Stock Status Pie Chart

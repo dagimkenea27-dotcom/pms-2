@@ -19,6 +19,9 @@ const ThemeManager = {
             this.applyTheme(savedTheme);
         } else if (prefersDark) {
             this.applyTheme(this.DARK_MODE);
+        } else {
+            // Explicitly set light mode default for icon state
+            this.applyTheme(this.LIGHT_MODE);
         }
     },
 
@@ -27,10 +30,16 @@ const ThemeManager = {
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem(this.STORAGE_KEY, theme);
 
-        // Update toggle switch if it exists on the page
-        const toggle = document.getElementById('darkModeSwitch');
-        if (toggle) {
-            toggle.checked = (theme === this.DARK_MODE);
+        // Update icon
+        const icon = document.getElementById('darkModeIcon');
+        if (icon) {
+            if (theme === this.DARK_MODE) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
         }
     },
 
@@ -45,16 +54,13 @@ const ThemeManager = {
 // Run initialization immediately to prevent FOUC
 ThemeManager.init();
 
-// Expose global function for the switch
+// Expose global function
 function toggleTheme() {
     ThemeManager.toggle();
 }
 
-// Re-check toggle state when DOM is loaded (in case script ran before switch existed)
+// Re-check state when DOM is loaded
 document.addEventListener('DOMContentLoaded', function () {
-    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-    const toggle = document.getElementById('darkModeSwitch');
-    if (toggle) {
-        toggle.checked = (currentTheme === 'dark');
-    }
+    const currentTheme = localStorage.getItem('ims_theme') || 'light';
+    ThemeManager.applyTheme(currentTheme);
 });

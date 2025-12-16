@@ -55,16 +55,25 @@ if (isset($_GET['id'])) {
         
         if ($product) {
             // Generate or retrieve barcode
+            // Generate or retrieve barcode for main product
             if (empty($product['barcode'])) {
-                // Generate barcode from SKU
                 $barcode_data = $product['sku'];
             } else {
-                // Use existing barcode
                 $barcode_data = $product['barcode'];
             }
             
             $generator = new BarcodeGenerator();
             $barcode_svg = $generator->generateSVG($barcode_data, 300, 100);
+
+            // Fetch variants if they exist
+            $variants = [];
+            if ($product['has_variants']) {
+                $v_query = "SELECT * FROM product_variants WHERE product_id = :id ORDER BY size, color";
+                $v_stmt = $db->prepare($v_query);
+                $v_stmt->bindParam(":id", $_GET['id']);
+                $v_stmt->execute();
+                $variants = $v_stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
         } else {
             $message = "Product not found!";
             $message_type = "danger";
@@ -95,28 +104,56 @@ require_once "../includes/header.php";
         <div class="card" id="printableArea">
             <div class="card-header">
                 <h6 class="card-title mb-0">
-                    Barcode for <?php echo htmlspecialchars($variant ? $product['name'] . ' - ' . $variant['size'] . ' ' . $variant['color'] : $product['name']); ?>
+                    Barcode for <?php echo htmlspecialchars($product['name']); ?>
                 </h6>
             </div>
             <div class="card-body text-center">
+                <!-- Main Product Barcode -->
                 <?php if ($barcode_svg): ?>
-                    <div class="mb-4">
-                        <?php echo $barcode_svg; ?>
+                    <div class="barcode-item mb-5">
+                        <div class="mb-2">
+                            <?php echo $barcode_svg; ?>
+                        </div>
+                        <div class="mb-2">
+                            <p><strong><?php echo htmlspecialchars($product['name']); ?></strong></p>
+                            <p>SKU: <?php echo htmlspecialchars($product['sku']); ?></p>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <p><strong>Barcode Data:</strong> <?php echo htmlspecialchars($variant ? $variant['sku'] : $product['sku']); ?></p>
+                <?php endif; ?>
+
+                <!-- Variant Barcodes -->
+                <?php if (!empty($variants)): ?>
+                    <hr>
+                    <h5 class="mb-4">Variants</h5>
+                    <?php foreach ($variants as $v): 
+                        $v_barcode = $generator->generateSVG($v['sku'], 300, 100);
+                        $v_label = $v['size'] . ' ' . $v['color'];
+                    ?>
+                    <div class="barcode-item mb-5 pb-3 border-bottom">
+                        <div class="mb-2">
+                            <?php echo $v_barcode; ?>
+                        </div>
+                        <div class="mb-2">
+                            <p><strong><?php echo htmlspecialchars($product['name'] . ' - ' . $v_label); ?></strong></p>
+                            <p>SKU: <?php echo htmlspecialchars($v['sku']); ?></p>
+                            <p>Price: $<?php echo number_format($v['price'] ?? $product['price'], 2); ?></p>
+                        </div>
                     </div>
-                    <div class="mb-3 d-print-none">
-                        <button class="btn btn-primary" onclick="window.print()">
-                            <i class="fas fa-print"></i> Print Barcode
-                        </button>
-                        <a href="view_products.php" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Back to Products
-                        </a>
-                    </div>
-                <?php else: ?>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+
+                <?php if (!$barcode_svg && empty($variants)): ?>
                     <p>No barcode data available for this product.</p>
                 <?php endif; ?>
+
+                <div class="mb-3 d-print-none">
+                    <button class="btn btn-primary" onclick="window.print()">
+                        <i class="fas fa-print"></i> Print Barcodes
+                    </button>
+                    <a href="view_products.php" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Products
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -129,13 +166,14 @@ require_once "../includes/header.php";
             <div class="card-body">
                 <p><strong>Name:</strong> <?php echo htmlspecialchars($product['name']); ?></p>
                 <p><strong>SKU:</strong> <?php echo htmlspecialchars($product['sku']); ?></p>
-                <?php if ($variant): ?>
-                    <p><strong>Variant:</strong> <?php echo htmlspecialchars($variant['size'] . ' ' . $variant['color']); ?></p>
-                    <p><strong>Variant SKU:</strong> <?php echo htmlspecialchars($variant['sku']); ?></p>
-                <?php endif; ?>
                 <p><strong>Category:</strong> <?php echo htmlspecialchars($product['category']); ?></p>
-                <p><strong>Quantity:</strong> <?php echo $variant ? $variant['quantity'] : $product['quantity']; ?></p>
-                <p><strong>Price:</strong> $<?php echo number_format($variant && $variant['price'] ? $variant['price'] : $product['price'], 2); ?></p>
+                
+                <?php if (!empty($variants)): ?>
+                    <p><strong>Variants:</strong> <?php echo count($variants); ?> variations</p>
+                <?php else: ?>
+                    <p><strong>Quantity:</strong> <?php echo $product['quantity']; ?></p>
+                    <p><strong>Price:</strong> $<?php echo number_format($product['price'], 2); ?></p>
+                <?php endif; ?>
                 
                 <?php if (!empty($product['image'])): ?>
                     <div class="text-center mt-3">
