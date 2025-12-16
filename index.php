@@ -138,17 +138,17 @@ require_once "includes/header.php";
 
 <!-- Page Heading -->
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
+    <h1 class="h3 mb-0 text-gray-800"><?php echo __('dashboard'); ?></h1>
     <div class="dropdown">
         <button class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm dropdown-toggle" type="button" id="reportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="fas fa-download fa-sm text-white-50"></i> Generate Report
+            <i class="fas fa-download fa-sm text-white-50"></i> <?php echo __('generate_report'); ?>
         </button>
         <ul class="dropdown-menu" aria-labelledby="reportDropdown">
-            <li><a class="dropdown-item" href="reports/stock_valuation.php"><i class="fas fa-file-invoice-dollar mr-2"></i>Stock Valuation</a></li>
-            <li><a class="dropdown-item" href="reports/stock_movement.php"><i class="fas fa-exchange-alt mr-2"></i>Stock Movement</a></li>
-            <li><a class="dropdown-item" href="reports/low_stock.php"><i class="fas fa-exclamation-triangle mr-2"></i>Low Stock Report</a></li>
+            <li><a class="dropdown-item" href="reports/stock_valuation.php"><i class="fas fa-file-invoice-dollar mr-2"></i><?php echo __('stock_valuation'); ?></a></li>
+            <li><a class="dropdown-item" href="reports/stock_movement.php"><i class="fas fa-exchange-alt mr-2"></i><?php echo __('stock_movement'); ?></a></li>
+            <li><a class="dropdown-item" href="reports/low_stock.php"><i class="fas fa-exclamation-triangle mr-2"></i><?php echo __('low_stock_items'); ?></a></li>
             <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="products/export_products.php"><i class="fas fa-file-export mr-2"></i>Export Products</a></li>
+            <li><a class="dropdown-item" href="products/export_products.php"><i class="fas fa-file-export mr-2"></i><?php echo __('export_products'); ?></a></li>
         </ul>
     </div>
 </div>
@@ -162,7 +162,7 @@ require_once "includes/header.php";
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                            Total Products</div>
+                            <?php echo __('total_products'); ?></div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $total_products['count']; ?></div>
                     </div>
                     <div class="col-auto">
@@ -180,7 +180,7 @@ require_once "includes/header.php";
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                            Low Stock Alerts</div>
+                            <?php echo __('low_stock_alerts'); ?></div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $low_stock['count']; ?></div>
                     </div>
                     <div class="col-auto">
@@ -198,7 +198,7 @@ require_once "includes/header.php";
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                            Out of Stock</div>
+                            <?php echo __('out_of_stock'); ?></div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $out_of_stock['count']; ?></div>
                     </div>
                     <div class="col-auto">
@@ -229,7 +229,7 @@ require_once "includes/header.php";
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Reorder Needed</div>
+                                <?php echo __('reorder_needed'); ?></div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $reorder_count; ?></div>
                         </div>
                         <div class="col-auto">
@@ -248,7 +248,7 @@ require_once "includes/header.php";
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                            Inventory Value</div>
+                            <?php echo __('inventory_value'); ?></div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800">$<?php echo number_format($total_value['total_value'] ?? 0, 2); ?></div>
                     </div>
                     <div class="col-auto">
@@ -267,7 +267,7 @@ require_once "includes/header.php";
         <!-- Top Selling Products -->
         <div class="card dashboard-card shadow mb-4">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Top Selling Products (Last 30 Days)</h6>
+                <h6 class="m-0 font-weight-bold text-primary"><?php echo __('top_selling_products'); ?></h6>
             </div>
             <div class="card-body">
                 <?php if ($top_products && count($top_products) > 0): ?>
@@ -275,8 +275,8 @@ require_once "includes/header.php";
                         <table class="table table-sm table-borderless">
                             <thead>
                                 <tr>
-                                    <th>Product</th>
-                                    <th class="text-end">Sold (Qty)</th>
+                                    <th><?php echo __('product'); ?></th>
+                                    <th class="text-end"><?php echo __('quantity'); ?></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -298,7 +298,7 @@ require_once "includes/header.php";
         <!-- Recent Activity -->
         <div class="card dashboard-card shadow mb-4">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Recent Stock Movements</h6>
+                <h6 class="m-0 font-weight-bold text-primary"><?php echo __('recent_movements'); ?></h6>
             </div>
             <div class="card-body">
                 <?php if ($recent_movements && count($recent_movements) > 0): ?>
@@ -306,10 +306,10 @@ require_once "includes/header.php";
                         <table class="table table-bordered" width="100%" cellspacing="0">
                             <thead>
                                 <tr>
-                                    <th>Date</th>
-                                    <th>Product</th>
-                                    <th>Type</th>
-                                    <th>Quantity</th>
+                                    <th><?php echo __('date'); ?></th>
+                                    <th><?php echo __('product'); ?></th>
+                                    <th><?php echo __('type'); ?></th>
+                                    <th><?php echo __('quantity'); ?></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -340,14 +340,14 @@ require_once "includes/header.php";
         <!-- Daily Stock Trends Chart -->
         <div class="card dashboard-card shadow mb-4">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                <h6 class="m-0 font-weight-bold text-primary">Daily Stock Trends (Last 30 Days)</h6>
+                <h6 class="m-0 font-weight-bold text-primary"><?php echo __('daily_stock_trend'); ?></h6>
                 <div class="dropdown">
                     <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="chartToggle" data-bs-toggle="dropdown" aria-expanded="false">
-                        View Options
+                        <?php echo __('view_options'); ?>
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="chartToggle">
-                        <li><a class="dropdown-item" href="#" onclick="showChart('daily')">Daily Trends</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="showChart('monthly')">Monthly Trends</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="showChart('daily')"><?php echo __('daily_trends'); ?></a></li>
+                        <li><a class="dropdown-item" href="#" onclick="showChart('monthly')"><?php echo __('monthly_trends'); ?></a></li>
                     </ul>
                 </div>
             </div>
@@ -362,7 +362,7 @@ require_once "includes/header.php";
         <!-- Stock Status Chart -->
         <div class="card dashboard-card shadow mb-4">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Stock Status Distribution</h6>
+                <h6 class="m-0 font-weight-bold text-primary"><?php echo __('stock_valuation'); ?></h6>
             </div>
             <div class="card-body">
                 <div class="chart-pie">
@@ -374,7 +374,7 @@ require_once "includes/header.php";
         <!-- Supplier Performance -->
         <div class="card dashboard-card shadow mb-4">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Top Suppliers (Last 30 Days)</h6>
+                <h6 class="m-0 font-weight-bold text-primary"><?php echo __('top_suppliers_volume'); ?></h6>
             </div>
             <div class="card-body">
                 <?php if ($top_suppliers && count($top_suppliers) > 0): ?>
@@ -434,14 +434,14 @@ require_once "includes/header.php";
                 labels: <?php echo json_encode($chart_labels); ?>,
                 datasets: [
                     {
-                        label: "Stock In",
+                        label: "<?php echo __('stock_in'); ?>",
                         backgroundColor: "#1cc88a",
                         hoverBackgroundColor: "#17a673",
                         borderColor: "#1cc88a",
                         data: <?php echo json_encode($chart_data_in); ?>,
                     },
                     {
-                        label: "Stock Out",
+                        label: "<?php echo __('stock_out'); ?>",
                         backgroundColor: "#e74a3b",
                         hoverBackgroundColor: "#be2617",
                         borderColor: "#e74a3b",
@@ -495,7 +495,7 @@ require_once "includes/header.php";
         var myPieChart = new Chart(ctxPie, {
             type: 'doughnut',
             data: {
-                labels: ["In Stock", "Low Stock", "Out of Stock"],
+                labels: ["<?php echo __('in_stock'); ?>", "<?php echo __('low_stock_items'); ?>", "<?php echo __('out_of_stock'); ?>"],
                 datasets: [{
                     data: [
                         <?php echo $total_products['count'] - $out_of_stock['count'] - $low_stock['count']; ?>, 
