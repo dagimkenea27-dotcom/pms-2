@@ -6,6 +6,7 @@ require_once "../models/User.php";
 require_once "../config/auth.php";
 
 // Auth check handled by auth_check.php
+Auth::requireRole('admin'); // Only admin can list users
 
 // Initialize DB and User
 $database = new Database();

@@ -7,7 +7,9 @@ $database = new Database();
 $db = $database->getConnection();
 
 // Handle product deletion
+// Handle product deletion
 if (isset($_GET['delete_id'])) {
+    Auth::requireRole('manager'); // Only manager/admin can delete
     // First get the product to delete its image
     $get_query = "SELECT image FROM products WHERE id = :id";
     $get_stmt = $db->prepare($get_query);
@@ -154,6 +156,7 @@ if (isset($_SESSION['message'])) {
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-list"></i> Product List</h1>
     <div>
+        <?php if (Auth::hasRole('manager')): ?>
         <a href="export_products.php" class="d-none d-sm-inline-block btn btn-sm btn-success shadow-sm me-2">
             <i class="fas fa-download fa-sm text-white-50"></i> Export CSV
         </a>
@@ -163,6 +166,7 @@ if (isset($_SESSION['message'])) {
         <a href="add_product.php" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
             <i class="fas fa-plus fa-sm text-white-50"></i> Add New Product
         </a>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -367,12 +371,14 @@ if (isset($_SESSION['message'])) {
                                         <a href="view_product.php?id=<?php echo $product['id']; ?>" class="btn btn-info btn-sm" title="View">
                                             <i class="fas fa-eye"></i>
                                         </a>
+                                        <?php if (Auth::hasRole('manager')): ?>
                                         <a href="edit_product.php?id=<?php echo $product['id']; ?>" class="btn btn-warning btn-sm" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
                                         <a href="?delete_id=<?php echo $product['id']; ?>" class="btn btn-danger btn-sm" title="Delete" onclick="return confirmDelete('<?php echo addslashes($product['name']); ?>')">
                                             <i class="fas fa-trash"></i>
                                         </a>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>

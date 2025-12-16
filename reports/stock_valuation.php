@@ -3,6 +3,12 @@
 require_once "../config/auth_check.php";
 require_once "../config/database.php";
 
+require_once "../config/auth.php"; // Ensure Auth class is loaded
+
+// Ensure user is logged in
+Auth::requireLogin();
+Auth::requireRole('manager');
+
 $database = new Database();
 $db = $database->getConnection();
 

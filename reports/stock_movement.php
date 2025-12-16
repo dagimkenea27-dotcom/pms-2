@@ -6,6 +6,7 @@ require_once "../config/auth.php";
 
 // Ensure user is logged in
 Auth::requireLogin();
+Auth::requireRole('manager');
 
 $database = new Database();
 $db = $database->getConnection();

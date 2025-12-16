@@ -4,6 +4,7 @@ require_once '../config/auth.php';
 require_once '../models/Driver.php';
 
 Auth::requireLogin();
+Auth::requireRole('manager');
 $currentUser = Auth::getCurrentUser();
 
 $database = new Database();

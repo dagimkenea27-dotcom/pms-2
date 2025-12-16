@@ -4,6 +4,9 @@ require_once "../config/auth_check.php";
 require_once "../config/database.php";
 require_once "../models/AuditLog.php";
 
+// Only managers can perform bulk operations
+Auth::requireRole('manager');
+
 header('Content-Type: application/json');
 
 $database = new Database();

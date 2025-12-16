@@ -7,6 +7,8 @@ require_once "../config/auth.php";
 
 // Ensure user is logged in
 Auth::requireLogin();
+// Only manager/admin can edit products
+Auth::requireRole('manager');
 
 $database = new Database();
 $db = $database->getConnection();

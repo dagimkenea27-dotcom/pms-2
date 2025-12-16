@@ -47,39 +47,11 @@ class Auth {
         }
     }
 
-    public static function requireRole($required_role) {
-        self::requireLogin();
-        
-        if ($_SESSION['role'] != $required_role && $_SESSION['role'] != 'admin') {
-            header("Location: unauthorized.php");
-            exit();
-        }
-    }
-
+    // --- Permissions (Optional - can be expanded) ---
     public static function hasPermission($permission) {
-        self::startSession();
-        
-        // Admin has all permissions
-        if ($_SESSION['role'] == 'admin') {
-            return true;
-        }
-        
-        // Check specific permissions from database
-        // This is a simplified version - you might want to implement a more complex permission system
-        $allowed_permissions = self::getUserPermissions($_SESSION['user_id']);
-        return in_array($permission, $allowed_permissions);
-    }
-
-    private static function getUserPermissions($user_id) {
-        // This would query the user_permissions table
-        // For now, return basic permissions based on role
-        $permissions = [
-            'staff' => ['products.view', 'stock.view'],
-            'manager' => ['products.view', 'products.create', 'products.edit', 'stock.view', 'stock.manage', 'reports.view', 'suppliers.view'],
-            'admin' => ['all']
-        ];
-        
-        return $permissions[$_SESSION['role']] ?? [];
+        // Simple implementation: Admin has all
+        if (self::hasRole('admin')) return true;
+        return false;
     }
 
     public static function preventCache() {
@@ -116,10 +88,61 @@ class Auth {
         return [
             'id' => $_SESSION['user_id'] ?? null,
             'username' => $_SESSION['username'] ?? null,
-            'role' => $_SESSION['role'] ?? null,
+            'role' => $_SESSION['role'] ?? 'staff', // Default to staff if undefined
             'full_name' => $_SESSION['full_name'] ?? null
         ];
     }
+
+    // --- Role Based Access Control ---
+
+    /**
+     * Check if user has a specific role or higher
+     * Hierarchy: admin > manager > staff
+     */
+    public static function hasRole($required_role) {
+        $user = self::getCurrentUser();
+        $user_role = strtolower($user['role']);
+        $required_role = strtolower($required_role);
+
+        // Admin has access to everything
+        if ($user_role === 'admin') return true;
+
+        if ($required_role === 'admin') {
+            return $user_role === 'admin';
+        }
+
+        if ($required_role === 'manager') {
+            return $user_role === 'admin' || $user_role === 'manager';
+        }
+
+        if ($required_role === 'staff') {
+            return true; // Everyone is at least staff
+        }
+
+        return false;
+    }
+
+    /**
+     * Enforce a role requirement. Redirects if failed.
+     */
+    public static function requireRole($role) {
+        self::checkAuthAndPreventCache();
+        if (!self::hasRole($role)) {
+            // Log the unauthorized attempt?
+            header("HTTP/1.1 403 Forbidden");
+            include_once __DIR__ . '/../includes/403.php'; // We need to create this
+            exit();
+        }
+    }
+
+    /**
+     * Strict check for exact role
+     */
+    public static function isRole($role) {
+        $user = self::getCurrentUser();
+        return strtolower($user['role']) === strtolower($role);
+    }
+
     // --- CSRF Protection ---
     public static function generateCSRF() {
         self::startSession();
