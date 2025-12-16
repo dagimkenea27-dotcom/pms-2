@@ -167,6 +167,15 @@ require_once "../includes/header.php";
                 <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-cube"></i> Product Details</h6>
             </div>
             <div class="card-body">
+                <div class="text-center mb-3">
+                    <?php if (!empty($product['image']) && file_exists("../" . $product['image'])): ?>
+                        <img src="../<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="img-fluid rounded mb-2" style="max-height: 150px;">
+                    <?php else: ?>
+                        <div class="py-4 bg-light rounded text-center mb-2">
+                            <i class="fas fa-image fa-3x text-gray-300"></i>
+                        </div>
+                    <?php endif; ?>
+                </div>
                 <table class="table table-sm">
                     <tr>
                         <th>SKU:</th>

@@ -320,7 +320,7 @@ if (isset($_SESSION['message'])) {
                         <th>Image</th>
                         <th>Name</th>
                         <th>Category</th>
-                        <th>Brand</th>
+                        <th>Location</th>
                         <th>Quantity</th>
                         <th>Price</th>
                         <th>Actions</th>
@@ -351,7 +351,7 @@ if (isset($_SESSION['message'])) {
                                     </a>
                                 </td>
                                 <td><?php echo htmlspecialchars($product['category']); ?></td>
-                                <td><?php echo htmlspecialchars($product['brand']); ?></td>
+                                <td><?php echo htmlspecialchars($product['location'] ?? '-'); ?></td>
                                 <td>
                                     <?php if ($product['quantity'] <= $product['min_stock'] && $product['quantity'] > 0): ?>
                                         <span class="badge bg-warning"><?php echo $product['quantity']; ?></span>
