@@ -12,15 +12,11 @@ const ThemeManager = {
     // Initialize theme
     init: function () {
         const savedTheme = localStorage.getItem(this.STORAGE_KEY);
-        // Check system preference if no saved theme
-        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        // Default to Light Mode if no saved preference (ignore system preference)
 
         if (savedTheme) {
             this.applyTheme(savedTheme);
-        } else if (prefersDark) {
-            this.applyTheme(this.DARK_MODE);
         } else {
-            // Explicitly set light mode default for icon state
             this.applyTheme(this.LIGHT_MODE);
         }
     },

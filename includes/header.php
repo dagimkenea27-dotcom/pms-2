@@ -272,7 +272,7 @@ Auth::startSession();
                                 </span>
                             </a>
                             <!-- Dropdown - Alerts -->
-                            <div class="dropdown-list dropdown-menu dropdown-menu-start shadow animated--grow-in"
+                            <div class="dropdown-list dropdown-menu dropdown-menu-end shadow animated--grow-in"
                                 aria-labelledby="alertsDropdown">
                                 <h6 class="dropdown-header bg-primary text-white border-0 py-2">
                                     <?php echo __('alerts_center'); ?>
