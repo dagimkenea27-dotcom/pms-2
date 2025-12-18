@@ -154,17 +154,17 @@ if (isset($_SESSION['message'])) {
 ?>
 
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-list"></i> Product List</h1>
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-list"></i> <?php echo __('all_products'); ?></h1>
     <div>
         <?php if (Auth::hasRole('manager')): ?>
         <a href="export_products.php" class="d-none d-sm-inline-block btn btn-sm btn-success shadow-sm me-2">
-            <i class="fas fa-download fa-sm text-white-50"></i> Export CSV
+            <i class="fas fa-download fa-sm text-white-50"></i> <?php echo __('export_products'); ?>
         </a>
         <button type="button" class="d-none d-sm-inline-block btn btn-sm btn-info shadow-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal">
-            <i class="fas fa-upload fa-sm text-white-50"></i> Import CSV
+            <i class="fas fa-upload fa-sm text-white-50"></i> <?php echo __('import_products'); ?>
         </button>
         <a href="add_product.php" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-            <i class="fas fa-plus fa-sm text-white-50"></i> Add New Product
+            <i class="fas fa-plus fa-sm text-white-50"></i> <?php echo __('add_product'); ?>
         </a>
         <?php endif; ?>
     </div>
@@ -175,10 +175,10 @@ if (isset($_SESSION['message'])) {
     <div class="card-body">
         <form method="GET" class="row g-3">
             <div class="col-md-6">
-                <label for="search" class="form-label">Search Products</label>
+                <label for="search" class="form-label"><?php echo __('search_products'); ?></label>
                 <div class="input-group">
                     <input type="text" class="form-control barcode-input" id="search" name="search" 
-                           placeholder="Search by name, SKU, or description..." 
+                           placeholder="<?php echo __('search_products'); ?>" 
                            value="<?php echo htmlspecialchars($search); ?>">
                     <button class="btn btn-outline-secondary start-barcode-scanner" type="button" id="barcode-scan-btn" title="Scan Barcode (Ctrl+B)">
                         <i class="fas fa-barcode"></i>
@@ -186,9 +186,9 @@ if (isset($_SESSION['message'])) {
                 </div>
             </div>
             <div class="col-md-4">
-                <label for="category" class="form-label">Filter by Category</label>
+                <label for="category" class="form-label"><?php echo __('filter_category'); ?></label>
                 <select class="form-select" id="category" name="category">
-                    <option value="">All Categories</option>
+                    <option value=""><?php echo __('all_categories'); ?></option>
                     <?php foreach ($categories as $cat): ?>
                         <option value="<?php echo htmlspecialchars($cat['category']); ?>" 
                                 <?php echo $category_filter == $cat['category'] ? 'selected' : ''; ?>>
@@ -200,11 +200,11 @@ if (isset($_SESSION['message'])) {
             <div class="col-md-2 d-flex align-items-end">
                 <div class="btn-group" role="group">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-search"></i> Search
+                        <i class="fas fa-search"></i> <?php echo __('search'); ?>
                     </button>
                     <?php if (!empty($search) || !empty($category_filter)): ?>
                         <a href="view_products.php" class="btn btn-outline-secondary">
-                            <i class="fas fa-times"></i> Clear
+                            <i class="fas fa-times"></i> <?php echo __('clear'); ?>
                         </a>
                     <?php endif; ?>
                 </div>
@@ -222,7 +222,7 @@ if (isset($_SESSION['message'])) {
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Total Products</div>
+                                <?php echo __('total_products'); ?></div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $total_products_count_all; ?></div>
                         </div>
                         <div class="col-auto">
@@ -241,7 +241,7 @@ if (isset($_SESSION['message'])) {
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Low Stock Items</div>
+                                <?php echo __('low_stock_alerts'); ?></div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $low_stock_count['count']; ?></div>
                         </div>
                         <div class="col-auto">
@@ -260,7 +260,7 @@ if (isset($_SESSION['message'])) {
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                                Out of Stock</div>
+                                <?php echo __('out_of_stock'); ?></div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $out_of_stock_count['count']; ?></div>
                         </div>
                         <div class="col-auto">
@@ -298,7 +298,7 @@ if (isset($_SESSION['message'])) {
 
 <div class="card dashboard-card shadow mb-4">
     <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-        <h6 class="m-0 font-weight-bold text-primary">Products</h6>
+        <h6 class="m-0 font-weight-bold text-primary"><?php echo __('products'); ?></h6>
         <div class="dropdown no-arrow">
             <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="fas fa-download fa-sm text-white-50"></i> Export
@@ -321,13 +321,13 @@ if (isset($_SESSION['message'])) {
                             </div>
                         </th>
                         <th>#</th>
-                        <th>Image</th>
-                        <th>Name</th>
-                        <th>Category</th>
-                        <th>Location</th>
-                        <th>Quantity</th>
-                        <th>Price</th>
-                        <th>Actions</th>
+                        <th><?php echo __('image'); ?></th>
+                        <th><?php echo __('product_name'); ?></th>
+                        <th><?php echo __('category'); ?></th>
+                        <th><?php echo __('location'); ?></th>
+                        <th><?php echo __('stock'); ?></th>
+                        <th><?php echo __('price'); ?></th>
+                        <th><?php echo __('actions'); ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -360,7 +360,7 @@ if (isset($_SESSION['message'])) {
                                     <?php if ($product['quantity'] <= $product['min_stock'] && $product['quantity'] > 0): ?>
                                         <span class="badge bg-warning"><?php echo $product['quantity']; ?></span>
                                     <?php elseif ($product['quantity'] == 0): ?>
-                                        <span class="badge bg-danger">Out of Stock</span>
+                                        <span class="badge bg-danger"><?php echo __('out_of_stock'); ?></span>
                                     <?php else: ?>
                                         <?php echo $product['quantity']; ?>
                                     <?php endif; ?>
@@ -385,7 +385,7 @@ if (isset($_SESSION['message'])) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="text-center">No products found.</td>
+                            <td colspan="9" class="text-center"><?php echo __('no_products_found'); ?></td>
                         </tr>
                     <?php endif; ?>
                 </tbody>

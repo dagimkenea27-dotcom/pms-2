@@ -85,9 +85,9 @@ require_once "../includes/header.php";
 ?>
 
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-download text-success"></i> Stock In</h1>
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-download text-success"></i> <?php echo __('add_stock'); ?></h1>
     <a href="view_products.php" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-        <i class="fas fa-arrow-left fa-sm text-white-50"></i> Back to Products
+        <i class="fas fa-arrow-left fa-sm text-white-50"></i> <?php echo __('back_to_products'); ?>
     </a>
 </div>
 
@@ -102,34 +102,34 @@ require_once "../includes/header.php";
     <div class="col-md-6">
         <div class="card dashboard-card shadow mb-4">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Add Stock to Product</h6>
+                <h6 class="m-0 font-weight-bold text-primary"><?php echo __('add_stock'); ?></h6>
             </div>
             <div class="card-body">
                 <form method="POST" action="">
                     <div class="mb-3">
-                        <label for="product_id" class="form-label">Select Product *</label>
+                        <label for="product_id" class="form-label"><?php echo __('select_product'); ?> *</label>
                         <select class="form-select" id="product_id" name="product_id" required>
-                            <option value="">Choose a product</option>
+                            <option value=""><?php echo __('choose_product'); ?></option>
                             <?php foreach ($products as $product): ?>
                             <option value="<?php echo $product['id']; ?>">
                                 <?php echo htmlspecialchars($product['sku']); ?> - 
                                 <?php echo htmlspecialchars($product['name']); ?> 
-                                (Current: <?php echo $product['quantity']; ?>)
+                                (<?php echo __('current_qty'); ?>: <?php echo $product['quantity']; ?>)
                             </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="quantity" class="form-label">Quantity to Add *</label>
+                        <label for="quantity" class="form-label"><?php echo __('quantity_to_add'); ?> *</label>
                         <input type="number" class="form-control" id="quantity" name="quantity" 
                                min="1" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="supplier_id" class="form-label">Select Supplier</label>
+                        <label for="supplier_id" class="form-label"><?php echo __('select_supplier'); ?></label>
                         <select class="form-select" id="supplier_id" name="supplier_id">
-                            <option value="">Choose a supplier (Optional)</option>
+                            <option value=""><?php echo __('choose_supplier'); ?></option>
                             <?php foreach ($suppliers as $supplier): ?>
                             <option value="<?php echo $supplier['id']; ?>">
                                 <?php echo htmlspecialchars($supplier['name']); ?>
@@ -139,28 +139,28 @@ require_once "../includes/header.php";
                     </div>
                     
                     <div class="mb-3">
-                        <label for="reason" class="form-label">Reason *</label>
+                        <label for="reason" class="form-label"><?php echo __('reason'); ?> *</label>
                         <select class="form-select" id="reason" name="reason" required>
-                            <option value="">Select Reason</option>
-                            <option value="Purchase Order">Purchase Order</option>
-                            <option value="Supplier Delivery">Supplier Delivery</option>
-                            <option value="Return">Return</option>
-                            <option value="Adjustment">Adjustment</option>
-                            <option value="Other">Other</option>
+                            <option value=""><?php echo __('reason'); ?></option>
+                            <option value="Purchase Order"><?php echo __('reason_purchase_order'); ?></option>
+                            <option value="Supplier Delivery"><?php echo __('reason_supplier_delivery'); ?></option>
+                            <option value="Return"><?php echo __('reason_return'); ?></option>
+                            <option value="Adjustment"><?php echo __('reason_adjustment'); ?></option>
+                            <option value="Other"><?php echo __('reason_other'); ?></option>
                         </select>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="reference" class="form-label">Reference</label>
+                        <label for="reference" class="form-label"><?php echo __('reference'); ?></label>
                         <input type="text" class="form-control" id="reference" name="reference" 
-                               placeholder="PO number, invoice, etc.">
+                               placeholder="<?php echo __('reference'); ?>">
                     </div>
                     
                     <button type="submit" class="btn btn-success">
-                        <i class="fas fa-download"></i> Add Stock
+                        <i class="fas fa-download"></i> <?php echo __('add_stock'); ?>
                     </button>
                     <a href="view_products.php" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> Cancel
+                        <i class="fas fa-times"></i> <?php echo __('cancel'); ?>
                     </a>
                 </form>
             </div>
@@ -170,21 +170,20 @@ require_once "../includes/header.php";
     <div class="col-md-6">
         <div class="card dashboard-card shadow mb-4">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Instructions</h6>
+                <h6 class="m-0 font-weight-bold text-primary"><?php echo __('instructions'); ?></h6>
             </div>
             <div class="card-body">
-                <p>Use this form to add stock to existing products:</p>
+                <p><?php echo __('stock_in_instructions'); ?></p>
                 <ol>
-                    <li>Select the product you want to add stock to</li>
-                    <li>Enter the quantity you want to add</li>
-                    <li>Select the supplier (optional)</li>
-                    <li>Specify the reason for adding stock</li>
-                    <li>Add any relevant reference numbers</li>
-                    <li>Click "Add Stock" to complete the process</li>
+                    <li><?php echo __('step_1_product'); ?></li>
+                    <li><?php echo __('step_2_qty'); ?></li>
+                    <li><?php echo __('step_3_supplier'); ?></li>
+                    <li><?php echo __('step_4_reason'); ?></li>
+                    <li><?php echo __('reference'); ?></li>
+                    <li><?php echo __('add_stock'); ?></li>
                 </ol>
                 <p class="text-muted">
-                    <i class="fas fa-info-circle"></i> This action will increase the product's quantity 
-                    and create a record in the stock movement history.
+                    <i class="fas fa-info-circle"></i> <?php echo __('stock_in_note'); ?>
                 </p>
             </div>
         </div>

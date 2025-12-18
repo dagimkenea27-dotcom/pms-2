@@ -49,15 +49,15 @@ $total_pages = ceil($total_rows / $limit);
 ?>
 
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-tags"></i> Categories</h1>
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-tags"></i> <?php echo __('categories'); ?></h1>
     <a href="add.php" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-        <i class="fas fa-plus fa-sm text-white-50"></i> Add Category
+        <i class="fas fa-plus fa-sm text-white-50"></i> <?php echo __('add_category'); ?>
     </a>
 </div>
 
 <div class="card dashboard-card shadow mb-4">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">All Categories</h6>
+        <h6 class="m-0 font-weight-bold text-primary"><?php echo __('all_categories'); ?></h6>
     </div>
     <div class="card-body">
         <!-- Search Form -->
@@ -65,13 +65,13 @@ $total_pages = ceil($total_rows / $limit);
             <div class="row">
                 <div class="col-md-6">
                     <div class="input-group">
-                        <input type="text" class="form-control" name="search" placeholder="Search categories..." value="<?php echo htmlspecialchars($search); ?>">
+                        <input type="text" class="form-control" name="search" placeholder="<?php echo __('search_categories'); ?>" value="<?php echo htmlspecialchars($search); ?>">
                         <button class="btn btn-outline-primary" type="submit">
-                            <i class="fas fa-search"></i> Search
+                            <i class="fas fa-search"></i> <?php echo __('search'); ?>
                         </button>
                         <?php if (!empty($search)): ?>
                             <a href="index.php" class="btn btn-outline-secondary">
-                                <i class="fas fa-times"></i> Clear
+                                <i class="fas fa-times"></i> <?php echo __('clear'); ?>
                             </a>
                         <?php endif; ?>
                     </div>
@@ -84,9 +84,9 @@ $total_pages = ceil($total_rows / $limit);
                 <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Description</th>
-                            <th>Actions</th>
+                            <th><?php echo __('category_name'); ?></th>
+                            <th><?php echo __('description'); ?></th>
+                            <th><?php echo __('actions'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -95,10 +95,10 @@ $total_pages = ceil($total_rows / $limit);
                             <td><?php echo htmlspecialchars($row['name']); ?></td>
                             <td><?php echo htmlspecialchars($row['description']); ?></td>
                             <td>
-                                <a href="edit.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-info" title="Edit">
+                                <a href="edit.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-info" title="<?php echo __('edit'); ?>">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <a href="delete.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this category?');">
+                                <a href="delete.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-danger" title="<?php echo __('delete'); ?>" onclick="return confirm('<?php echo __('category_delete_confirm'); ?>');">
                                     <i class="fas fa-trash"></i>
                                 </a>
                             </td>
@@ -145,14 +145,14 @@ $total_pages = ceil($total_rows / $limit);
         <?php else: ?>
             <div class="text-center py-5">
                 <i class="fas fa-tags fa-3x text-muted mb-3"></i>
-                <h4>No categories found</h4>
+                <h4><?php echo __('no_categories_found'); ?></h4>
                 <?php if (!empty($search)): ?>
-                    <p class="text-muted">No categories match your search criteria.</p>
-                    <a href="index.php" class="btn btn-secondary">Clear Search</a>
+                    <p class="text-muted"><?php echo __('no_categories_match'); ?></p>
+                    <a href="index.php" class="btn btn-secondary"><?php echo __('clear'); ?></a>
                 <?php else: ?>
-                    <p class="text-muted">Get started by adding your first category.</p>
+                    <p class="text-muted"><?php echo __('start_adding_category'); ?></p>
                     <a href="add.php" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Add Your First Category
+                        <i class="fas fa-plus"></i> <?php echo __('add_your_first_category'); ?>
                     </a>
                 <?php endif; ?>
             </div>
