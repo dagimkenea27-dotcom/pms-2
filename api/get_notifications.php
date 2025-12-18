@@ -26,6 +26,7 @@ try {
     $notifications = [];
     while ($row = $recent->fetch(PDO::FETCH_ASSOC)) {
         $notifications[] = [
+            'id' => $row['id'],
             'message' => htmlspecialchars($row['message']),
             'type' => $row['type'],
             'link' => $row['link'] ? BASE_URL . $row['link'] : '#',

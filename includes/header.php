@@ -282,7 +282,10 @@ Auth::startSession();
                                     <?php if ($recent_notifs->rowCount() > 0): ?>
                                         <?php while ($notif = $recent_notifs->fetch(PDO::FETCH_ASSOC)): ?>
                                         <a class="dropdown-item d-flex align-items-center <?php echo $notif['is_read'] ? '' : 'bg-light'; ?>" 
-                                           href="<?php echo $notif['link'] ? BASE_URL . $notif['link'] : '#'; ?>">
+                                           href="<?php echo $notif['link'] ? BASE_URL . $notif['link'] : '#'; ?>"
+                                           data-notification-id="<?php echo $notif['id']; ?>"
+                                           data-is-read="<?php echo $notif['is_read']; ?>"
+                                           onclick="markNotificationAsRead(event, this)">
                                             <div class="mr-3">
                                                 <div class="icon-circle bg-<?php echo $notif['type'] == 'info' ? 'primary' : ($notif['type'] == 'success' ? 'success' : 'warning'); ?> text-white p-2 rounded-circle">
                                                     <i class="fas fa-<?php echo $notif['type'] == 'info' ? 'file-alt' : 'exclamation-triangle'; ?>"></i>
@@ -307,6 +310,52 @@ Auth::startSession();
                             
                             <!-- Notification Poller Script -->
                             <script>
+                            // Function to mark notification as read
+                            function markNotificationAsRead(event, element) {
+                                const notificationId = element.getAttribute('data-notification-id');
+                                const isRead = element.getAttribute('data-is-read');
+                                
+                                // Only mark as read if it's unread
+                                if (isRead == '0') {
+                                    // Send AJAX request to mark as read
+                                    fetch('<?php echo BASE_URL; ?>api/mark_notification_read.php', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                            notification_id: notificationId
+                                        })
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            // Update badge count
+                                            const badge = document.getElementById('alertBadge');
+                                            if (data.unread_count > 0) {
+                                                badge.style.display = 'inline-block';
+                                                badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
+                                            } else {
+                                                badge.style.display = 'none';
+                                            }
+                                            
+                                            // Update the element's appearance
+                                            element.classList.remove('bg-light');
+                                            element.setAttribute('data-is-read', '1');
+                                            const textSpan = element.querySelector('span');
+                                            if (textSpan) {
+                                                textSpan.classList.remove('font-weight-bold');
+                                                textSpan.classList.add('font-weight-normal');
+                                            }
+                                        }
+                                    })
+                                    .catch(err => console.error('Error marking notification as read:', err));
+                                }
+                                
+                                // Allow the link to navigate
+                                return true;
+                            }
+                            
                             document.addEventListener('DOMContentLoaded', function() {
                                 function fetchNotifications() {
                                     fetch('<?php echo BASE_URL; ?>api/get_notifications.php')
@@ -332,7 +381,11 @@ Auth::startSession();
                                                     const iconBg = notif.type === 'info' ? 'bg-primary' : (notif.type === 'success' ? 'bg-success' : 'bg-warning');
                                                     
                                                     html += `
-                                                    <a class="dropdown-item d-flex align-items-center ${bgClass}" href="${notif.link}">
+                                                    <a class="dropdown-item d-flex align-items-center ${bgClass}" 
+                                                       href="${notif.link}"
+                                                       data-notification-id="${notif.id}"
+                                                       data-is-read="${notif.is_read}"
+                                                       onclick="markNotificationAsRead(event, this)">
                                                         <div class="mr-3">
                                                             <div class="icon-circle ${iconBg} text-white p-2 rounded-circle">
                                                                 <i class="fas fa-${icon}"></i>
