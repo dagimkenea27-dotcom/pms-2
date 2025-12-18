@@ -7,11 +7,24 @@ const AlertSystem = {
     // Configuration
     CHECK_INTERVAL: 60000, // 60 seconds
     SNOOZE_DURATION: 10 * 60 * 1000, // 10 minutes
-    // Dynamically determine API path - use absolute path from root
+    // Dynamically determine API path - works for both root and subdirectory installations
     API_URL: (() => {
-        const path = window.location.pathname;
-        const baseMatch = path.match(/^(.*?\/stock_management)\//);
-        const basePath = baseMatch ? baseMatch[1] : '';
+        // Get the directory where the current page is located
+        const currentPath = window.location.pathname;
+        const pathParts = currentPath.split('/').filter(p => p);
+
+        // Remove the last part (filename) and any 'products', 'categories', etc folders
+        // to get back to the application root
+        let basePath = '';
+
+        // Check if we're in a subdirectory installation (like /stock_management/)
+        if (currentPath.includes('/stock_management/')) {
+            basePath = '/stock_management';
+        } else {
+            // We're at domain root - just use absolute path
+            basePath = '';
+        }
+
         return basePath + '/api/check_alerts.php';
     })(),
     STORAGE_KEY_SNOOZE: 'stock_alert_snooze_until',
