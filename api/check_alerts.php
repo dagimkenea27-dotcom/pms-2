@@ -39,6 +39,29 @@ try {
     $count_stmt->execute();
     $total_count = $count_stmt->fetch(PDO::FETCH_ASSOC)['count'];
 
+    // Session-based tracking to avoid duplicate alerts
+    session_start();
+    
+    // Check if we've already sent alerts in this session
+    $last_alert_time = isset($_SESSION['last_stock_alert_time']) ? $_SESSION['last_stock_alert_time'] : 0;
+    $current_time = time();
+    
+    // Only send alerts if it's been more than 1 hour since last alert
+    if ($current_time - $last_alert_time < 3600) {
+        // Return empty response if it's too soon
+        echo json_encode([
+            'alert_count' => 0,
+            'items' => [],
+            'status' => 'success'
+        ]);
+        exit;
+    }
+    
+    // Update last alert time if we're sending alerts
+    if ($total_count > 0) {
+        $_SESSION['last_stock_alert_time'] = $current_time;
+    }
+
     echo json_encode([
         'alert_count' => (int)$total_count,
         'items' => $items,

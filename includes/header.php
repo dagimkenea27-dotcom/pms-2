@@ -357,6 +357,9 @@ Auth::startSession();
                             }
                             
                             document.addEventListener('DOMContentLoaded', function() {
+                                // Track notifications shown in this session
+                                const sessionNotifications = new Set(JSON.parse(sessionStorage.getItem('shownNotifications') || '[]'));
+                                
                                 function fetchNotifications() {
                                     fetch('<?php echo BASE_URL; ?>api/get_notifications.php')
                                         .then(response => response.json())
@@ -403,8 +406,18 @@ Auth::startSession();
                                         .catch(err => console.error('Error fetching notifications:', err));
                                 }
 
-                                // Poll every 2 seconds
-                                setInterval(fetchNotifications, 2000);
+                                // Poll every hour
+                                setInterval(fetchNotifications, 3600000); // 1 hour in milliseconds
+                                
+                                // Also check on page focus/visibility change to catch updates
+                                document.addEventListener('visibilitychange', function() {
+                                    if (!document.hidden) {
+                                        fetchNotifications();
+                                    }
+                                });
+                                
+                                // Check when window regains focus
+                                window.addEventListener('focus', fetchNotifications);
                             });
                             </script>
                             <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button"

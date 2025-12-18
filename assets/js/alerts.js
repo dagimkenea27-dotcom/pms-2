@@ -5,7 +5,7 @@
 
 const AlertSystem = {
     // Configuration
-    CHECK_INTERVAL: 60000, // 60 seconds
+    CHECK_INTERVAL: 3600000, // 1 hour in milliseconds
     SNOOZE_DURATION: 10 * 60 * 1000, // 10 minutes
     // Dynamically determine API path - works for both root and subdirectory installations
     API_URL: (() => {
@@ -38,6 +38,16 @@ const AlertSystem = {
         // Run immediately on load, then interval
         this.checkAlerts();
         setInterval(() => this.checkAlerts(), this.CHECK_INTERVAL);
+        
+        // Also check on page focus/visibility change to catch updates
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                this.checkAlerts();
+            }
+        });
+        
+        // Check when window regains focus
+        window.addEventListener('focus', () => this.checkAlerts());
 
         // Inject Modal HTML if not present
         if (!document.getElementById('stockAlertModal')) {
@@ -54,11 +64,28 @@ const AlertSystem = {
             return;
         }
 
+        // Check if we've already shown alerts in this session
+        const sessionAlerts = sessionStorage.getItem('stockAlertsShown');
+        if (sessionAlerts) {
+            const alertData = JSON.parse(sessionAlerts);
+            const now = new Date().getTime();
+            // If we've shown alerts in the last hour, don't show again
+            if (now - alertData.timestamp < 3600000) {
+                console.log('Stock alerts already shown this session.');
+                return;
+            }
+        }
+
         fetch(this.API_URL)
             .then(response => response.json())
             .then(data => {
                 if (data.alert_count > 0) {
                     this.triggerAlert(data);
+                    // Store that we've shown alerts in this session
+                    sessionStorage.setItem('stockAlertsShown', JSON.stringify({
+                        timestamp: new Date().getTime(),
+                        count: data.alert_count
+                    }));
                 }
             })
             .catch(err => console.error('Alert check failed', err));

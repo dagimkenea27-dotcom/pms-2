@@ -35,9 +35,35 @@ try {
         ];
     }
 
+    // Track notifications in session to avoid duplicates
+    if (!isset($_SESSION['notifications_last_seen'])) {
+        $_SESSION['notifications_last_seen'] = [];
+    }
+    
+    // Filter out notifications that have been seen in this session
+    $filtered_notifications = [];
+    foreach ($notifications as $notif) {
+        // Only include if not seen in current session
+        if (!in_array($notif['id'], $_SESSION['notifications_last_seen'])) {
+            $filtered_notifications[] = $notif;
+        }
+    }
+    
+    // Update session with all notification IDs we're sending
+    foreach ($notifications as $notif) {
+        if (!in_array($notif['id'], $_SESSION['notifications_last_seen'])) {
+            $_SESSION['notifications_last_seen'][] = $notif['id'];
+        }
+    }
+    
+    // Limit session storage to prevent it from growing too large
+    if (count($_SESSION['notifications_last_seen']) > 50) {
+        $_SESSION['notifications_last_seen'] = array_slice($_SESSION['notifications_last_seen'], -50);
+    }
+
     echo json_encode([
         'count' => $count,
-        'notifications' => $notifications
+        'notifications' => $filtered_notifications
     ]);
 
 } catch (Exception $e) {
