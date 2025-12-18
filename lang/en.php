@@ -137,6 +137,7 @@ return [
     'stock_in_note' => 'This action will increase the product quantity and create a record in the stock movement history.',
     'choose_product' => 'Choose a product',
     'choose_supplier' => 'Choose a supplier',
+    'search_products' => 'Search products...',
     
     // Reasons
     'reason_purchase_order' => 'Purchase Order',

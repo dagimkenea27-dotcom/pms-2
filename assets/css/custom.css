@@ -733,3 +733,34 @@ footer.sticky-footer .copyright {
         /* Larger icons for touch */
     }
 }
+
+/* Searchable Dropdown Styles */
+.searchable-select-container {
+    position: relative;
+}
+
+.searchable-select-container .dropdown-menu {
+    display: none;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.searchable-select-container .dropdown-menu.show {
+    display: block;
+}
+
+.searchable-select-container .dropdown-item {
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+}
+
+.searchable-select-container .dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.searchable-select-container .dropdown-item.disabled {
+    color: #6c757d;
+    cursor: not-allowed;
+    background-color: transparent;
+}

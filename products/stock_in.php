@@ -108,16 +108,24 @@ require_once "../includes/header.php";
                 <form method="POST" action="">
                     <div class="mb-3">
                         <label for="product_id" class="form-label"><?php echo __('select_product'); ?> *</label>
-                        <select class="form-select" id="product_id" name="product_id" required>
-                            <option value=""><?php echo __('choose_product'); ?></option>
-                            <?php foreach ($products as $product): ?>
-                            <option value="<?php echo $product['id']; ?>">
-                                <?php echo htmlspecialchars($product['sku']); ?> - 
-                                <?php echo htmlspecialchars($product['name']); ?> 
-                                (<?php echo __('current_qty'); ?>: <?php echo $product['quantity']; ?>)
-                            </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <div class="position-relative">
+                            <select class="form-select" id="product_id" name="product_id" required style="display: none;">
+                                <option value=""><?php echo __('choose_product'); ?></option>
+                                <?php foreach ($products as $product): ?>
+                                <option value="<?php echo $product['id']; ?>" 
+                                        data-search="<?php echo htmlspecialchars(strtolower($product['sku'] . ' ' . $product['name'])); ?>">
+                                    <?php echo htmlspecialchars($product['sku']); ?> - 
+                                    <?php echo htmlspecialchars($product['name']); ?> 
+                                    (<?php echo __('current_qty'); ?>: <?php echo $product['quantity']; ?>)
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="searchable-select-container">
+                                <input type="text" class="form-control" id="product_search" placeholder="<?php echo __('search_products'); ?>" autocomplete="off">
+                                <div id="product_dropdown" class="dropdown-menu w-100" style="max-height: 200px; overflow-y: auto; position: absolute; z-index: 1000; display: none;"></div>
+                            </div>
+                            <input type="hidden" id="selected_product_id" name="product_id" required>
+                        </div>
                     </div>
                     
                     <div class="mb-3">
@@ -189,5 +197,77 @@ require_once "../includes/header.php";
         </div>
     </div>
 </div>
+
+<script>
+// Searchable dropdown functionality
+(function() {
+    const searchInput = document.getElementById('product_search');
+    const dropdown = document.getElementById('product_dropdown');
+    const hiddenInput = document.getElementById('selected_product_id');
+    const originalSelect = document.getElementById('product_id');
+    
+    // Store all options for searching
+    const options = [];
+    for (let i = 1; i < originalSelect.options.length; i++) { // Skip first option
+        const option = originalSelect.options[i];
+        options.push({
+            value: option.value,
+            text: option.text,
+            search: option.getAttribute('data-search')
+        });
+    }
+    
+    // Show dropdown with filtered options
+    searchInput.addEventListener('focus', function() {
+        filterOptions('');
+        dropdown.style.display = 'block';
+    });
+    
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
+    
+    // Filter options based on search term
+    searchInput.addEventListener('input', function() {
+        filterOptions(this.value);
+        dropdown.style.display = 'block';
+    });
+    
+    function filterOptions(searchTerm) {
+        const term = searchTerm.toLowerCase().trim();
+        dropdown.innerHTML = '';
+        
+        const filtered = options.filter(option => 
+            !term || option.search.includes(term)
+        );
+        
+        if (filtered.length === 0) {
+            dropdown.innerHTML = '<div class="dropdown-item disabled">No products found</div>';
+        } else {
+            filtered.forEach(option => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.textContent = option.text;
+                item.addEventListener('click', function() {
+                    searchInput.value = option.text;
+                    hiddenInput.value = option.value;
+                    dropdown.style.display = 'none';
+                    
+                    // Dispatch change event for form validation
+                    const event = new Event('change', { bubbles: true });
+                    hiddenInput.dispatchEvent(event);
+                });
+                dropdown.appendChild(item);
+            });
+        }
+    }
+    
+    // Initialize with empty search to show all options
+    filterOptions('');
+})();
+</script>
 
 <?php require_once "../includes/footer.php"; ?>

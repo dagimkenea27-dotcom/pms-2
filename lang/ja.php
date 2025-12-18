@@ -138,6 +138,7 @@ return [
     'stock_in_note' => 'この操作により、製品の在庫数が増加し、在庫移動履歴に記録が作成されます。',
     'choose_product' => '製品を選択してください',
     'choose_supplier' => '仕入先を選択してください',
+    'search_products' => '製品を検索...',
 
     // Reasons
     'reason_purchase_order' => '発注',
