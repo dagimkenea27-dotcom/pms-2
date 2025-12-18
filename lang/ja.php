@@ -173,4 +173,13 @@ return [
     'search_products' => '製品を検索...',
     'filter_category' => 'カテゴリで絞り込み',
     'filter_status' => 'ステータスで絞り込み',
+
+    // Notifications
+    'notifications' => '通知',
+    'mark_all_read' => 'すべて既読にする',
+    'mark_as_read' => '既読にする',
+    'all_notifications_marked_read' => 'すべての通知を既読にしました。',
+    'no_notifications' => '通知はありません。',
+    'all_alerts' => 'すべてのアラート',
+    'view' => '表示',
 ];

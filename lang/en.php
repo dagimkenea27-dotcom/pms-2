@@ -172,4 +172,13 @@ return [
     'search_products' => 'Search products...',
     'filter_category' => 'Filter by Category',
     'filter_status' => 'Filter by Status',
+
+    // Notifications
+    'notifications' => 'Notifications',
+    'mark_all_read' => 'Mark All as Read',
+    'mark_as_read' => 'Mark as Read',
+    'all_notifications_marked_read' => 'All notifications marked as read.',
+    'no_notifications' => 'You have no notifications.',
+    'all_alerts' => 'All Alerts',
+    'view' => 'View',
 ];

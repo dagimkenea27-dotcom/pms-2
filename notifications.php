@@ -12,7 +12,7 @@ $user_id = Auth::getCurrentUser()['id'];
 // Handle Mark All as Read
 if (isset($_POST['mark_all_read'])) {
     if ($notification->markAllAsRead($user_id)) {
-        $success_msg = "All notifications marked as read.";
+        $success_msg = __('all_notifications_marked_read');
     }
 }
 
@@ -35,11 +35,11 @@ require_once "includes/header.php";
 ?>
 
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">Notifications</h1>
+    <h1 class="h3 mb-0 text-gray-800"><?php echo __('notifications'); ?></h1>
     <?php if (count($notifications) > 0): ?>
     <form method="POST" action="">
         <button type="submit" name="mark_all_read" class="btn btn-sm btn-primary shadow-sm">
-            <i class="fas fa-check-double fa-sm text-white-50"></i> Mark All as Read
+            <i class="fas fa-check-double fa-sm text-white-50"></i> <?php echo __('mark_all_read'); ?>
         </button>
     </form>
     <?php endif; ?>
@@ -56,7 +56,7 @@ require_once "includes/header.php";
     <div class="col-lg-12">
         <div class="card shadow mb-4">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">All Alerts</h6>
+                <h6 class="m-0 font-weight-bold text-primary"><?php echo __('all_alerts'); ?></h6>
             </div>
             <div class="card-body">
                 <?php if (count($notifications) > 0): ?>
@@ -68,7 +68,12 @@ require_once "includes/header.php";
                                     <i class="fas fa-<?php echo $notif['type'] == 'info' ? 'file-alt' : 'exclamation-triangle'; ?>"></i>
                                 </div>
                                 <div class="ms-3">
-                                    <div class="small text-gray-500"><?php echo date('F j, Y, g:i a', strtotime($notif['created_at'])); ?></div>
+                                    <div class="small text-gray-500">
+                                        <?php 
+                                        $date_format = get_current_lang() == 'ja' ? 'Y年n月j日 g:i a' : 'F j, Y, g:i a';
+                                        echo date($date_format, strtotime($notif['created_at'])); 
+                                        ?>
+                                    </div>
                                     <span class="font-weight-<?php echo $notif['is_read'] ? 'normal' : 'bold'; ?>"><?php echo htmlspecialchars($notif['message']); ?></span>
                                 </div>
                             </div>
@@ -77,13 +82,13 @@ require_once "includes/header.php";
                                 <form method="POST" action="" class="d-inline">
                                     <input type="hidden" name="mark_read_id" value="<?php echo $notif['id']; ?>">
                                     <input type="hidden" name="redirect_link" value="<?php echo $notif['link'] ? BASE_URL . $notif['link'] : '#'; ?>">
-                                    <button type="submit" class="btn btn-sm btn-outline-primary" title="Mark as Read">
+                                    <button type="submit" class="btn btn-sm btn-outline-primary" title="<?php echo __('mark_as_read'); ?>">
                                         <i class="fas fa-check"></i>
                                     </button>
                                 </form>
                                 <?php endif; ?>
                                 <?php if ($notif['link'] && $notif['link'] != '#'): ?>
-                                <a href="<?php echo BASE_URL . $notif['link']; ?>" class="btn btn-sm btn-circle btn-light ml-2" title="View">
+                                <a href="<?php echo BASE_URL . $notif['link']; ?>" class="btn btn-sm btn-circle btn-light ml-2" title="<?php echo __('view'); ?>">
                                     <i class="fas fa-chevron-right"></i>
                                 </a>
                                 <?php endif; ?>
@@ -92,7 +97,7 @@ require_once "includes/header.php";
                     <?php endforeach; ?>
                     </div>
                 <?php else: ?>
-                    <p class="text-center text-muted my-5">You have no notifications.</p>
+                    <p class="text-center text-muted my-5"><?php echo __('no_notifications'); ?></p>
                 <?php endif; ?>
             </div>
         </div>
