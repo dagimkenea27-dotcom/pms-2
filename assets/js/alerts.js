@@ -7,8 +7,13 @@ const AlertSystem = {
     // Configuration
     CHECK_INTERVAL: 60000, // 60 seconds
     SNOOZE_DURATION: 10 * 60 * 1000, // 10 minutes
-    // Dynamically determine API path 
-    API_URL: (window.location.pathname.includes('/stock_management/') ? '/stock_management/api/check_alerts.php' : 'api/check_alerts.php'),
+    // Dynamically determine API path - use absolute path from root
+    API_URL: (() => {
+        const path = window.location.pathname;
+        const baseMatch = path.match(/^(.*?\/stock_management)\//);
+        const basePath = baseMatch ? baseMatch[1] : '';
+        return basePath + '/api/check_alerts.php';
+    })(),
     STORAGE_KEY_SNOOZE: 'stock_alert_snooze_until',
 
     // Base64 Beep Sound (Short, non-intrusive)
