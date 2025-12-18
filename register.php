@@ -13,47 +13,55 @@ if (Auth::isLoggedIn()) {
     exit();
 }
 
+// Initialize database and models
+$database = new Database();
+$db = $database->getConnection();
+$user = new User($db);
+$notification = new Notification($db);
+
 $message = '';
+$error = '';
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // CSRF Validation
     if (!isset($_POST['csrf_token']) || !Auth::validateCSRF($_POST['csrf_token'])) {
-        $error = "Security check failed. Please refresh the page and try again.";
+        $error = __('security_check_failed');
     } else {
-    $user->password = $_POST['password'] ?? '';
-    $user->email = $_POST['email'] ?? '';
-    $confirm_password = $_POST['confirm_password'] ?? '';
-    $user->first_name = $_POST['first_name'] ?? '';
-    $user->last_name = $_POST['last_name'] ?? '';
-    $user->role = 'staff'; // Default role
-    
-    // ... (validation checks)
-    if (empty($user->username) || empty($user->password) || empty($user->email)) {
-        $error = "Please fill in all required fields.";
-    } elseif ($user->password !== $confirm_password) {
-        $error = "Passwords do not match.";
-    } elseif ($user->usernameExists()) {
-        $error = "Username already exists.";
-    } elseif ($user->emailExists()) {
-        $error = "Email already exists.";
-    } elseif (strlen($user->password) < 8 || 
-             !preg_match('/[A-Z]/', $user->password) || 
-             !preg_match('/[a-z]/', $user->password) || 
-             !preg_match('/[0-9]/', $user->password) || 
-             !preg_match('/[!@#$%^&*(),.?":{}|<>]/', $user->password)) {
-        $error = "Password must be at least 8 characters long and include uppercase, lowercase, numbers, and special characters.";
-    } else {
-        if ($user->create()) {
-            // Notify admins
-            $notifMsg = "New user registration: " . $user->username . " (" . $user->email . ")";
-            $notification->notifyAdmins($notifMsg, "users/view_users.php", "info");
-            
-            $message = "Registration successful! Your account is pending admin approval. Please contact administrator.";
+        $user->username = $_POST['username'] ?? '';
+        $user->password = $_POST['password'] ?? '';
+        $user->email = $_POST['email'] ?? '';
+        $confirm_password = $_POST['confirm_password'] ?? '';
+        $user->first_name = $_POST['first_name'] ?? '';
+        $user->last_name = $_POST['last_name'] ?? '';
+        $user->role = 'staff'; // Default role
+        
+        // Validation checks
+        if (empty($user->username) || empty($user->password) || empty($user->email)) {
+            $error = __('please_fill_required');
+        } elseif ($user->password !== $confirm_password) {
+            $error = __('passwords_do_not_match');
+        } elseif ($user->usernameExists()) {
+            $error = __('username_exists');
+        } elseif ($user->emailExists()) {
+            $error = __('email_exists');
+        } elseif (strlen($user->password) < 8 || 
+                 !preg_match('/[A-Z]/', $user->password) || 
+                 !preg_match('/[a-z]/', $user->password) || 
+                 !preg_match('/[0-9]/', $user->password) || 
+                 !preg_match('/[!@#$%^&*(),.?":{}|<>]/', $user->password)) {
+            $error = __('password_requirements_error');
         } else {
-            $error = "Unable to register. Please try again.";
+            if ($user->create()) {
+                // Notify admins
+                $notifMsg = "New user registration: " . $user->username . " (" . $user->email . ")";
+                $notification->notifyAdmins($notifMsg, "users/view_users.php", "info");
+                
+                $message = __('registration_successful');
+            } else {
+                $error = __('unable_to_register');
+            }
         }
-    }
     }
 }
 
