@@ -35,7 +35,7 @@ const AlertSystem = {
 
     // Init
     init: function () {
-        // Run immediately on load, then interval
+        // Run immediately on load, then every hour
         this.checkAlerts();
         setInterval(() => this.checkAlerts(), this.CHECK_INTERVAL);
         
@@ -64,31 +64,41 @@ const AlertSystem = {
             return;
         }
 
-        // Check if we've already shown alerts in this session
-        const sessionAlerts = sessionStorage.getItem('stockAlertsShown');
-        if (sessionAlerts) {
-            const alertData = JSON.parse(sessionAlerts);
-            const now = new Date().getTime();
-            // If we've shown alerts in the last hour, don't show again
-            if (now - alertData.timestamp < 3600000) {
-                console.log('Stock alerts already shown this session.');
-                return;
-            }
-        }
-
         fetch(this.API_URL)
-            .then(response => response.json())
+            .then(response => {
+                // Check if response is OK (2xx status)
+                if (!response.ok) {
+                    // If unauthorized (401) or redirected to login page, redirect user
+                    if (response.status === 401) {
+                        window.location.href = (typeof BASE_URL !== 'undefined' ? BASE_URL : '') + 'login.php';
+                        return;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Check content type to see if it's JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    // Likely redirected to login page
+                    window.location.href = (typeof BASE_URL !== 'undefined' ? BASE_URL : '') + 'login.php';
+                    return;
+                }
+                
+                return response.json();
+            })
             .then(data => {
-                if (data.alert_count > 0) {
+                if (data && data.alert_count > 0) {
                     this.triggerAlert(data);
-                    // Store that we've shown alerts in this session
-                    sessionStorage.setItem('stockAlertsShown', JSON.stringify({
-                        timestamp: new Date().getTime(),
-                        count: data.alert_count
-                    }));
                 }
             })
-            .catch(err => console.error('Alert check failed', err));
+            .catch(err => {
+                console.error('Alert check failed', err);
+                // If there's a network error or parsing error, it might be due to session timeout
+                // Redirect to login page to handle re-authentication
+                if (err instanceof TypeError || err.message.includes('JSON')) {
+                    window.location.href = (typeof BASE_URL !== 'undefined' ? BASE_URL : '') + 'login.php';
+                }
+            });
     },
 
     // Trigger Popup & Sound

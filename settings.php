@@ -3,7 +3,7 @@ require_once 'includes/header.php';
 
 // Check if logged in
 if (!Auth::isLoggedIn()) {
-    header("Location: login.php");
+    header("Location: " . (defined('BASE_URL') ? BASE_URL : '') . "login.php");
     exit();
 }
 ?>

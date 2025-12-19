@@ -4,12 +4,8 @@ header('Content-Type: application/json');
 require_once "../config/auth_check.php";
 require_once "../config/database.php";
 
-// Simple auth check - ensure user is logged in
-if (!Auth::isLoggedIn()) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized']);
-    exit;
-}
+
+// Auth::checkAuthAndPreventCache() was called which includes session timeout checking
 
 try {
     $database = new Database();
@@ -40,15 +36,25 @@ try {
     $total_count = $count_stmt->fetch(PDO::FETCH_ASSOC)['count'];
 
     // Session-based tracking to avoid duplicate alerts
-    session_start();
+    // Session is already started by auth_check.php
     
-    // Check if we've already sent alerts in this session
-    $last_alert_time = isset($_SESSION['last_stock_alert_time']) ? $_SESSION['last_stock_alert_time'] : 0;
-    $current_time = time();
+    // Initialize session start time if not set
+    if (!isset($_SESSION['session_start_time'])) {
+        $_SESSION['session_start_time'] = time();
+    }
     
-    // Only send alerts if it's been more than 1 hour since last alert
-    if ($current_time - $last_alert_time < 3600) {
-        // Return empty response if it's too soon
+    // Calculate time since session start
+    $session_duration = time() - $_SESSION['session_start_time'];
+    
+    // Show alert immediately on first login, then every hour (3600 seconds)
+    $hours_since_start = floor($session_duration / 3600);
+    
+    // Check if we've already shown an alert for this hour
+    $last_alert_hour = isset($_SESSION['last_alert_hour']) ? $_SESSION['last_alert_hour'] : -1;
+    
+    // Only send alerts if we haven't shown one for this hour yet
+    if ($last_alert_hour >= $hours_since_start) {
+        // Return empty response if we've already shown alert for this hour
         echo json_encode([
             'alert_count' => 0,
             'items' => [],
@@ -57,9 +63,9 @@ try {
         exit;
     }
     
-    // Update last alert time if we're sending alerts
+    // Update last alert hour if we're sending alerts
     if ($total_count > 0) {
-        $_SESSION['last_stock_alert_time'] = $current_time;
+        $_SESSION['last_alert_hour'] = $hours_since_start;
     }
 
     echo json_encode([

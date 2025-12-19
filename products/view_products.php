@@ -49,7 +49,7 @@ $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $category_filter = isset($_GET['category']) ? $_GET['category'] : '';
 $filter_type = isset($_GET['filter']) ? $_GET['filter'] : ''; // Added filter parameter
 $active_id = isset($_GET['active_id']) ? (int)$_GET['active_id'] : 0;
-$records_per_page = 10;
+$records_per_page = 15;
 $offset = ($page - 1) * $records_per_page;
 
 // Build query based on search and filters

@@ -1,20 +1,17 @@
 <?php
 // api/get_notifications.php
 require_once "../config/paths.php"; // Added to ensure BASE_URL is defined
-require_once "../config/auth.php"; // Changed from auth_check.php
+require_once "../config/auth_check.php"; // Use auth_check to ensure proper session handling
 require_once "../config/database.php";
 require_once "../models/Notification.php";
 
-Auth::startSession(); // Manually start session since we're not using auth_check
+// Auth check is already done by auth_check.php
+// Auth::checkAuthAndPreventCache() was called which includes session timeout checking
 
 header('Content-Type: application/json');
 
 try {
-    if (!Auth::isLoggedIn()) {
-        echo json_encode(['count' => 0, 'html' => '']);
-        exit;
-    }
-
+    // Check if user is logged in (already checked by auth_check.php)
     $database = new Database();
     $db = $database->getConnection();
     $notification = new Notification($db);

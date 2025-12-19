@@ -362,11 +362,31 @@ Auth::startSession();
                                 
                                 function fetchNotifications() {
                                     fetch('<?php echo BASE_URL; ?>api/get_notifications.php')
-                                        .then(response => response.json())
+                                        .then(response => {
+                                            // Check if response is OK (2xx status)
+                                            if (!response.ok) {
+                                                // If unauthorized (401) or redirected to login page, redirect user
+                                                if (response.status === 401) {
+                                                    window.location.href = '<?php echo BASE_URL; ?>login.php';
+                                                    return;
+                                                }
+                                                throw new Error(`HTTP error! status: ${response.status}`);
+                                            }
+                                            
+                                            // Check content type to see if it's JSON
+                                            const contentType = response.headers.get('content-type');
+                                            if (!contentType || !contentType.includes('application/json')) {
+                                                // Likely redirected to login page
+                                                window.location.href = '<?php echo BASE_URL; ?>login.php';
+                                                return;
+                                            }
+                                            
+                                            return response.json();
+                                        })
                                         .then(data => {
                                             // Update Badge
                                             const badge = document.getElementById('alertBadge');
-                                            if (data.count > 0) {
+                                            if (data && data.count > 0) {
                                                 badge.style.display = 'inline-block';
                                                 badge.textContent = data.count > 9 ? '9+' : data.count;
                                             } else {
@@ -375,7 +395,7 @@ Auth::startSession();
 
                                             // Update List contents if needed
                                             const list = document.getElementById('alertList');
-                                            if (data.notifications && data.notifications.length > 0) {
+                                            if (data && data.notifications && data.notifications.length > 0) {
                                                 let html = '';
                                                 data.notifications.forEach(notif => {
                                                     const bgClass = notif.is_read == 1 ? '' : 'bg-light';
@@ -403,7 +423,14 @@ Auth::startSession();
                                                 list.innerHTML = html;
                                             }
                                         })
-                                        .catch(err => console.error('Error fetching notifications:', err));
+                                        .catch(err => {
+                                            console.error('Error fetching notifications:', err);
+                                            // If there's a network error or parsing error, it might be due to session timeout
+                                            // Redirect to login page to handle re-authentication
+                                            if (err instanceof TypeError || err.message.includes('JSON')) {
+                                                window.location.href = '<?php echo BASE_URL; ?>login.php';
+                                            }
+                                        });
                                 }
 
                                 // Poll every hour
