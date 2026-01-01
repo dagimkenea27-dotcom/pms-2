@@ -204,6 +204,7 @@ Auth::startSession();
                         <a class="collapse-item" href="<?php echo BASE_URL; ?>users/view_users.php"><?php echo __('user_management'); ?></a>
                         <a class="collapse-item" href="<?php echo BASE_URL; ?>admin/audit_logs.php"><?php echo __('audit_logs'); ?></a>
                         <a class="collapse-item" href="<?php echo BASE_URL; ?>tax_fee_admin.php"><?php echo __('tax_fee_config'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'settings/backup.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>settings/backup.php"><?php echo __('database_backup'); ?></a>
                     </div>
                 </div>
             </li>

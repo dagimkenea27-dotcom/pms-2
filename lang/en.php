@@ -182,4 +182,6 @@ return [
     'no_notifications' => 'You have no notifications.',
     'all_alerts' => 'All Alerts',
     'view' => 'View',
+    'backup' => 'Backup',
+    'database_backup' => 'Database Backup',
 ];

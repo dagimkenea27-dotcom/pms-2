@@ -32,7 +32,19 @@ if (!Auth::isLoggedIn()) {
                         <label class="form-check-label" for="notificationsSwitch">Enable Email Notifications</label>
                     </div>
 
-                    <button type="button" class="btn btn-secondary" disabled>Save Settings</button>
+                    <hr>
+                    
+                    <div class="mb-3">
+                        <label class="form-label d-block">Database Maintenance</label>
+                        <a href="<?php echo BASE_URL; ?>settings/backup.php" class="btn btn-outline-primary shadow-sm">
+                            <i class="fas fa-database fa-sm mr-1"></i> <?php echo __('database_backup'); ?>
+                        </a>
+                        <div class="form-text mt-2">Create and download a full backup of your system data.</div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="button" class="btn btn-secondary" disabled>Save Settings</button>
+                    </div>
                 </form>
             </div>
         </div>

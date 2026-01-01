@@ -183,4 +183,6 @@ return [
     'no_notifications' => '通知はありません。',
     'all_alerts' => 'すべてのアラート',
     'view' => '表示',
+    'backup' => 'バックアップ',
+    'database_backup' => 'データベースバックアップ',
 ];
