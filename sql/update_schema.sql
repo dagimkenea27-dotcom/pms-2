@@ -80,8 +80,7 @@ DROP PROCEDURE UpgradeDatabase;
 CREATE TABLE IF NOT EXISTS routes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    warehouse_location TEXT,
-    warehouse_coords JSON,
+    warehouse_locations JSON,
     driver_count INT DEFAULT 1,
     country_code VARCHAR(10) DEFAULT 'et',
     created_by INT,

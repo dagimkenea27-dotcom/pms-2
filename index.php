@@ -157,56 +157,62 @@ require_once "includes/header.php";
 <div class="row">
     <!-- Total Products Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card dashboard-card border-left-primary shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                            <?php echo __('total_products'); ?></div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $total_products['count']; ?></div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-box fa-2x text-gray-300"></i>
+        <a href="products/view_products.php" class="text-decoration-none">
+            <div class="card dashboard-card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                <?php echo __('total_products'); ?></div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $total_products['count']; ?></div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-box fa-2x text-gray-300"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Low Stock Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card dashboard-card border-left-warning shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                            <?php echo __('low_stock_alerts'); ?></div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $low_stock['count']; ?></div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+        <a href="products/view_products.php?filter=low_stock" class="text-decoration-none">
+            <div class="card dashboard-card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                <?php echo __('low_stock_alerts'); ?></div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $low_stock['count']; ?></div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Out of Stock Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card dashboard-card border-left-danger shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                            <?php echo __('out_of_stock'); ?></div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $out_of_stock['count']; ?></div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+        <a href="products/view_products.php?filter=out_of_stock" class="text-decoration-none">
+            <div class="card dashboard-card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                <?php echo __('out_of_stock'); ?></div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $out_of_stock['count']; ?></div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <?php
@@ -243,20 +249,22 @@ require_once "includes/header.php";
 
     <!-- Inventory Value Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card dashboard-card border-left-success shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                            <?php echo __('inventory_value'); ?></div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">$<?php echo number_format($total_value['total_value'] ?? 0, 2); ?></div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+        <a href="reports/stock_valuation.php" class="text-decoration-none">
+            <div class="card dashboard-card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                <?php echo __('inventory_value'); ?></div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">$<?php echo number_format($total_value['total_value'] ?? 0, 2); ?></div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 

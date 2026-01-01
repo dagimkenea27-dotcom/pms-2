@@ -14,17 +14,16 @@ class Route {
     }
 
     // Save a new route
-    public function saveRoute($name, $warehouse_location, $warehouse_coords, $driver_count, $country_code, $created_by, $stops, $algorithm = 'nearest_neighbor') {
+    public function saveRoute($name, $warehouse_locations, $driver_count, $country_code, $created_by, $stops, $algorithm = 'nearest_neighbor') {
         try {
             $this->conn->beginTransaction();
 
             // Insert route
-            $query = "INSERT INTO " . $this->table . " (name, warehouse_location, warehouse_coords, driver_count, country_code, created_by) 
-                      VALUES (:name, :warehouse_location, :warehouse_coords, :driver_count, :country_code, :created_by)";
+            $query = "INSERT INTO " . $this->table . " (name, warehouse_locations, driver_count, country_code, created_by) 
+                      VALUES (:name, :warehouse_locations, :driver_count, :country_code, :created_by)";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':name', $name);
-            $stmt->bindParam(':warehouse_location', $warehouse_location);
-            $stmt->bindParam(':warehouse_coords', json_encode($warehouse_coords));
+            $stmt->bindParam(':warehouse_locations', json_encode($warehouse_locations));
             $stmt->bindParam(':driver_count', $driver_count);
             $stmt->bindParam(':country_code', $country_code);
             $stmt->bindParam(':created_by', $created_by);
@@ -98,6 +97,11 @@ class Route {
 
         if (!$route) {
             return null;
+        }
+
+        // Decode warehouse locations
+        if (isset($route['warehouse_locations'])) {
+            $route['warehouse_locations'] = json_decode($route['warehouse_locations'], true);
         }
 
         // Get stops

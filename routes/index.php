@@ -148,22 +148,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = "Route name is required to save the route.";
         } else {
             try {
-                $warehouseLocation = validateInput($_POST['start'] ?? '', 'address');
-                $driverCount = validateInput($_POST['drivers'] ?? 1, 'int');
-                $countryCode = validateInput($_POST['countrycode'] ?? 'et', 'country');
-                
-                // Get coordinates if not already provided
-                $warehouseCoords = null;
-                if (isset($_POST['warehouse_lat']) && isset($_POST['warehouse_lon'])) {
-                    $lat = validateInput($_POST['warehouse_lat'], 'coordinate');
-                    $lon = validateInput($_POST['warehouse_lon'], 'coordinate');
-                    if ($lat !== null && $lon !== null) {
-                        $warehouseCoords = ['lat' => $lat, 'lon' => $lon];
+                // Handle multiple warehouses for saving
+                $warehouseLocations = [];
+                if (isset($_POST['warehouses']) && is_array($_POST['warehouses'])) {
+                    // Multiple warehouses mode
+                    foreach ($_POST['warehouses'] as $warehouseData) {
+                        if (!empty($warehouseData['name']) && !empty($warehouseData['lat']) && !empty($warehouseData['lon'])) {
+                            $warehouseLocations[] = [
+                                'name' => validateInput($warehouseData['name'], 'address'),
+                                'lat' => validateInput($warehouseData['lat'], 'coordinate'),
+                                'lon' => validateInput($warehouseData['lon'], 'coordinate')
+                            ];
+                        }
                     }
-                }
-                
-                if (!$warehouseCoords) {
-                    $warehouseCoords = $locationSearch->geocode($warehouseLocation, $countryCode);
+                } else {
+                    // Single warehouse mode (backward compatibility)
+                    $warehouseLocation = validateInput($_POST['start'] ?? '', 'address');
+                    $driverCount = validateInput($_POST['drivers'] ?? 1, 'int');
+                    $countryCode = validateInput($_POST['countrycode'] ?? 'et', 'country');
+                    
+                    // Get coordinates if not already provided
+                    $warehouseCoords = null;
+                    if (isset($_POST['warehouse_lat']) && isset($_POST['warehouse_lon'])) {
+                        $lat = validateInput($_POST['warehouse_lat'], 'coordinate');
+                        $lon = validateInput($_POST['warehouse_lon'], 'coordinate');
+                        if ($lat !== null && $lon !== null) {
+                            $warehouseCoords = ['lat' => $lat, 'lon' => $lon];
+                        }
+                    }
+                    
+                    if (!$warehouseCoords) {
+                        $warehouseCoords = $locationSearch->geocode($warehouseLocation, $countryCode);
+                    }
+                    
+                    // Convert to new format
+                    if (!empty($warehouseLocation) && $warehouseCoords) {
+                        $warehouseLocations[] = [
+                            'name' => $warehouseLocation,
+                            'lat' => $warehouseCoords['lat'],
+                            'lon' => $warehouseCoords['lon']
+                        ];
+                    }
                 }
                 
                 // Prepare stops data
@@ -174,11 +199,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 
-                // Save route to database
+                // Save route to database (pass warehouse locations as array)
                 $routeId = $routeModel->saveRoute(
                     $routeName,
-                    $warehouseLocation,
-                    $warehouseCoords,
+                    $warehouseLocations,
                     $driverCount,
                     $countryCode,
                     $currentUser['id'],
@@ -198,28 +222,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } 
     elseif (isset($_POST['optimize'])) {
-        $start = validateInput($_POST['start'] ?? '', 'address');
-        $raw = validateInput($_POST['addresses'] ?? '', 'address');
-        $country = validateInput($_POST['countrycode'] ?? 'et', 'country');
-        $numDrivers = validateInput($_POST['drivers'] ?? 1, 'int');
-        $algorithm = validateInput($_POST['algorithm'] ?? 'nearest_neighbor');
-        $useCoordinates = false;
-        
-        // Check if start is coordinates
-        if (preg_match('/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/', $start, $matches)) {
-            $startGeo = [
-                'lat' => floatval($matches[1]),
-                'lon' => floatval($matches[2]),
-                'display_name' => "Location at {$matches[1]}, {$matches[2]}"
-            ];
-            $useCoordinates = true;
+        // Handle multiple warehouses
+        $warehouses = [];
+        if (isset($_POST['warehouses']) && is_array($_POST['warehouses'])) {
+            // Multiple warehouses mode
+            foreach ($_POST['warehouses'] as $warehouseData) {
+                if (!empty($warehouseData['name']) && !empty($warehouseData['lat']) && !empty($warehouseData['lon'])) {
+                    $warehouses[] = [
+                        'name' => validateInput($warehouseData['name'], 'address'),
+                        'lat' => validateInput($warehouseData['lat'], 'coordinate'),
+                        'lon' => validateInput($warehouseData['lon'], 'coordinate')
+                    ];
+                }
+            }
         } else {
-            $startGeo = $locationSearch->geocode($start, $country);
+            // Single warehouse mode (backward compatibility)
+            $start = validateInput($_POST['start'] ?? '', 'address');
+            if (!empty($start)) {
+                $useCoordinates = false;
+                
+                // Check if start is coordinates
+                if (preg_match('/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/', $start, $matches)) {
+                    $warehouses[] = [
+                        'name' => "Location at {$matches[1]}, {$matches[2]}",
+                        'lat' => floatval($matches[1]),
+                        'lon' => floatval($matches[2])
+                    ];
+                    $useCoordinates = true;
+                } else {
+                    $startGeo = $locationSearch->geocode($start, validateInput($_POST['countrycode'] ?? 'et', 'country'));
+                    if ($startGeo) {
+                        $warehouses[] = [
+                            'name' => $startGeo['display_name'] ?? $start,
+                            'lat' => $startGeo['lat'],
+                            'lon' => $startGeo['lon']
+                        ];
+                    }
+                }
+            }
         }
         
-        if (!$startGeo) {
-            $errors[] = "Unable to geocode Warehouse Location. Please check the address.";
+        if (empty($warehouses)) {
+            $errors[] = "Please provide at least one warehouse location.";
         } else {
+            $raw = validateInput($_POST['addresses'] ?? '', 'address');
+            $country = validateInput($_POST['countrycode'] ?? 'et', 'country');
+            $numDrivers = validateInput($_POST['drivers'] ?? 1, 'int');
+            $algorithm = validateInput($_POST['algorithm'] ?? 'nearest_neighbor');
+            
             $lines = array_filter(array_map('trim', explode("\n", $raw)));
             
             // Validate number of addresses
@@ -271,16 +321,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $driverRoutes = [];
                     $pointsPerDriver = ceil(count($points) / $numDrivers);
                     
+                    // Distribute warehouses among drivers
                     for ($i = 0; $i < $numDrivers; $i++) {
                         $driverPoints = array_slice($points, $i * $pointsPerDriver, $pointsPerDriver);
                         
                         if (!empty($driverPoints)) {
+                            // Assign warehouse (round-robin for multiple warehouses)
+                            $warehouseIndex = $i % count($warehouses);
+                            $warehouseData = $warehouses[$warehouseIndex];
+                            
                             // Create warehouse point for this driver
                             $warehouse = [
-                                'address' => $start . " (WAREHOUSE)",
-                                'lat' => $startGeo['lat'],
-                                'lon' => $startGeo['lon'],
-                                'display_name' => $startGeo['display_name'] . " (WAREHOUSE)",
+                                'address' => $warehouseData['name'] . " (WAREHOUSE)",
+                                'lat' => $warehouseData['lat'],
+                                'lon' => $warehouseData['lon'],
+                                'display_name' => $warehouseData['name'] . " (WAREHOUSE)",
                                 'is_warehouse' => true
                             ];
                             
@@ -730,26 +785,31 @@ require_once "../includes/header.php";
         <div class="input-panel-body">
             <form method="POST" id="routeForm">
                 <div class="mb-4">
-                    <div class="form-group-title">Start Location</div>
-                    <div class="search-container">
-                        <div class="search-input-group d-flex">
-                            <input type="text" class="form-control" 
-                                   name="start" 
-                                   id="warehouse-location" 
-                                   value="<?= htmlspecialchars($_POST['start'] ?? '') ?>" 
-                                   placeholder="Search warehouse..."
-                                   autocomplete="off">
-                            <button class="btn" type="button" id="search-location-btn">
-                                <i class="fas fa-search"></i>
-                            </button>
-                            <button class="btn" type="button" id="use-current-location" title="Use Current Location">
-                                <i class="fas fa-location-arrow"></i>
-                            </button>
+                    <div class="form-group-title">Warehouse Locations</div>
+                    <div id="warehouses-container">
+                        <div class="warehouse-item mb-3">
+                            <div class="search-container">
+                                <div class="search-input-group d-flex">
+                                    <input type="text" class="form-control warehouse-location" 
+                                           name="warehouses[0][name]" 
+                                           placeholder="Search warehouse..."
+                                           autocomplete="off">
+                                    <button class="btn search-location-btn" type="button">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                    <button class="btn use-current-location" type="button" title="Use Current Location">
+                                        <i class="fas fa-location-arrow"></i>
+                                    </button>
+                                </div>
+                                <div class="search-results" style="display:none;"></div>
+                                <input type="hidden" name="warehouses[0][lat]" class="warehouse-lat">
+                                <input type="hidden" name="warehouses[0][lon]" class="warehouse-lon">
+                            </div>
                         </div>
-                        <div id="search-results" class="search-results"></div>
                     </div>
-                    <input type="hidden" name="warehouse_lat" id="warehouse-lat" value="<?= htmlspecialchars($_POST['warehouse_lat'] ?? '') ?>">
-                    <input type="hidden" name="warehouse_lon" id="warehouse-lon" value="<?= htmlspecialchars($_POST['warehouse_lon'] ?? '') ?>">
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="add-warehouse">
+                        <i class="fas fa-plus me-1"></i> Add Another Warehouse
+                    </button>
                 </div>
 
                 <div class="row g-3 mb-4">
@@ -808,7 +868,17 @@ require_once "../includes/header.php";
                         </div>
                     </div>
                     
-                    <input type="hidden" name="start" value="<?= htmlspecialchars($_POST['start'] ?? '') ?>">
+                    <?php if (isset($_POST['warehouses']) && is_array($_POST['warehouses'])): ?>
+                        <?php foreach ($_POST['warehouses'] as $index => $warehouse): ?>
+                            <input type="hidden" name="warehouses[<?= $index ?>][name]" value="<?= htmlspecialchars($warehouse['name'] ?? '') ?>">
+                            <input type="hidden" name="warehouses[<?= $index ?>][lat]" value="<?= htmlspecialchars($warehouse['lat'] ?? '') ?>">
+                            <input type="hidden" name="warehouses[<?= $index ?>][lon]" value="<?= htmlspecialchars($warehouse['lon'] ?? '') ?>">
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <input type="hidden" name="start" value="<?= htmlspecialchars($_POST['start'] ?? '') ?>">
+                        <input type="hidden" name="warehouse_lat" value="<?= htmlspecialchars($_POST['warehouse_lat'] ?? '') ?>">
+                        <input type="hidden" name="warehouse_lon" value="<?= htmlspecialchars($_POST['warehouse_lon'] ?? '') ?>">
+                    <?php endif; ?>
                     <input type="hidden" name="drivers" value="<?= htmlspecialchars($_POST['drivers'] ?? '1') ?>">
                     <input type="hidden" name="countrycode" value="<?= htmlspecialchars($_POST['countrycode'] ?? 'et') ?>">
                     <?php foreach ($driverRoutes as $driverIdx => $data): ?>
@@ -1106,77 +1176,186 @@ function initMap() {
     }
 }
 // Set warehouse location
-function setWarehouseLocation(lat, lon, name = null) {
+function setWarehouseLocation(lat, lon, name = null, inputElement = null) {
     try {
         console.log('Setting warehouse location:', lat, lon, name);
         
-        // Remove existing marker
-        if (warehouseMarker) {
-            map.removeLayer(warehouseMarker);
+        // For single warehouse mode (backward compatibility)
+        if (!inputElement) {
+            // Remove existing marker
+            if (warehouseMarker) {
+                map.removeLayer(warehouseMarker);
+            }
+            
+            // Add new marker with custom icon
+            const warehouseIcon = L.divIcon({
+                className: 'warehouse-icon',
+                html: '<div style="background: #2c3e50; color: white; padding: 8px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-warehouse"></i></div>',
+                iconSize: [40, 40],
+                iconAnchor: [20, 40]
+            });
+            
+            warehouseMarker = L.marker([lat, lon], {icon: warehouseIcon})
+                .addTo(map)
+                .bindPopup("<strong>Warehouse Location</strong><br>" + (name || `Coordinates: ${lat}, ${lon}`))
+                .openPopup();
+            
+            console.log('Warehouse marker added to map');
+            
+            // Update form fields
+            document.getElementById('warehouse-lat').value = lat;
+            document.getElementById('warehouse-lon').value = lon;
+            if (name) {
+                document.getElementById('warehouse-location').value = name;
+            }
+            
+            // Center map
+            map.setView([lat, lon], 15);
+        } else {
+            // For multiple warehouse mode
+            const searchContainer = inputElement.closest('.search-container');
+            searchContainer.querySelector('.warehouse-lat').value = lat;
+            searchContainer.querySelector('.warehouse-lon').value = lon;
+            inputElement.value = name || `${lat}, ${lon}`;
+            
+            // Add marker to map
+            const warehouseIcon = L.divIcon({
+                className: 'warehouse-icon',
+                html: '<div style="background: #2c3e50; color: white; padding: 8px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-warehouse"></i></div>',
+                iconSize: [40, 40],
+                iconAnchor: [20, 40]
+            });
+            
+            const marker = L.marker([lat, lon], {icon: warehouseIcon})
+                .addTo(map)
+                .bindPopup(`<strong>Warehouse Location</strong><br>${name || `Coordinates: ${lat}, ${lon}`}`);
         }
-        
-        // Add new marker with custom icon
-        const warehouseIcon = L.divIcon({
-            className: 'warehouse-icon',
-            html: '<div style="background: #2c3e50; color: white; padding: 8px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-warehouse"></i></div>',
-            iconSize: [40, 40],
-            iconAnchor: [20, 40]
-        });
-        
-        warehouseMarker = L.marker([lat, lon], {icon: warehouseIcon})
-            .addTo(map)
-            .bindPopup("<strong>Warehouse Location</strong><br>" + (name || `Coordinates: ${lat}, ${lon}`))
-            .openPopup();
-        
-        console.log('Warehouse marker added to map');
-        
-        // Update form fields
-        document.getElementById('warehouse-lat').value = lat;
-        document.getElementById('warehouse-lon').value = lon;
-        if (name) {
-            document.getElementById('warehouse-location').value = name;
-        }
-        
-        // Center map
-        map.setView([lat, lon], 15);
         
         console.log('Warehouse location set successfully');
     } catch (error) {
         console.error('Error setting warehouse location:', error);
     }
 }
-// Search functionality
-document.getElementById('warehouse-location').addEventListener('input', function(e) {
+// Search functionality for all warehouse inputs
+function attachWarehouseSearchEvents() {
+    // Handle dynamically added warehouse inputs
+    document.querySelectorAll('.warehouse-location').forEach(input => {
+        input.removeEventListener('input', handleWarehouseInput);
+        input.addEventListener('input', handleWarehouseInput);
+    });
+    
+    document.querySelectorAll('.search-location-btn').forEach(button => {
+        button.removeEventListener('click', handleSearchButtonClick);
+        button.addEventListener('click', handleSearchButtonClick);
+    });
+}
+
+function handleWarehouseInput(e) {
     clearTimeout(searchTimeout);
     const query = e.target.value.trim();
     
     if (query.length < 2) {
-        hideSearchResults();
+        hideSearchResults(e.target.nextElementSibling.nextElementSibling); // search-results div
         return;
     }
     
-    if (query === currentSearchQuery) return;
-    currentSearchQuery = query;
+    const currentQuery = e.target.dataset.currentQuery || '';
+    if (query === currentQuery) return;
+    e.target.dataset.currentQuery = query;
+    
+    // Store reference to search results container
+    const searchResults = e.target.nextElementSibling.nextElementSibling;
     
     // Debounce search
     searchTimeout = setTimeout(() => {
-        performSearch(query);
+        performSearch(query, searchResults);
     }, 300);
-});
+}
 
-// Search button
-document.getElementById('search-location-btn').addEventListener('click', function() {
-    const query = document.getElementById('warehouse-location').value.trim();
+function handleSearchButtonClick(e) {
+    const container = e.target.closest('.search-container');
+    const input = container.querySelector('.warehouse-location');
+    const query = input.value.trim();
+    
     if (query.length < 2) {
         alert('Please enter at least 2 characters to search');
         return;
     }
-    performSearch(query);
+    
+    const searchResults = container.querySelector('.search-results');
+    performSearch(query, searchResults);
+}
+
+// Add warehouse button
+document.getElementById('add-warehouse').addEventListener('click', function() {
+    const container = document.getElementById('warehouses-container');
+    const warehouseCount = container.querySelectorAll('.warehouse-item').length;
+    
+    const warehouseItem = document.createElement('div');
+    warehouseItem.className = 'warehouse-item mb-3';
+    warehouseItem.innerHTML = `
+        <div class="search-container">
+            <div class="search-input-group d-flex">
+                <input type="text" class="form-control warehouse-location" 
+                       name="warehouses[${warehouseCount}][name]" 
+                       placeholder="Search warehouse..."
+                       autocomplete="off">
+                <button class="btn search-location-btn" type="button">
+                    <i class="fas fa-search"></i>
+                </button>
+                <button class="btn use-current-location" type="button" title="Use Current Location">
+                    <i class="fas fa-location-arrow"></i>
+                </button>
+            </div>
+            <div class="search-results" style="display:none;"></div>
+            <input type="hidden" name="warehouses[${warehouseCount}][lat]" class="warehouse-lat">
+            <input type="hidden" name="warehouses[${warehouseCount}][lon]" class="warehouse-lon">
+        </div>
+    `;
+    
+    container.appendChild(warehouseItem);
+    
+    // Attach events to new elements
+    attachWarehouseSearchEvents();
+    
+    // Attach current location event
+    warehouseItem.querySelector('.use-current-location').addEventListener('click', function() {
+        if (!navigator.geolocation) {
+            alert('Geolocation not supported');
+            return;
+        }
+        
+        navigator.geolocation.getCurrentPosition(function(position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            
+            const container = warehouseItem.querySelector('.search-container');
+            container.querySelector('.warehouse-lat').value = lat;
+            container.querySelector('.warehouse-lon').value = lon;
+            
+            // Reverse geocode to get address
+            fetch(`?ajax=reverse_geocode&lat=${lat}&lon=${lon}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.display_name) {
+                        container.querySelector('.warehouse-location').value = data.display_name;
+                    } else {
+                        container.querySelector('.warehouse-location').value = `${lat}, ${lon}`;
+                    }
+                })
+                .catch(() => {
+                    container.querySelector('.warehouse-location').value = `${lat}, ${lon}`;
+                });
+        });
+    });
 });
 
+// Initial attachment of events
+attachWarehouseSearchEvents();
+
 // Perform search
-function performSearch(query) {
-    showLoading(true);
+function performSearch(query, searchResultsElement) {
+    showLoading(true, searchResultsElement.previousElementSibling.querySelector('button'));
     
     fetch(`?ajax=search&q=${encodeURIComponent(query)}&country=<?= $_POST['countrycode'] ?? 'et' ?>`)
         .then(response => {
@@ -1184,19 +1363,20 @@ function performSearch(query) {
             return response.json();
         })
         .then(data => {
-            showSearchResults(data, query);
-            showLoading(false);
+            showSearchResults(data, query, searchResultsElement);
+            showLoading(false, searchResultsElement.previousElementSibling.querySelector('button'));
         })
         .catch(error => {
             console.error('Search error:', error);
-            showSearchResults([], query);
-            showLoading(false);
+            showSearchResults([], query, searchResultsElement);
+            showLoading(false, searchResultsElement.previousElementSibling.querySelector('button'));
         });
 }
 
 // Show search results
-function showSearchResults(results, query) {
-    const container = document.getElementById('search-results');
+function showSearchResults(results, query, searchResultsElement) {
+    // Use the passed element or fall back to the default one
+    const container = searchResultsElement || document.getElementById('search-results');
     container.innerHTML = '';
     
     if (results.length === 0) {
@@ -1230,8 +1410,18 @@ function showSearchResults(results, query) {
         
         item.addEventListener('click', function(e) {
             e.preventDefault();
-            setWarehouseLocation(result.lat, result.lon, result.display_name);
-            hideSearchResults();
+            // Find the container for this search result
+            const searchContainer = container.closest('.search-container');
+            const locationInput = searchContainer.querySelector('.warehouse-location');
+            const latInput = searchContainer.querySelector('.warehouse-lat');
+            const lonInput = searchContainer.querySelector('.warehouse-lon');
+            
+            // Set values
+            locationInput.value = result.display_name;
+            latInput.value = result.lat;
+            lonInput.value = result.lon;
+            
+            hideSearchResults(container);
         });
         
         container.appendChild(item);
@@ -1241,8 +1431,12 @@ function showSearchResults(results, query) {
 }
 
 // Hide search results
-function hideSearchResults() {
-    document.getElementById('search-results').style.display = 'none';
+function hideSearchResults(element) {
+    if (element) {
+        element.style.display = 'none';
+    } else {
+        document.getElementById('search-results').style.display = 'none';
+    }
 }
 
 // Reverse geocode (click on map)
@@ -1266,41 +1460,53 @@ function reverseGeocode(lat, lon) {
         });
 }
 
-// Current location
-document.getElementById('use-current-location').addEventListener('click', function() {
-    if (!navigator.geolocation) {
-        alert('Geolocation is not supported by your browser');
-        return;
-    }
-    
-    showLoading(true, this);
-    const button = this;
-    const originalHtml = button.innerHTML;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    button.disabled = true;
-    
-    navigator.geolocation.getCurrentPosition(
-        function(position) {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            reverseGeocode(lat, lon);
-            button.innerHTML = originalHtml;
-            button.disabled = false;
-            showLoading(false);
-        },
-        function(error) {
-            alert('Unable to retrieve your location. Error: ' + error.message);
-            button.innerHTML = originalHtml;
-            button.disabled = false;
-            showLoading(false);
-        },
-        {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-        }
-    );
-});
+// Current location buttons for all warehouses
+function attachCurrentLocationEvents() {
+    document.querySelectorAll('.use-current-location').forEach(button => {
+        button.addEventListener('click', function() {
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by your browser');
+                return;
+            }
+            
+            showLoading(true, this);
+            const button = this;
+            const originalHtml = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            button.disabled = true;
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    
+                    // Find the input field for this button
+                    const container = button.closest('.search-container');
+                    const input = container.querySelector('.warehouse-location');
+                    
+                    reverseGeocode(lat, lon, input);
+                    button.innerHTML = originalHtml;
+                    button.disabled = false;
+                    showLoading(false);
+                },
+                function(error) {
+                    alert('Unable to retrieve your location. Error: ' + error.message);
+                    button.innerHTML = originalHtml;
+                    button.disabled = false;
+                    showLoading(false);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        });
+    });
+}
+
+// Initial attachment
+attachCurrentLocationEvents();
 
 // Locate user on map
 function locateUser() {
