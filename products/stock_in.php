@@ -21,6 +21,12 @@ $suppliers_stmt = $db->prepare($suppliers_query);
 $suppliers_stmt->execute();
 $suppliers = $suppliers_stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Get all drivers
+$drivers_query = "SELECT id, full_name FROM drivers WHERE status = 'active' ORDER BY full_name ASC";
+$drivers_stmt = $db->prepare($drivers_query);
+$drivers_stmt->execute();
+$drivers = $drivers_stmt->fetchAll(PDO::FETCH_ASSOC);
+
 $message = '';
 $message_type = '';
 
@@ -45,9 +51,10 @@ if ($_POST) {
         
         if ($update_stmt->execute()) {
             // Log the stock movement
+            $driver_id = !empty($_POST['driver_id']) ? $_POST['driver_id'] : null;
             $movement_query = "INSERT INTO stock_movements 
-                              (product_id, movement_type, quantity, reason, reference, supplier_id, user_id) 
-                              VALUES (:product_id, 'IN', :quantity, :reason, :reference, :supplier_id, :user_id)";
+                              (product_id, movement_type, quantity, reason, reference, supplier_id, user_id, driver_id) 
+                              VALUES (:product_id, 'IN', :quantity, :reason, :reference, :supplier_id, :user_id, :driver_id)";
             $movement_stmt = $db->prepare($movement_query);
             $movement_stmt->bindParam(":product_id", $product_id);
             $movement_stmt->bindParam(":quantity", $quantity);
@@ -55,6 +62,7 @@ if ($_POST) {
             $movement_stmt->bindParam(":reference", $reference);
             $movement_stmt->bindParam(":supplier_id", $supplier_id);
             $movement_stmt->bindValue(":user_id", Auth::getCurrentUser()['id']);
+            $movement_stmt->bindParam(":driver_id", $driver_id);
             
             if ($movement_stmt->execute()) {
                 $message = "Stock added successfully!";
@@ -146,6 +154,18 @@ require_once "../includes/header.php";
                             <?php endforeach; ?>
                         </select>
                     </div>
+
+                    <div class="mb-3">
+                        <label for="driver_id" class="form-label">Driver Name</label>
+                        <select class="form-select" id="driver_id" name="driver_id">
+                            <option value="">Choose a driver</option>
+                            <?php foreach ($drivers as $driver): ?>
+                            <option value="<?php echo $driver['id']; ?>">
+                                <?php echo htmlspecialchars($driver['full_name']); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     
                     <div class="mb-3">
                         <label for="reason" class="form-label"><?php echo __('reason'); ?> *</label>
@@ -175,7 +195,7 @@ require_once "../includes/header.php";
             </div>
         </div>
     </div>
-    
+        
     <div class="col-md-6">
         <div class="card dashboard-card shadow mb-4">
             <div class="card-header py-3">

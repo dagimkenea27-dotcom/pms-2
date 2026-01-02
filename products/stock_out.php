@@ -29,6 +29,12 @@ $stmt = $db->prepare($query);
 $stmt->execute();
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Get all drivers
+$drivers_query = "SELECT id, full_name FROM drivers WHERE status = 'active' ORDER BY full_name ASC";
+$drivers_stmt = $db->prepare($drivers_query);
+$drivers_stmt->execute();
+$drivers = $drivers_stmt->fetchAll(PDO::FETCH_ASSOC);
+
 $message = '';
 $message_type = '';
 
@@ -85,9 +91,10 @@ if ($_POST) {
             $update_p->execute([$quantity, $product_id]);
             
             // Log movement
+            $driver_id = !empty($_POST['driver_id']) ? $_POST['driver_id'] : null;
             $movement_query = "INSERT INTO stock_movements 
-                              (product_id, variant_id, movement_type, quantity, reason, reference, user_id) 
-                              VALUES (:pid, :vid, 'OUT', :qty, :reason, :ref, :uid)";
+                              (product_id, variant_id, movement_type, quantity, reason, reference, user_id, driver_id) 
+                              VALUES (:pid, :vid, 'OUT', :qty, :reason, :ref, :uid, :did)";
             $m_stmt = $db->prepare($movement_query);
             $m_stmt->execute([
                 ':pid' => $product_id,
@@ -95,7 +102,8 @@ if ($_POST) {
                 ':qty' => $quantity,
                 ':reason' => $reason,
                 ':ref' => $reference,
-                ':uid' => Auth::getCurrentUser()['id']
+                ':uid' => Auth::getCurrentUser()['id'],
+                ':did' => $driver_id
             ]);
             
             $log_desc = "Removed $quantity from product ID $product_id (Variant: {$variant['size']} {$variant['color']}). Reason: $reason";
@@ -114,16 +122,18 @@ if ($_POST) {
             $update_stmt->execute();
             
             // Log stock movement
+            $driver_id = !empty($_POST['driver_id']) ? $_POST['driver_id'] : null;
             $movement_query = "INSERT INTO stock_movements 
-                              (product_id, movement_type, quantity, reason, reference, user_id) 
-                              VALUES (:product_id, 'OUT', :quantity, :reason, :reference, :user_id)";
+                              (product_id, movement_type, quantity, reason, reference, user_id, driver_id) 
+                              VALUES (:product_id, 'OUT', :quantity, :reason, :reference, :user_id, :driver_id)";
             $movement_stmt = $db->prepare($movement_query);
             $movement_stmt->execute([
                 ':product_id' => $product_id,
                 ':quantity' => $quantity,
                 ':reason' => $reason,
                 ':reference' => $reference,
-                ':user_id' => Auth::getCurrentUser()['id']
+                ':user_id' => Auth::getCurrentUser()['id'],
+                ':driver_id' => $driver_id
             ]);
             
             $log_desc = "Removed $quantity from product ID $product_id. Reason: $reason";
@@ -240,6 +250,18 @@ require_once "../includes/header.php";
                         <label for="reference" class="form-label">Reference</label>
                         <input type="text" class="form-control" id="reference" name="reference" 
                                placeholder="Invoice number, etc.">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="driver_id" class="form-label">Driver Name</label>
+                        <select class="form-select" id="driver_id" name="driver_id">
+                            <option value="">Choose a driver</option>
+                            <?php foreach ($drivers as $driver): ?>
+                            <option value="<?php echo $driver['id']; ?>">
+                                <?php echo htmlspecialchars($driver['full_name']); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     
                     <button type="submit" class="btn btn-danger">

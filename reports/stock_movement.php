@@ -61,10 +61,12 @@ $query = "
         p.sku,
         u.username,
         u.first_name,
-        u.last_name
+        u.last_name,
+        d.full_name as driver_name
     FROM stock_movements sm
     LEFT JOIN products p ON sm.product_id = p.id
     LEFT JOIN users u ON sm.user_id = u.id
+    LEFT JOIN drivers d ON sm.driver_id = d.id
     $where_sql
     ORDER BY sm.created_at DESC
     LIMIT :from_record_num, :records_per_page";
@@ -149,6 +151,7 @@ require_once "../includes/header.php";
                         <th>Reason</th>
                         <th>Reference</th>
                         <th>User</th>
+                        <th>Driver</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -181,6 +184,11 @@ require_once "../includes/header.php";
                                     echo htmlspecialchars($row['username'] ?? 'System');
                                 }
                                 ?>
+                                </small>
+                            </td>
+                            <td>
+                                <small class="text-info">
+                                    <?php echo htmlspecialchars($row['driver_name'] ?? '-'); ?>
                                 </small>
                             </td>
                         </tr>

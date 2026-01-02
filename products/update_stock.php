@@ -25,6 +25,12 @@ if (isset($_GET['id'])) {
         $v_stmt->execute([':pid' => $product['id']]);
         $variants = $v_stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    // Get all drivers for dropdown
+    $drivers_query = "SELECT id, full_name FROM drivers WHERE status = 'active' ORDER BY full_name ASC";
+    $drivers_stmt = $db->prepare($drivers_query);
+    $drivers_stmt->execute();
+    $drivers = $drivers_stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 if (!$product) {
@@ -94,9 +100,10 @@ if ($_POST) {
         }
 
         // Log movement
+        $driver_id = !empty($_POST['driver_id']) ? $_POST['driver_id'] : null;
         $movement_query = "INSERT INTO stock_movements 
-                          (product_id, variant_id, movement_type, quantity, reason, reference, user_id) 
-                          VALUES (:product_id, :variant_id, :movement_type, :quantity, :reason, :reference, :user_id)";
+                          (product_id, variant_id, movement_type, quantity, reason, reference, user_id, driver_id) 
+                          VALUES (:product_id, :variant_id, :movement_type, :quantity, :reason, :reference, :user_id, :driver_id)";
         $movement_stmt = $db->prepare($movement_query);
         $movement_stmt->execute([
             ':product_id' => $product['id'],
@@ -105,7 +112,8 @@ if ($_POST) {
             ':quantity' => $quantity,
             ':reason' => $reason,
             ':reference' => $reference,
-            ':user_id' => Auth::getCurrentUser()['id']
+            ':user_id' => Auth::getCurrentUser()['id'],
+            ':driver_id' => $driver_id
         ]);
 
         $db->commit();
@@ -133,10 +141,11 @@ if ($_POST) {
 }
 
 // Get stock movement history
-$movement_query = "SELECT sm.*, pv.sku as variant_sku, pv.size, pv.color, u.username, u.first_name, u.last_name
+$movement_query = "SELECT sm.*, pv.sku as variant_sku, pv.size, pv.color, u.username, u.first_name, u.last_name, d.full_name as driver_name
                   FROM stock_movements sm
                   LEFT JOIN product_variants pv ON sm.variant_id = pv.id
                   LEFT JOIN users u ON sm.user_id = u.id
+                  LEFT JOIN drivers d ON sm.driver_id = d.id
                   WHERE sm.product_id = :product_id 
                   ORDER BY sm.created_at DESC 
                   LIMIT 20";
@@ -269,6 +278,18 @@ require_once "../includes/header.php";
                         <input type="text" class="form-control" id="reference" name="reference" 
                                placeholder="PO number, invoice, etc.">
                     </div>
+
+                    <div class="mb-3">
+                        <label for="driver_id" class="form-label">Driver Name</label>
+                        <select class="form-select" id="driver_id" name="driver_id">
+                            <option value="">Choose a driver</option>
+                            <?php foreach ($drivers as $driver): ?>
+                            <option value="<?php echo $driver['id']; ?>">
+                                <?php echo htmlspecialchars($driver['full_name']); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     
                     <button type="submit" class="btn btn-primary w-100">
                         <i class="fas fa-save"></i> Update Stock
@@ -296,6 +317,7 @@ require_once "../includes/header.php";
                                     <th>Reason</th>
                                     <th>Reference</th>
                                     <th>User</th>
+                                    <th>Driver</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -329,6 +351,11 @@ require_once "../includes/header.php";
                                             echo htmlspecialchars($movement['username'] ?? 'System');
                                         }
                                         ?>
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small class="text-info">
+                                            <?php echo htmlspecialchars($movement['driver_name'] ?? '-'); ?>
                                         </small>
                                     </td>
                                 </tr>
