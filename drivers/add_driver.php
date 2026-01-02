@@ -14,26 +14,32 @@ $message = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $data = [
-        'user_id' => $_POST['user_id'] ?? null,
-        'full_name' => $_POST['full_name'],
-        'email' => $_POST['email'] ?? null,
-        'phone' => $_POST['phone'],
-        'license_number' => $_POST['license_number'] ?? null,
-        'license_expiry' => $_POST['license_expiry'] ?? null,
-        'status' => $_POST['status'] ?? 'active',
-        'skills' => isset($_POST['skills']) ? $_POST['skills'] : [],
-        'max_working_hours' => $_POST['max_working_hours'] ?? 8.00,
-        'hourly_rate' => $_POST['hourly_rate'] ?? null
-    ];
-    
-    $driver_id = $driver->create($data);
-    
-    if ($driver_id) {
-        header('Location: index.php?message=Driver added successfully');
-        exit;
-    } else {
-        $error = "Failed to add driver. Please try again.";
+    try {
+        $data = [
+            'user_id' => $_POST['user_id'] ?? null,
+            'full_name' => $_POST['full_name'],
+            'email' => $_POST['email'] ?? null,
+            'phone' => $_POST['phone'],
+            'license_number' => $_POST['license_number'] ?? null,
+            'license_expiry' => $_POST['license_expiry'] ?? null,
+            'status' => $_POST['status'] ?? 'active',
+            'skills' => isset($_POST['skills']) ? $_POST['skills'] : [],
+            'max_working_hours' => $_POST['max_working_hours'] ?? 8.00,
+            'hourly_rate' => $_POST['hourly_rate'] ?? null
+        ];
+        
+        $driver_id = $driver->create($data);
+        
+        if ($driver_id) {
+            header('Location: index.php?message=Driver added successfully');
+            exit;
+        } else {
+            $error = "Failed to add driver. Please try again.";
+        }
+    } catch (PDOException $e) {
+        $error = "Database Error: " . $e->getMessage();
+    } catch (Exception $e) {
+        $error = "Error: " . $e->getMessage();
     }
 }
 

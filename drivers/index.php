@@ -15,13 +15,17 @@ $message = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['delete_driver'])) {
-        $driver_id = intval($_POST['driver_id']);
-        if ($driver->delete($driver_id)) {
-            $message = "Driver deleted successfully!";
-        } else {
-            $error = "Failed to delete driver.";
+    try {
+        if (isset($_POST['delete_driver'])) {
+            $driver_id = intval($_POST['driver_id']);
+            if ($driver->delete($driver_id)) {
+                $message = "Driver deleted successfully!";
+            } else {
+                $error = "Failed to delete driver.";
+            }
         }
+    } catch (Exception $e) {
+        $error = "Error: " . $e->getMessage();
     }
 }
 
@@ -29,7 +33,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $status_filter = $_GET['status'] ?? null;
 
 // Get all drivers
-$drivers_result = $driver->getAll($status_filter);
+try {
+    $drivers_result = $driver->getAll($status_filter);
+} catch (Exception $e) {
+    $error = "Failed to fetch drivers: " . $e->getMessage();
+    $drivers_result = false; // To handle the loop below
+}
 
 require_once '../includes/header.php';
 ?>
@@ -102,8 +111,9 @@ require_once '../includes/header.php';
                     </tr>
                 </thead>
                 <tbody>
-                    <?php while ($d = $drivers_result->fetch(PDO::FETCH_ASSOC)): ?>
-                        <tr>
+                    <?php if ($drivers_result): ?>
+                        <?php while ($d = $drivers_result->fetch(PDO::FETCH_ASSOC)): ?>
+                            <tr>
                             <td><?= $d['id'] ?></td>
                             <td>
                                 <strong><?= htmlspecialchars($d['full_name']) ?></strong>
@@ -159,6 +169,9 @@ require_once '../includes/header.php';
                             </td>
                         </tr>
                     <?php endwhile; ?>
+                    <?php else: ?>
+                        <tr><td colspan="9" class="text-center">No drivers found or database error occurred.</td></tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
