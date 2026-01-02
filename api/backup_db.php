@@ -76,15 +76,56 @@ try {
     
     $mysqli->close();
 
-    $filename = 'backup_' . $name . '_' . date('Y-m-d_H_i_s') . '.sql';
+    $filename_sql = 'database_backup.sql';
+    $filename_zip = 'backup_' . $name . '_' . date('Y-m-d_H_i_s') . '.zip';
     
-    header('Content-Type: application/sql');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
-    header('Content-Length: ' . strlen($sql));
+    // Create ZIP archive
+    $zip = new ZipArchive();
+    $tmp_file = tempnam(sys_get_temp_dir(), 'db_zip');
+
+    if ($zip->open($tmp_file, ZipArchive::CREATE) !== TRUE) {
+        // Fallback to plain SQL if ZIP creation fails
+        header('Content-Type: application/sql');
+        header('Content-Disposition: attachment; filename="' . str_replace('.zip', '.sql', $filename_zip) . '"');
+        echo $sql;
+        exit();
+    }
+
+    // Add SQL file to ZIP
+    $zip->addFromString($filename_sql, $sql);
+
+    // Add uploads folder to ZIP
+    $uploads_path = realpath(dirname(__DIR__) . '/uploads');
+    if ($uploads_path && is_dir($uploads_path)) {
+        $files = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($uploads_path),
+            RecursiveIteratorIterator::LEAVES_ONLY
+        );
+
+        foreach ($files as $name => $file) {
+            // Skip directories (they would be added automatically)
+            if (!$file->isDir()) {
+                // Get real and relative path for current file
+                $file_path = $file->getRealPath();
+                $relative_path = 'uploads/' . str_replace('\\', '/', substr($file_path, strlen($uploads_path) + 1));
+
+                // Add current file to archive
+                $zip->addFile($file_path, $relative_path);
+            }
+        }
+    }
+
+    $zip->close();
+
+    // Send ZIP file
+    header('Content-Type: application/zip');
+    header('Content-Disposition: attachment; filename="' . $filename_zip . '"');
+    header('Content-Length: ' . filesize($tmp_file));
     header('Cache-Control: private, max-age=0, must-revalidate');
     header('Pragma: public');
     
-    echo $sql;
+    readfile($tmp_file);
+    unlink($tmp_file); // Delete the temporary file
     exit();
 
 } catch (Exception $e) {
