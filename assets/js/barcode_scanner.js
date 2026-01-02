@@ -9,17 +9,24 @@ const BarcodeScanner = {
     currentCameraId: null,
     lastScannedCode: null,
     config: {
-        fps: 15,
-        qrbox: {
-            width: 300,
-            height: 150,
-            default: true
+        fps: 25,
+        qrbox: (viewfinderWidth, viewfinderHeight) => {
+            // High-performance dynamic scan box
+            const width = viewfinderWidth * 0.8;
+            const height = viewfinderHeight * 0.45;
+            return {
+                width: width < 250 ? 250 : width,
+                height: height < 150 ? 150 : height
+            };
         },
         aspectRatio: 1.0,
         disableFlip: false,
         rememberLastUsedCamera: true,
         showTorchButtonIfSupported: true,
-        showZoomSliderIfSupported: true
+        showZoomSliderIfSupported: true,
+        experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+        }
     },
 
     // Initialize and bind events
@@ -189,12 +196,13 @@ const BarcodeScanner = {
                     cameraId,
                     this.config,
                     (decodedText, decodedResult) => {
+                        console.log("Code found:", decodedText, decodedResult);
                         this.handleScanSuccess(decodedText, decodedResult);
                     },
                     (errorMessage) => {
-                        // Ignore "no code found" errors
-                        if (!errorMessage.includes('No QR code')) {
-                            console.debug('Scan error:', errorMessage);
+                        // Very verbose, only log if not "no code"
+                        if (!errorMessage.includes('No QR code') && !errorMessage.includes('NotFoundException')) {
+                            console.debug('Scanner hint:', errorMessage);
                         }
                     }
                 );

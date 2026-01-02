@@ -111,9 +111,12 @@
     margin: 15px 0;
 }
 
-.barcode-display svg {
+.barcode-display svg, .qr-code-img {
     max-width: 100%;
     height: auto;
+    border: 1px solid #f0f0f0;
+    padding: 5px;
+    background: white;
 }
 
 /* Scanner Controls */

@@ -82,7 +82,7 @@ class BarcodeGenerator {
     }
 
     /**
-     * Generate SVG (Detects format automatically)
+     * Generate SVG Barcode (Detects format automatically)
      */
     public function generateSVG($text, $width = 200, $height = 50) {
         if ($this->isUPCACandidate($text)) {
@@ -93,12 +93,18 @@ class BarcodeGenerator {
     }
 
     /**
-     * Generate HTML (Detects format automatically) - Removed for brevity, use SVG
+     * Generate QR Code (Uses API for reliability if no local library)
+     */
+    public function generateQRCode($text, $size = 150) {
+        return '<img src="https://api.qrserver.com/v1/create-qr-code/?size=' . $size . 'x' . $size . '&data=' . urlencode($text) . '" alt="QR Code" class="qr-code-img" />';
+    }
+
+    /**
+     * Generate HTML - Optimized for Barcode/QR choice
      */
     public function generateHTML($text, $width = 200, $height = 50) {
-        // Fallback to SVG logic wrapped in container? Or just return SVG.
-        // For compatibility with existing calls, let's keep it referring to SVG logic internally or deprecate.
-        // HTML rendering of barcodes is notoriously flaky.
+        // Return both or just the most compatible one?
+        // For now, return SVG Barcode for consistency
         return $this->generateSVG($text, $width, $height);
     }
 

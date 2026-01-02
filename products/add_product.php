@@ -461,7 +461,7 @@ require_once "../includes/header.php";
                             <tr>
                                 <td><input type="text" class="form-control" name="variant_size[]" placeholder="e.g., Small"></td>
                                 <td><input type="text" class="form-control" name="variant_color[]" placeholder="e.g., Red"></td>
-                                <td><input type="text" class="form-control" name="variant_sku[]" placeholder="Auto-generated"></td>
+                                <td><input type="text" class="form-control variant-sku" name="variant_sku[]" placeholder="Loading SKU..."></td>
                                 <td><input type="number" class="form-control" name="variant_qty[]" value="0" min="0"></td>
                                 <td><input type="number" class="form-control" name="variant_price[]" step="0.01" placeholder="Same as main"></td>
                                 <td><button type="button" class="btn btn-danger remove-variant"><i class="fas fa-trash"></i></button></td>
@@ -515,7 +515,7 @@ document.getElementById('addVariantRow').addEventListener('click', function() {
     newRow.innerHTML = `
         <td><input type="text" class="form-control" name="variant_size[]" placeholder="e.g., Small"></td>
         <td><input type="text" class="form-control" name="variant_color[]" placeholder="e.g., Red"></td>
-        <td><input type="text" class="form-control" name="variant_sku[]" placeholder="Auto-generated"></td>
+        <td><input type="text" class="form-control variant-sku" name="variant_sku[]" placeholder="Loading SKU..."></td>
         <td><input type="number" class="form-control" name="variant_qty[]" value="0" min="0"></td>
         <td><input type="number" class="form-control" name="variant_price[]" step="0.01" placeholder="Same as main"></td>
         <td><button type="button" class="btn btn-danger remove-variant"><i class="fas fa-trash"></i></button></td>
@@ -523,7 +523,9 @@ document.getElementById('addVariantRow').addEventListener('click', function() {
     
     tbody.appendChild(newRow);
     
-    // Add event listener to the new remove button
+    // Auto-generate SKU for new row
+    const usedSkus = getAllUsedSkus();
+    newRow.querySelector('.variant-sku').value = generateJS_SKU(usedSkus);
     newRow.querySelector('.remove-variant').addEventListener('click', function() {
         if (tbody.children.length > 1) {
             tbody.removeChild(newRow);
@@ -564,11 +566,20 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Generate SKU
-document.getElementById('generateSKU').addEventListener('click', function() {
-    const skuInput = document.getElementById('sku');
+// Helper to get all currently used SKUs in the UI (to avoid collisions)
+function getAllUsedSkus() {
+    const skus = [];
+    const mainSku = document.getElementById('sku').value;
+    if (mainSku) skus.push(mainSku);
     
-    // Generate 11 digits: Last 5 of Timestamp + 6 Random
+    document.querySelectorAll('.variant-sku').forEach(input => {
+        if (input.value) skus.push(input.value);
+    });
+    return skus;
+}
+
+// Reusable SKU generation logic matching functions.php
+function generateJS_SKU(excludes = []) {
     const timestamp = Math.floor(Date.now() / 1000).toString().slice(-5); 
     const random = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
     const code11 = timestamp + '' + random;
@@ -585,8 +596,43 @@ document.getElementById('generateSKU').addEventListener('click', function() {
     }
     const mod = sum % 10;
     const checkDigit = (mod === 0) ? 0 : (10 - mod);
+    const sku = code11 + '' + checkDigit;
     
-    skuInput.value = code11 + '' + checkDigit;
+    // Simple collision check against current page state
+    if (excludes.includes(sku)) {
+        return generateJS_SKU(excludes);
+    }
+    return sku;
+}
+
+// Generate SKU
+document.getElementById('generateSKU').addEventListener('click', function() {
+    const usedSkus = [];
+    const mainSkuInput = document.getElementById('sku');
+    
+    const newMainSku = generateJS_SKU(usedSkus);
+    mainSkuInput.value = newMainSku;
+    usedSkus.push(newMainSku);
+    
+    // Also regenerate for variants if they are empty or placeholder
+    document.querySelectorAll('.variant-sku').forEach(input => {
+        const val = generateJS_SKU(usedSkus);
+        input.value = val;
+        usedSkus.push(val);
+    });
+});
+
+// Populate initial variant SKU on load
+document.addEventListener('DOMContentLoaded', function() {
+    const variantSkus = document.querySelectorAll('.variant-sku');
+    const used = getAllUsedSkus();
+    variantSkus.forEach(input => {
+        if (!input.value) {
+            const sku = generateJS_SKU(used);
+            input.value = sku;
+            used.push(sku);
+        }
+    });
 });
 
 // Auto-fill variant prices from main product price

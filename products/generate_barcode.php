@@ -108,38 +108,42 @@ require_once "../includes/header.php";
                 </h6>
             </div>
             <div class="card-body text-center">
-                <!-- Main Product Barcode -->
-                <?php if ($barcode_svg): ?>
-                    <div class="barcode-item mb-5">
+                <!-- Main Product Barcode (Only show if no variants exist) -->
+                <?php if ($barcode_svg && empty($variants)): ?>
+                    <div class="barcode-item mb-5 text-center">
                         <div class="mb-2">
                             <?php echo $barcode_svg; ?>
                         </div>
-                        <div class="mb-2">
-                            <p><strong><?php echo htmlspecialchars($product['name']); ?></strong></p>
-                            <p>SKU: <?php echo htmlspecialchars($product['sku']); ?></p>
+                        <div class="mt-2">
+                            <p class="mb-1"><strong><?php echo htmlspecialchars($product['name']); ?></strong></p>
+                            <p class="text-muted small">SKU: <?php echo htmlspecialchars($product['sku']); ?></p>
                         </div>
                     </div>
                 <?php endif; ?>
 
                 <!-- Variant Barcodes -->
                 <?php if (!empty($variants)): ?>
-                    <hr>
-                    <h5 class="mb-4">Variants</h5>
-                    <?php foreach ($variants as $v): 
-                        $v_barcode = $generator->generateSVG($v['sku'], 300, 100);
-                        $v_label = $v['size'] . ' ' . $v['color'];
-                    ?>
-                    <div class="barcode-item mb-5 pb-3 border-bottom">
-                        <div class="mb-2">
-                            <?php echo $v_barcode; ?>
+                    <h5 class="mb-4 text-center">Product Variant Barcodes</h5>
+                    <div class="row justify-content-center">
+                        <?php foreach ($variants as $v): 
+                            $v_barcode = $generator->generateSVG($v['sku'], 300, 100);
+                            $v_label = $v['size'] . ' ' . $v['color'];
+                        ?>
+                        <div class="col-md-6 mb-5">
+                            <div class="barcode-item p-3 border rounded text-center h-100 shadow-sm">
+                                <div class="mb-3">
+                                    <?php echo $v_barcode; ?>
+                                </div>
+                                <div>
+                                    <p class="mb-1 fw-bold"><?php echo htmlspecialchars($product['name']); ?></p>
+                                    <p class="mb-1 text-primary small"><?php echo htmlspecialchars($v_label); ?></p>
+                                    <p class="mb-2 small text-muted">SKU: <?php echo htmlspecialchars($v['sku']); ?></p>
+                                    <h5 class="mb-0 text-dark">$<?php echo number_format($v['price'] ?? $product['price'], 2); ?></h5>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-2">
-                            <p><strong><?php echo htmlspecialchars($product['name'] . ' - ' . $v_label); ?></strong></p>
-                            <p>SKU: <?php echo htmlspecialchars($v['sku']); ?></p>
-                            <p>Price: $<?php echo number_format($v['price'] ?? $product['price'], 2); ?></p>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
-                    <?php endforeach; ?>
                 <?php endif; ?>
 
                 <?php if (!$barcode_svg && empty($variants)): ?>

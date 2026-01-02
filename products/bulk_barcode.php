@@ -175,7 +175,7 @@ $generator = new BarcodeGenerator();
                 </div>
                 <?php endif; ?>
                 
-                <div class="barcode-container">
+                <div class="barcode-container mb-2">
                     <?php echo $generator->generateSVG($barcode['sku'], 180, 60); ?>
                 </div>
                 
