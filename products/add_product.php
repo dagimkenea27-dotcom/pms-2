@@ -51,9 +51,12 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
             $response['errors'][] = "Product name is required.";
         }
         
+        $used_skus = [];
         if (empty($sku)) {
             $sku = generateSKU($db);
+            $used_skus[] = $sku;
         } else {
+            $used_skus[] = $sku;
             // Check if SKU already exists in products table
             $check_query = "SELECT id FROM products WHERE sku = :sku";
             $check_stmt = $db->prepare($check_query);
@@ -87,8 +90,9 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                     }
                     
                     if (empty($v_sku)) {
-                         $v_sku = generateSKU($db);
+                         $v_sku = generateSKU($db, $used_skus);
                     }
+                    $used_skus[] = $v_sku;
 
                     // Check duplicate SKU among variants in this submit
                     foreach ($variants as $existing_v) {
@@ -564,9 +568,9 @@ document.addEventListener('click', function(e) {
 document.getElementById('generateSKU').addEventListener('click', function() {
     const skuInput = document.getElementById('sku');
     
-    // Generate 11 digits: Timestamp (10) + Random (1)
-    const timestamp = Math.floor(Date.now() / 1000); 
-    const random = Math.floor(Math.random() * 10); // 0-9
+    // Generate 11 digits: Last 5 of Timestamp + 6 Random
+    const timestamp = Math.floor(Date.now() / 1000).toString().slice(-5); 
+    const random = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
     const code11 = timestamp + '' + random;
     
     // Calculate Check Digit

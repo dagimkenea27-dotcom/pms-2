@@ -55,15 +55,17 @@ function __($key) {
  * Generate unique 12-digit numeric SKU with valid Check Digit
  * 
  * @param PDO $db The database connection
+ * @param array $extra_excludes Additional SKUs to exclude (e.g., from current batch)
  * @return string The generated SKU
  */
-function generateSKU($db) {
-    // Generate 11 digits: Timestamp (10 digits) + 1 Random Digit
-    $timestamp = time(); // 10 digits
-    $random = rand(0, 9); // 1 digit
-    $code11 = $timestamp . $random;
+function generateSKU($db, $extra_excludes = []) {
+    // Increase entropy: Use last 5 digits of timestamp + 6 random digits
+    // This provides 1,000,000 possible SKUs per 100,000 seconds (approx 27.7 hours)
+    $timestamp_part = substr(time(), -5); 
+    $random_part = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+    $code11 = $timestamp_part . $random_part;
     
-    // Calculate UPC Check Digit
+    // Calculate UPC/EAN-13 Check Digit
     $sum = 0;
     for ($i = 0; $i < 11; $i++) {
         if (($i + 1) % 2 != 0) { // Odd position (1-based index)
@@ -77,15 +79,20 @@ function generateSKU($db) {
     
     $sku = $code11 . $checkDigit;
     
+    // Check if in current batch list
+    if (in_array($sku, $extra_excludes)) {
+        return generateSKU($db, $extra_excludes);
+    }
+
     // Check uniqueness in products table
     $stmt = $db->prepare("SELECT id FROM products WHERE sku = ?");
     $stmt->execute([$sku]);
-    if ($stmt->fetch()) return generateSKU($db);
+    if ($stmt->fetch()) return generateSKU($db, $extra_excludes);
     
     // Check uniqueness in variants table
     $stmt_v = $db->prepare("SELECT id FROM product_variants WHERE sku = ?");
     $stmt_v->execute([$sku]);
-    if ($stmt_v->fetch()) return generateSKU($db);
+    if ($stmt_v->fetch()) return generateSKU($db, $extra_excludes);
     
     return $sku;
 }

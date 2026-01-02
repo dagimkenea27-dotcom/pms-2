@@ -102,6 +102,7 @@ if ($_POST) {
     // Process Variants Data
     $submitted_variants = [];
     $total_qty = 0;
+    $used_skus = [$sku];
     
     if ($has_variants) {
          if (isset($_POST['variant_size']) && is_array($_POST['variant_size'])) {
@@ -118,8 +119,9 @@ if ($_POST) {
                 }
                 
                 if (empty($v_sku)) {
-                     $v_sku = generateSKU($db);
+                     $v_sku = generateSKU($db, $used_skus);
                 }
+                $used_skus[] = $v_sku;
 
                 // Check duplicate SKU among variants in this submit
                 foreach ($submitted_variants as $existing_v) {
@@ -693,9 +695,9 @@ document.addEventListener('DOMContentLoaded', function() {
 document.getElementById('generateSKU').addEventListener('click', function() {
     if (confirm('Are you sure you want to generate a new SKU? This will replace the existing one.')) {
         const skuInput = document.getElementById('sku');
-        // Generate 11 digits: Timestamp (10) + Random (1)
-        const timestamp = Math.floor(Date.now() / 1000); 
-        const random = Math.floor(Math.random() * 10); // 0-9
+        // Generate 11 digits: Last 5 of Timestamp + 6 Random
+        const timestamp = Math.floor(Date.now() / 1000).toString().slice(-5); 
+        const random = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
         const code11 = timestamp + '' + random;
         
         // Calculate Check Digit
