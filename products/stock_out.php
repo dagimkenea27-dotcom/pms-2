@@ -86,15 +86,16 @@ if ($_POST) {
             
             // Log movement
             $movement_query = "INSERT INTO stock_movements 
-                              (product_id, variant_id, movement_type, quantity, reason, reference) 
-                              VALUES (:pid, :vid, 'OUT', :qty, :reason, :ref)";
+                              (product_id, variant_id, movement_type, quantity, reason, reference, user_id) 
+                              VALUES (:pid, :vid, 'OUT', :qty, :reason, :ref, :uid)";
             $m_stmt = $db->prepare($movement_query);
             $m_stmt->execute([
                 ':pid' => $product_id,
                 ':vid' => $variant_id,
                 ':qty' => $quantity,
                 ':reason' => $reason,
-                ':ref' => $reference
+                ':ref' => $reference,
+                ':uid' => Auth::getCurrentUser()['id']
             ]);
             
             $log_desc = "Removed $quantity from product ID $product_id (Variant: {$variant['size']} {$variant['color']}). Reason: $reason";
@@ -114,14 +115,15 @@ if ($_POST) {
             
             // Log stock movement
             $movement_query = "INSERT INTO stock_movements 
-                              (product_id, movement_type, quantity, reason, reference) 
-                              VALUES (:product_id, 'OUT', :quantity, :reason, :reference)";
+                              (product_id, movement_type, quantity, reason, reference, user_id) 
+                              VALUES (:product_id, 'OUT', :quantity, :reason, :reference, :user_id)";
             $movement_stmt = $db->prepare($movement_query);
             $movement_stmt->execute([
                 ':product_id' => $product_id,
                 ':quantity' => $quantity,
                 ':reason' => $reason,
-                ':reference' => $reference
+                ':reference' => $reference,
+                ':user_id' => Auth::getCurrentUser()['id']
             ]);
             
             $log_desc = "Removed $quantity from product ID $product_id. Reason: $reason";

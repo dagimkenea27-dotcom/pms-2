@@ -58,9 +58,13 @@ $query = "
     SELECT 
         sm.*,
         p.name as product_name,
-        p.sku
+        p.sku,
+        u.username,
+        u.first_name,
+        u.last_name
     FROM stock_movements sm
     LEFT JOIN products p ON sm.product_id = p.id
+    LEFT JOIN users u ON sm.user_id = u.id
     $where_sql
     ORDER BY sm.created_at DESC
     LIMIT :from_record_num, :records_per_page";
@@ -144,6 +148,7 @@ require_once "../includes/header.php";
                         <th>Quantity</th>
                         <th>Reason</th>
                         <th>Reference</th>
+                        <th>User</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -167,6 +172,17 @@ require_once "../includes/header.php";
                             </td>
                             <td><?php echo htmlspecialchars($row['reason']); ?></td>
                             <td><?php echo htmlspecialchars($row['reference'] ?? '-'); ?></td>
+                            <td>
+                                <small>
+                                <?php 
+                                if (!empty($row['first_name'])) {
+                                    echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']);
+                                } else {
+                                    echo htmlspecialchars($row['username'] ?? 'System');
+                                }
+                                ?>
+                                </small>
+                            </td>
                         </tr>
                         <?php endforeach; ?>
                     <?php else: ?>

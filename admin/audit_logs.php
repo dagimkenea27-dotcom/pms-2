@@ -49,7 +49,14 @@ require_once "../includes/header.php";
                         <td><?php echo $row['id']; ?></td>
                         <td>
                             <i class="fas fa-user-circle text-secondary"></i> 
-                            <?php echo htmlspecialchars($row['username'] ?? 'Unknown'); ?>
+                            <?php 
+                            if (!empty($row['first_name'])) {
+                                echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']);
+                                echo ' <small class="text-muted">(@' . htmlspecialchars($row['username']) . ')</small>';
+                            } else {
+                                echo htmlspecialchars($row['username'] ?? 'Unknown');
+                            }
+                            ?>
                         </td>
                         <td>
                             <?php 

@@ -46,14 +46,15 @@ if ($_POST) {
         if ($update_stmt->execute()) {
             // Log the stock movement
             $movement_query = "INSERT INTO stock_movements 
-                              (product_id, movement_type, quantity, reason, reference, supplier_id) 
-                              VALUES (:product_id, 'IN', :quantity, :reason, :reference, :supplier_id)";
+                              (product_id, movement_type, quantity, reason, reference, supplier_id, user_id) 
+                              VALUES (:product_id, 'IN', :quantity, :reason, :reference, :supplier_id, :user_id)";
             $movement_stmt = $db->prepare($movement_query);
             $movement_stmt->bindParam(":product_id", $product_id);
             $movement_stmt->bindParam(":quantity", $quantity);
             $movement_stmt->bindParam(":reason", $reason);
             $movement_stmt->bindParam(":reference", $reference);
             $movement_stmt->bindParam(":supplier_id", $supplier_id);
+            $movement_stmt->bindValue(":user_id", Auth::getCurrentUser()['id']);
             
             if ($movement_stmt->execute()) {
                 $message = "Stock added successfully!";

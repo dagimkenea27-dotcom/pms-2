@@ -95,8 +95,8 @@ if ($_POST) {
 
         // Log movement
         $movement_query = "INSERT INTO stock_movements 
-                          (product_id, variant_id, movement_type, quantity, reason, reference) 
-                          VALUES (:product_id, :variant_id, :movement_type, :quantity, :reason, :reference)";
+                          (product_id, variant_id, movement_type, quantity, reason, reference, user_id) 
+                          VALUES (:product_id, :variant_id, :movement_type, :quantity, :reason, :reference, :user_id)";
         $movement_stmt = $db->prepare($movement_query);
         $movement_stmt->execute([
             ':product_id' => $product['id'],
@@ -104,7 +104,8 @@ if ($_POST) {
             ':movement_type' => $movement_type,
             ':quantity' => $quantity,
             ':reason' => $reason,
-            ':reference' => $reference
+            ':reference' => $reference,
+            ':user_id' => Auth::getCurrentUser()['id']
         ]);
 
         $db->commit();
@@ -132,9 +133,10 @@ if ($_POST) {
 }
 
 // Get stock movement history
-$movement_query = "SELECT sm.*, pv.sku as variant_sku, pv.size, pv.color 
+$movement_query = "SELECT sm.*, pv.sku as variant_sku, pv.size, pv.color, u.username, u.first_name, u.last_name
                   FROM stock_movements sm
                   LEFT JOIN product_variants pv ON sm.variant_id = pv.id
+                  LEFT JOIN users u ON sm.user_id = u.id
                   WHERE sm.product_id = :product_id 
                   ORDER BY sm.created_at DESC 
                   LIMIT 20";
@@ -293,6 +295,7 @@ require_once "../includes/header.php";
                                     <th>Quantity</th>
                                     <th>Reason</th>
                                     <th>Reference</th>
+                                    <th>User</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -316,7 +319,18 @@ require_once "../includes/header.php";
                                     </td>
                                     <td><?php echo $movement['quantity']; ?></td>
                                     <td><?php echo htmlspecialchars($movement['reason']); ?></td>
-                                    <td><?php echo htmlspecialchars($movement['reference']); ?></td>
+                                    <td><?php echo htmlspecialchars($movement['reference'] ?? '-'); ?></td>
+                                    <td>
+                                        <small>
+                                        <?php 
+                                        if (!empty($movement['first_name'])) {
+                                            echo htmlspecialchars($movement['first_name'] . ' ' . $movement['last_name']);
+                                        } else {
+                                            echo htmlspecialchars($movement['username'] ?? 'System');
+                                        }
+                                        ?>
+                                        </small>
+                                    </td>
                                 </tr>
                                 <?php endforeach; ?>
                             </tbody>

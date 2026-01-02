@@ -31,7 +31,7 @@ class AuditLog {
 
     // Read logs (for admin view)
     public function read($limit = 100) {
-        $query = "SELECT a.*, u.username 
+        $query = "SELECT a.*, u.username, u.first_name, u.last_name
                   FROM " . $this->table_name . " a
                   LEFT JOIN users u ON a.user_id = u.id
                   ORDER BY a.created_at DESC
