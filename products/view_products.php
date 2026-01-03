@@ -163,8 +163,11 @@ if (isset($_SESSION['message'])) {
         <button type="button" class="d-none d-sm-inline-block btn btn-sm btn-info shadow-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal">
             <i class="fas fa-upload fa-sm text-white-50"></i> <?php echo __('import_products'); ?>
         </button>
+        <a href="stock_audit.php" class="d-none d-sm-inline-block btn btn-sm btn-outline-info shadow-sm me-2">
+            <i class="fas fa-history fa-sm text-info-50"></i> Audit Log
+        </a>
         <a href="add_product.php" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-            <i class="fas fa-plus fa-sm text-white-50"></i> <?php echo __('add_product'); ?>
+            <i class="fas fa-plus fa-sm text-white-50"></i> <?php echo __('add_new_product'); ?>
         </a>
         <?php endif; ?>
     </div>
@@ -377,6 +380,9 @@ if (isset($_SESSION['message'])) {
                                         </a>
                                         <a href="?delete_id=<?php echo $product['id']; ?>" class="btn btn-danger btn-sm" title="Delete" onclick="return confirmDelete('<?php echo addslashes($product['name']); ?>')">
                                             <i class="fas fa-trash"></i>
+                                        </a>
+                                        <a href="update_stock.php?id=<?php echo $product['id']; ?>" class="btn btn-success btn-sm" title="Update Stock">
+                                            <i class="fas fa-boxes"></i>
                                         </a>
                                         <?php endif; ?>
                                     </div>

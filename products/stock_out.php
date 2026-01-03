@@ -106,6 +106,8 @@ if ($_POST) {
                 ':did' => $driver_id
             ]);
             
+            logStockChange($db, $product_id, $variant_id, Auth::getCurrentUser()['id'], 'out', $variant['quantity'], $variant['quantity'] - $quantity, "Stock Out: $reason ($reference)");
+            
             $log_desc = "Removed $quantity from product ID $product_id (Variant: {$variant['size']} {$variant['color']}). Reason: $reason";
 
         } else {
@@ -136,6 +138,8 @@ if ($_POST) {
                 ':driver_id' => $driver_id
             ]);
             
+            logStockChange($db, $product_id, null, Auth::getCurrentUser()['id'], 'out', $product['quantity'], $product['quantity'] - $quantity, "Stock Out: $reason ($reference)");
+            
             $log_desc = "Removed $quantity from product ID $product_id. Reason: $reason";
         }
 
@@ -153,17 +157,17 @@ if ($_POST) {
         $message = "Stock removed successfully!";
         $message_type = "success";
         
-        // Log to AuditLog
         if (Auth::isLoggedIn()) {
             $user = Auth::getCurrentUser();
             $audit->log($user['id'], "STOCK_OUT", $log_desc);
         }
         
-        // Refresh product list
-        $stmt = $db->prepare($query);
-        $stmt->execute();
-        $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
+        // PRG Pattern
+        $_SESSION['message'] = $message;
+        $_SESSION['message_type'] = $message_type;
+        header("Location: stock_out.php");
+        exit();
+
     } catch (Exception $e) {
         if ($db->inTransaction()) {
             $db->rollBack();
@@ -183,7 +187,14 @@ require_once "../includes/header.php";
     </a>
 </div>
 
-<?php if ($message): ?>
+<?php 
+if (isset($_SESSION['message'])) {
+    $message = $_SESSION['message'];
+    $message_type = $_SESSION['message_type'];
+    unset($_SESSION['message']);
+    unset($_SESSION['message_type']);
+}
+if ($message): ?>
 <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
     <?php echo $message; ?>
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>

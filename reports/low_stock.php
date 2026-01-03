@@ -74,6 +74,7 @@ require_once "../includes/header.php";
                 <table class="table table-bordered table-hover" width="100%" cellspacing="0">
                     <thead>
                         <tr>
+                            <th style="width: 50px;">#</th>
                             <th>SKU</th>
                             <th>Product Name</th>
                             <th>Current Stock</th>
@@ -84,11 +85,12 @@ require_once "../includes/header.php";
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($products as $product): 
+                        <?php foreach ($products as $index => $product): 
                             $status_class = $product['quantity'] == 0 ? 'bg-danger' : 'bg-warning text-dark';
                             $status_text = $product['quantity'] == 0 ? 'Out of Stock' : 'Low Stock';
                         ?>
                         <tr>
+                            <td><?php echo $offset + $index + 1; ?></td>
                             <td><strong><?php echo htmlspecialchars($product['sku']); ?></strong></td>
                             <td><?php echo htmlspecialchars($product['name']); ?></td>
                             <td>

@@ -17,6 +17,12 @@ Auth::startSession();
     <script src="<?php echo BASE_URL; ?>assets/js/alerts.js"></script>
     <link href="<?php echo BASE_URL; ?>assets/css/custom.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="manifest" href="<?php echo BASE_URL; ?>manifest.json">
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('<?php echo BASE_URL; ?>sw.js');
+        }
+    </script>
 </head>
 <body id="page-top">
     <!-- Page Wrapper -->
@@ -100,6 +106,9 @@ Auth::startSession();
                     <div class="py-2 collapse-inner rounded">
                         <a class="collapse-item" href="<?php echo BASE_URL; ?>products/stock_in.php"><?php echo __('stock_in'); ?></a>
                         <a class="collapse-item" href="<?php echo BASE_URL; ?>products/stock_out.php"><?php echo __('stock_out'); ?></a>
+                        <a class="collapse-item fw-bold text-primary" href="<?php echo BASE_URL; ?>products/purchase_orders.php">
+                            <i class="fas fa-file-invoice fa-sm"></i> Purchase Orders
+                        </a>
                     </div>
                 </div>
             </li>

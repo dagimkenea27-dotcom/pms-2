@@ -423,8 +423,8 @@ body.sidebar-toggled .topbar {
     background-color: var(--bg-nav);
     background-clip: border-box;
     border: 1px solid var(--border-color);
-    border-radius: .35rem;
-    box-shadow: var(--card-shadow);
+    border-radius: 10px;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
     margin-bottom: 1.5rem;
     transition: transform 0.2s ease-in-out;
 }
@@ -434,13 +434,16 @@ body.sidebar-toggled .topbar {
 }
 
 .card-header {
-    padding: .75rem 1.25rem;
+    padding: 1rem 1.5rem;
     margin-bottom: 0;
     background-color: var(--bg-body);
-    border-bottom: 1px solid var(--border-color);
-    color: var(--text-main);
-    font-weight: 700;
+    border-bottom: 2px solid var(--border-color);
     color: var(--primary-color);
+    font-weight: 700;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .border-left-primary {
@@ -463,11 +466,66 @@ body.sidebar-toggled .topbar {
     border-left: .25rem solid var(--danger-color) !important;
 }
 
-.text-xs {
-    font-size: .7rem;
+/* Unified Table Styles */
+.table {
+    margin-bottom: 0;
+    color: var(--text-main);
 }
 
-/* Text Utility Overrides for Theming */
+.table th {
+    background-color: #f8f9fc;
+    color: var(--secondary-color);
+    font-weight: 700;
+    border-top: none;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+}
+
+[data-theme="dark"] .table th {
+    background-color: #1e293b;
+    color: #e2e8f0;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.table-bordered {
+    border: 1px solid var(--border-color);
+}
+
+.table-bordered th,
+.table-bordered td {
+    border: 1px solid var(--border-color);
+}
+
+/* Unified Form Styles */
+.form-control,
+.form-select {
+    border-radius: 0.35rem;
+    border: 1px solid #d1d3e2;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    color: #6e707e;
+    transition: box-shadow 0.2s;
+}
+
+.form-control:focus,
+.form-select:focus {
+    color: #495057;
+    background-color: #fff;
+    border-color: #bac8f3;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(78, 115, 223, 0.25);
+}
+
+.form-label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--primary-color);
+}
+
 .text-gray-300 {
     color: var(--text-muted) !important;
 }

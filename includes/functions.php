@@ -96,4 +96,13 @@ function generateSKU($db, $extra_excludes = []) {
     
     return $sku;
 }
-
+/**
+ * Log a stock change event for audit trail
+ */
+function logStockChange($db, $product_id, $variant_id, $user_id, $change_type, $qty_before, $qty_after, $notes = '') {
+    $qty_change = $qty_after - $qty_before;
+    $query = "INSERT INTO stock_history (product_id, variant_id, user_id, change_type, quantity_before, quantity_after, quantity_change, notes) 
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    $stmt = $db->prepare($query);
+    return $stmt->execute([$product_id, $variant_id, $user_id, $change_type, $qty_before, $qty_after, $qty_change, $notes]);
+}

@@ -10,7 +10,7 @@ $db = $database->getConnection();
 $audit = new AuditLog($db);
 
 // Get all products for selection
-$query = "SELECT id, sku, name, quantity FROM products ORDER BY name ASC";
+$query = "SELECT id, sku, name, quantity, has_variants FROM products ORDER BY name ASC";
 $stmt = $db->prepare($query);
 $stmt->execute();
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -20,6 +20,20 @@ $suppliers_query = "SELECT id, name FROM suppliers ORDER BY name ASC";
 $suppliers_stmt = $db->prepare($suppliers_query);
 $suppliers_stmt->execute();
 $suppliers = $suppliers_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Handle AJAX request for variants (Added for consistency)
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'get_variants' && isset($_GET['product_id'])) {
+    header('Content-Type: application/json');
+    try {
+        $stmt = $db->prepare("SELECT id, size, color, sku, quantity FROM product_variants WHERE product_id = ?");
+        $stmt->execute([$_GET['product_id']]);
+        $variants = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['success' => true, 'variants' => $variants]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+    exit;
+}
 
 // Get all drivers
 $drivers_query = "SELECT id, full_name FROM drivers WHERE status = 'active' ORDER BY full_name ASC";
@@ -39,51 +53,62 @@ if ($_POST) {
         $reference = $_POST['reference'];
         $supplier_id = !empty($_POST['supplier_id']) ? $_POST['supplier_id'] : null;
         
+        $variant_id = !empty($_POST['variant_id']) ? $_POST['variant_id'] : null;
+        
         if ($quantity <= 0) {
             throw new Exception("Quantity must be greater than zero.");
         }
         
-        // Update product quantity
-        $update_query = "UPDATE products SET quantity = quantity + :quantity WHERE id = :id";
-        $update_stmt = $db->prepare($update_query);
-        $update_stmt->bindParam(":quantity", $quantity);
-        $update_stmt->bindParam(":id", $product_id);
-        
-        if ($update_stmt->execute()) {
-            // Log the stock movement
-            $driver_id = !empty($_POST['driver_id']) ? $_POST['driver_id'] : null;
-            $movement_query = "INSERT INTO stock_movements 
-                              (product_id, movement_type, quantity, reason, reference, supplier_id, user_id, driver_id) 
-                              VALUES (:product_id, 'IN', :quantity, :reason, :reference, :supplier_id, :user_id, :driver_id)";
-            $movement_stmt = $db->prepare($movement_query);
-            $movement_stmt->bindParam(":product_id", $product_id);
-            $movement_stmt->bindParam(":quantity", $quantity);
-            $movement_stmt->bindParam(":reason", $reason);
-            $movement_stmt->bindParam(":reference", $reference);
-            $movement_stmt->bindParam(":supplier_id", $supplier_id);
-            $movement_stmt->bindValue(":user_id", Auth::getCurrentUser()['id']);
-            $movement_stmt->bindParam(":driver_id", $driver_id);
+        $db->beginTransaction();
+
+        // Get current quantity for audit
+        $check_stmt = $db->prepare("SELECT quantity, has_variants FROM products WHERE id = ?");
+        $check_stmt->execute([$product_id]);
+        $p_data = $check_stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($p_data['has_variants']) {
+            if (empty($variant_id)) throw new Exception("Please select a variant.");
             
-            if ($movement_stmt->execute()) {
-                $message = "Stock added successfully!";
-                $message_type = "success";
-                
-                // Log to AuditLog
-                if (Auth::isLoggedIn()) {
-                    $user = Auth::getCurrentUser();
-                    $audit->log($user['id'], "STOCK_IN", "Added $quantity to product ID $product_id. Reason: $reason");
-                }
-                
-                // Refresh product list
-                $stmt = $db->prepare($query);
-                $stmt->execute();
-                $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            } else {
-                throw new Exception("Failed to log stock movement.");
-            }
+            $v_stmt = $db->prepare("SELECT quantity FROM product_variants WHERE id = ?");
+            $v_stmt->execute([$variant_id]);
+            $v_qty_before = $v_stmt->fetchColumn();
+
+            $db->prepare("UPDATE product_variants SET quantity = quantity + ? WHERE id = ?")->execute([$quantity, $variant_id]);
+            $db->prepare("UPDATE products SET quantity = quantity + ? WHERE id = ?")->execute([$quantity, $product_id]);
+            
+            logStockChange($db, $product_id, $variant_id, Auth::getCurrentUser()['id'], 'in', $v_qty_before, $v_qty_before + $quantity, "Stock In: $reason ($reference)");
         } else {
-            throw new Exception("Failed to update product quantity.");
+            $db->prepare("UPDATE products SET quantity = quantity + ? WHERE id = ?")->execute([$quantity, $product_id]);
+            logStockChange($db, $product_id, null, Auth::getCurrentUser()['id'], 'in', $p_data['quantity'], $p_data['quantity'] + $quantity, "Stock In: $reason ($reference)");
         }
+        
+        // Log the legacy stock movement
+        $driver_id = !empty($_POST['driver_id']) ? $_POST['driver_id'] : null;
+        $movement_query = "INSERT INTO stock_movements 
+                          (product_id, variant_id, movement_type, quantity, reason, reference, supplier_id, user_id, driver_id) 
+                          VALUES (:product_id, :variant_id, 'IN', :quantity, :reason, :reference, :supplier_id, :user_id, :driver_id)";
+        $movement_stmt = $db->prepare($movement_query);
+        $movement_stmt->execute([
+            ':product_id' => $product_id,
+            ':variant_id' => $variant_id,
+            ':quantity' => $quantity,
+            ':reason' => $reason,
+            ':reference' => $reference,
+            ':supplier_id' => $supplier_id,
+            ':user_id' => Auth::getCurrentUser()['id'],
+            ':driver_id' => $driver_id
+        ]);
+        
+        $db->commit();
+        $message = "Stock added successfully!";
+        $message_type = "success";
+        
+        // PRG Pattern
+        $_SESSION['message'] = $message;
+        $_SESSION['message_type'] = $message_type;
+        header("Location: stock_in.php");
+        exit();
+
     } catch (Exception $e) {
         $message = "Error: " . $e->getMessage();
         $message_type = "danger";
@@ -100,7 +125,14 @@ require_once "../includes/header.php";
     </a>
 </div>
 
-<?php if ($message): ?>
+<?php 
+if (isset($_SESSION['message'])) {
+    $message = $_SESSION['message'];
+    $message_type = $_SESSION['message_type'];
+    unset($_SESSION['message']);
+    unset($_SESSION['message_type']);
+}
+if ($message): ?>
 <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
     <?php echo $message; ?>
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -122,10 +154,11 @@ require_once "../includes/header.php";
                                 <option value=""><?php echo __('choose_product'); ?></option>
                                 <?php foreach ($products as $product): ?>
                                 <option value="<?php echo $product['id']; ?>" 
+                                        data-has-variants="<?php echo $product['has_variants']; ?>"
                                         data-search="<?php echo htmlspecialchars(strtolower($product['sku'] . ' ' . $product['name'])); ?>">
                                     <?php echo htmlspecialchars($product['sku']); ?> - 
                                     <?php echo htmlspecialchars($product['name']); ?> 
-                                    (<?php echo __('current_qty'); ?>: <?php echo $product['quantity']; ?>)
+                                    (Total: <?php echo $product['quantity']; ?>)
                                 </option>
                                 <?php endforeach; ?>
                             </select>
@@ -133,8 +166,15 @@ require_once "../includes/header.php";
                                 <input type="text" class="form-control" id="product_search" placeholder="<?php echo __('search_products'); ?>" autocomplete="off">
                                 <div id="product_dropdown" class="dropdown-menu w-100" style="max-height: 200px; overflow-y: auto; position: absolute; z-index: 1000; display: none;"></div>
                             </div>
-                            <input type="hidden" id="selected_product_id" name="product_id" required>
+                             <input type="hidden" id="selected_product_id" name="product_id" required>
                         </div>
+                    </div>
+                    
+                    <div class="mb-3" id="variant_container" style="display:none;">
+                        <label for="variant_id" class="form-label">Select Variant *</label>
+                        <select class="form-select" id="variant_id" name="variant_id">
+                            <option value="">Choose a variant</option>
+                        </select>
                     </div>
                     
                     <div class="mb-3">
@@ -234,7 +274,8 @@ require_once "../includes/header.php";
         options.push({
             value: option.value,
             text: option.text,
-            search: option.getAttribute('data-search')
+            search: option.getAttribute('data-search'),
+            hasVariants: option.getAttribute('data-has-variants')
         });
     }
     
@@ -276,8 +317,33 @@ require_once "../includes/header.php";
                     searchInput.value = option.text;
                     hiddenInput.value = option.value;
                     dropdown.style.display = 'none';
+
+                    const hasVariants = option.hasVariants == '1';
+                    const variantContainer = document.getElementById('variant_container');
+                    const variantSelect = document.getElementById('variant_id');
                     
-                    // Dispatch change event for form validation
+                    variantSelect.innerHTML = '<option value="">Choose a variant</option>';
+                    
+                    if (hasVariants && option.value) {
+                        variantContainer.style.display = 'block';
+                        variantSelect.setAttribute('required', 'required');
+                        fetch(`stock_in.php?ajax=get_variants&product_id=${option.value}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    data.variants.forEach(v => {
+                                        const variantOption = document.createElement('option');
+                                        variantOption.value = v.id;
+                                        variantOption.textContent = `${v.size} ${v.color} (Qty: ${v.quantity})`;
+                                        variantSelect.appendChild(variantOption);
+                                    });
+                                }
+                            });
+                    } else {
+                        variantContainer.style.display = 'none';
+                        variantSelect.removeAttribute('required');
+                    }
+                    
                     const event = new Event('change', { bubbles: true });
                     hiddenInput.dispatchEvent(event);
                 });

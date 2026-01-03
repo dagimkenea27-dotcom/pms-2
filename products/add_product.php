@@ -83,6 +83,8 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                     $v_color = trim($_POST['variant_color'][$i]);
                     $v_qty = intval($_POST['variant_qty'][$i]);
                     $v_price = floatval($_POST['variant_price'][$i]);
+                    $v_cost = floatval($_POST['variant_cost'][$i] ?? 0);
+                    $v_location = trim($_POST['variant_location'][$i] ?? '');
                     $v_sku = trim($_POST['variant_sku'][$i]);
 
                     if (empty($v_size) && empty($v_color)) {
@@ -119,6 +121,8 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                         'color' => $v_color,
                         'qty' => $v_qty,
                         'price' => $v_price > 0 ? $v_price : null,
+                        'cost' => $v_cost > 0 ? $v_cost : null,
+                        'location' => $v_location,
                         'sku' => $v_sku
                     ];
                 }
@@ -233,7 +237,7 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                     $product_id = $db->lastInsertId();
 
                     if ($has_variants) {
-                        $v_stmt = $db->prepare("INSERT INTO product_variants (product_id, sku, size, color, quantity, price, min_stock) VALUES (:pid, :sku, :size, :color, :qty, :price, :min_stock)");
+                        $v_stmt = $db->prepare("INSERT INTO product_variants (product_id, sku, size, color, quantity, price, cost_price, location, min_stock) VALUES (:pid, :sku, :size, :color, :qty, :price, :cost_price, :location, :min_stock)");
                         foreach ($variants as $v) {
                             $v_stmt->execute([
                                 ':pid' => $product_id,
@@ -241,12 +245,17 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                                 ':size' => $v['size'],
                                 ':color' => $v['color'],
                                 ':qty' => $v['qty'],
-                                ':price' => $v['price'], // Can be null
-                                ':min_stock' => $min_stock // default to product min_stock
+                                ':price' => $v['price'],
+                                ':cost_price' => $v['cost'],
+                                ':location' => $v['location'],
+                                ':min_stock' => $min_stock
                             ]);
                             $variant_id = $db->lastInsertId();
 
-                            // Log stock movement for variant
+                            // Log Audit Trail
+                            logStockChange($db, $product_id, $variant_id, Auth::getCurrentUser()['id'], 'in', 0, $v['qty'], 'Initial stock');
+
+                            // Log legacy movement for backward compatibility
                             $movement_query = "INSERT INTO stock_movements (product_id, variant_id, movement_type, quantity, reason, supplier_id) 
                                               VALUES (:product_id, :variant_id, 'IN', :quantity, 'Initial stock', :supplier_id)";
                             $m_stmt = $db->prepare($movement_query);
@@ -258,7 +267,10 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                             ]);
                         }
                     } else {
-                        // Log the initial stock movement for simple product
+                        // Log Audit Trail
+                        logStockChange($db, $product_id, null, Auth::getCurrentUser()['id'], 'in', 0, $quantity, 'Initial stock');
+
+                        // Log legacy movement
                         $movement_query = "INSERT INTO stock_movements (product_id, movement_type, quantity, reason, supplier_id) 
                                           VALUES (:product_id, 'IN', :quantity, 'Initial stock', :supplier_id)";
                         $movement_stmt = $db->prepare($movement_query);
@@ -453,7 +465,9 @@ require_once "../includes/header.php";
                                 <th>Color</th>
                                 <th>SKU</th>
                                 <th>Quantity</th>
+                                <th>Cost ($)</th>
                                 <th>Price ($)</th>
+                                <th>Location</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -463,7 +477,9 @@ require_once "../includes/header.php";
                                 <td><input type="text" class="form-control" name="variant_color[]" placeholder="e.g., Red"></td>
                                 <td><input type="text" class="form-control variant-sku" name="variant_sku[]" placeholder="Loading SKU..."></td>
                                 <td><input type="number" class="form-control" name="variant_qty[]" value="0" min="0"></td>
+                                <td><input type="number" class="form-control" name="variant_cost[]" step="0.01" placeholder="Optional"></td>
                                 <td><input type="number" class="form-control" name="variant_price[]" step="0.01" placeholder="Same as main"></td>
+                                <td><input type="text" class="form-control" name="variant_location[]" placeholder="e.g. Bin 1"></td>
                                 <td><button type="button" class="btn btn-danger remove-variant"><i class="fas fa-trash"></i></button></td>
                             </tr>
                         </tbody>
@@ -517,7 +533,9 @@ document.getElementById('addVariantRow').addEventListener('click', function() {
         <td><input type="text" class="form-control" name="variant_color[]" placeholder="e.g., Red"></td>
         <td><input type="text" class="form-control variant-sku" name="variant_sku[]" placeholder="Loading SKU..."></td>
         <td><input type="number" class="form-control" name="variant_qty[]" value="0" min="0"></td>
+        <td><input type="number" class="form-control" name="variant_cost[]" step="0.01" placeholder="Optional"></td>
         <td><input type="number" class="form-control" name="variant_price[]" step="0.01" placeholder="Same as main"></td>
+        <td><input type="text" class="form-control" name="variant_location[]" placeholder="e.g. Bin 1"></td>
         <td><button type="button" class="btn btn-danger remove-variant"><i class="fas fa-trash"></i></button></td>
     `;
     

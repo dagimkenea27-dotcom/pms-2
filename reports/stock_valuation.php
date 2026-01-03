@@ -163,6 +163,7 @@ require_once "../includes/header.php";
                 <table class="table table-striped table-hover" id="valuationTable">
                     <thead class="table-dark">
                         <tr>
+                            <th style="width: 50px;">#</th>
                             <th>Thumbnail</th>
                             <th>Product Name</th>
                             <th>Category</th>
@@ -175,8 +176,9 @@ require_once "../includes/header.php";
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($products as $product): ?>
+                        <?php foreach ($products as $index => $product): ?>
                         <tr>
+                            <td><?php echo $offset + $index + 1; ?></td>
                             <td>
                                 <?php if (!empty($product['image'])): ?>
                                     <img src="../<?php echo htmlspecialchars($product['image']); ?>" alt="Product Image" class="img-thumbnail" style="max-height: 50px;">
@@ -199,7 +201,7 @@ require_once "../includes/header.php";
                     </tbody>
                     <tfoot class="table-active">
                         <tr>
-                            <td colspan="6"><strong>Totals:</strong></td>
+                            <td colspan="7"><strong>Totals:</strong></td>
                             <td><strong>$<?php echo number_format($total_cost_value, 2); ?></strong></td>
                             <td><strong>$<?php echo number_format($total_retail_value, 2); ?></strong></td>
                             <td></td>

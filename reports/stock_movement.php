@@ -144,6 +144,7 @@ require_once "../includes/header.php";
             <table class="table table-striped table-hover">
                 <thead>
                     <tr>
+                        <th style="width: 50px;">#</th>
                         <th>Date</th>
                         <th>Product</th>
                         <th>Type</th>
@@ -156,8 +157,9 @@ require_once "../includes/header.php";
                 </thead>
                 <tbody>
                     <?php if (count($movements) > 0): ?>
-                        <?php foreach ($movements as $row): ?>
+                        <?php foreach ($movements as $index => $row): ?>
                         <tr>
+                            <td><?php echo $from_record_num + $index + 1; ?></td>
                             <td><?php echo date('M j, Y g:i A', strtotime($row['created_at'])); ?></td>
                             <td>
                                 <strong><?php echo htmlspecialchars($row['sku']); ?></strong><br>
@@ -195,7 +197,7 @@ require_once "../includes/header.php";
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="6" class="text-center py-4 text-muted">No movements found matching your criteria.</td>
+                            <td colspan="9" class="text-center py-4 text-muted">No movements found matching your criteria.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>

@@ -183,8 +183,11 @@ require_once "../includes/header.php";
                 <a href="update_stock.php?id=<?php echo $product['id']; ?>" class="btn btn-success w-100 mb-2">
                     <i class="fas fa-warehouse"></i> Update Stock
                 </a>
-                <a href="generate_barcode.php?id=<?php echo $product['id']; ?>" class="btn btn-info w-100">
+                <a href="generate_barcode.php?id=<?php echo $product['id']; ?>" class="btn btn-info w-100 mb-2">
                     <i class="fas fa-barcode"></i> Generate Barcode
+                </a>
+                <a href="stock_audit.php?product_id=<?php echo $product['id']; ?>" class="btn btn-outline-info w-100">
+                    <i class="fas fa-history"></i> View Audit Log
                 </a>
                 <a href="view_products.php" class="btn btn-secondary w-100 mt-3">
                     <i class="fas fa-arrow-left"></i> Back to Products

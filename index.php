@@ -11,7 +11,7 @@ $database = new Database();
 $db = $database->getConnection();
 
 // Get low stock count (products with quantity less than 10)
-$low_stock_query = "SELECT COUNT(*) as count FROM products WHERE quantity > 0 AND quantity < 10";
+$low_stock_query = "SELECT COUNT(*) as count FROM products WHERE quantity > 0 AND quantity <= min_stock";
 $low_stock_stmt = $db->prepare($low_stock_query);
 $low_stock_stmt->execute();
 $low_stock = $low_stock_stmt->fetch(PDO::FETCH_ASSOC);
@@ -36,9 +36,9 @@ $total_value = $total_value_stmt->fetch(PDO::FETCH_ASSOC);
 
 // Get recent stock movements
 $recent_movements_query = "
-    SELECT sm.*, p.name as product_name, p.sku 
+    SELECT DISTINCT sm.id, sm.created_at, sm.movement_type, sm.quantity, p.name as product_name 
     FROM stock_movements sm 
-    LEFT JOIN products p ON sm.product_id = p.id 
+    JOIN products p ON sm.product_id = p.id 
     ORDER BY sm.created_at DESC 
     LIMIT 10";
 $recent_movements_stmt = $db->prepare($recent_movements_query);

@@ -11,18 +11,22 @@ $db = $database->getConnection();
 $message = '';
 $error = '';
 
-// Get current preferences
-$query = "SELECT * FROM optimization_preferences WHERE user_id = :user_id LIMIT 1";
-$stmt = $db->prepare($query);
-$stmt->bindParam(':user_id', $currentUser['id']);
-$stmt->execute();
-$preferences = $stmt->fetch(PDO::FETCH_ASSOC);
+try {
+    // Get current preferences
+    $query = "SELECT * FROM optimization_preferences WHERE user_id = :user_id LIMIT 1";
+    $stmt = $db->prepare($query);
+    $stmt->bindParam(':user_id', $currentUser['id']);
+    $stmt->execute();
+    $preferences = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Get cost settings
-$query = "SELECT * FROM cost_settings ORDER BY created_at DESC LIMIT 1";
-$stmt = $db->prepare($query);
-$stmt->execute();
-$cost_settings = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Get cost settings
+    $query = "SELECT * FROM cost_settings ORDER BY created_at DESC LIMIT 1";
+    $stmt = $db->prepare($query);
+    $stmt->execute();
+    $cost_settings = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    die("Database Error: " . $e->getMessage());
+}
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

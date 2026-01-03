@@ -3,6 +3,7 @@
 require_once "../config/auth_check.php";
 require_once "../config/database.php";
 require_once "../config/auth.php";
+require_once "../includes/functions.php";
 
 $database = new Database();
 $db = $database->getConnection();
@@ -75,11 +76,13 @@ if ($_POST) {
                 // Update master product quantity
                 $db->prepare("UPDATE products SET quantity = quantity + ? WHERE id = ?")->execute([$quantity, $product['id']]);
                 $new_qty = $current_qty + $quantity;
+                logStockChange($db, $product['id'], $variant_id, Auth::getCurrentUser()['id'], 'in', $current_qty, $new_qty, "Movement: $reason ($reference)");
             } else {
                 $db->prepare("UPDATE product_variants SET quantity = quantity - ? WHERE id = ?")->execute([$quantity, $variant_id]);
                 // Update master product quantity
                 $db->prepare("UPDATE products SET quantity = quantity - ? WHERE id = ?")->execute([$quantity, $product['id']]);
                 $new_qty = $current_qty - $quantity;
+                logStockChange($db, $product['id'], $variant_id, Auth::getCurrentUser()['id'], 'out', $current_qty, $new_qty, "Movement: $reason ($reference)");
             }
 
         } else {
@@ -93,9 +96,11 @@ if ($_POST) {
             if ($movement_type == 'IN') {
                  $db->prepare("UPDATE products SET quantity = quantity + ? WHERE id = ?")->execute([$quantity, $product['id']]);
                  $new_qty = $current_qty + $quantity;
+                 logStockChange($db, $product['id'], null, Auth::getCurrentUser()['id'], 'in', $current_qty, $new_qty, "Movement: $reason ($reference)");
             } else {
                  $db->prepare("UPDATE products SET quantity = quantity - ? WHERE id = ?")->execute([$quantity, $product['id']]);
                  $new_qty = $current_qty - $quantity;
+                 logStockChange($db, $product['id'], null, Auth::getCurrentUser()['id'], 'out', $current_qty, $new_qty, "Movement: $reason ($reference)");
             }
         }
 
@@ -133,6 +138,12 @@ if ($_POST) {
             $variants = $v_stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
+        // PRG Pattern: Redirect to prevent duplicate submission on refresh
+        $_SESSION['message'] = $message;
+        $_SESSION['message_type'] = $message_type;
+        header("Location: update_stock.php?id=" . $product['id']);
+        exit();
+
     } catch (Exception $exception) {
         if ($db->inTransaction()) $db->rollBack();
         $message = "Error: " . $exception->getMessage();
@@ -164,7 +175,14 @@ require_once "../includes/header.php";
     </a>
 </div>
 
-<?php if ($message): ?>
+<?php 
+if (isset($_SESSION['message'])) {
+    $message = $_SESSION['message'];
+    $message_type = $_SESSION['message_type'];
+    unset($_SESSION['message']);
+    unset($_SESSION['message_type']);
+}
+if ($message): ?>
 <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
     <?php echo $message; ?>
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
