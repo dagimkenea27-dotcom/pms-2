@@ -39,7 +39,11 @@ $message = '';
 $message_type = '';
 
 // Handle form submission
-if ($_POST) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_POST['csrf_token']) || !Auth::validateCSRF($_POST['csrf_token'])) {
+        $message = "Security Error: Invalid Token";
+        $message_type = "danger";
+    } else {
     try {
         $product_id = $_POST['product_id'];
         $quantity = intval($_POST['quantity']);
@@ -175,6 +179,7 @@ if ($_POST) {
         $message = "Error: " . $e->getMessage();
         $message_type = "danger";
     }
+    }
 }
 
 require_once "../includes/header.php";
@@ -209,6 +214,7 @@ if ($message): ?>
             </div>
             <div class="card-body">
                 <form method="POST" action="">
+                    <input type="hidden" name="csrf_token" value="<?php echo Auth::generateCSRF(); ?>">
                     <div class="mb-3">
                         <label for="product_id" class="form-label">Select Product *</label>
                         <div class="position-relative">

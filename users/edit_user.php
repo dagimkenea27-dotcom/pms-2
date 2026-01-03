@@ -31,6 +31,10 @@ if (isset($_GET['id'])) {
 
 // Handle form submission
 if ($_POST) {
+    if (!isset($_POST['csrf_token']) || !Auth::validateCSRF($_POST['csrf_token'])) {
+        $message = "Security Error: Invalid Token";
+        $message_type = "danger";
+    } else {
     $user->username = $_POST['username'];
     $user->email = $_POST['email'];
     $user->first_name = $_POST['first_name'];
@@ -49,6 +53,7 @@ if ($_POST) {
     } else {
         $message = "Error updating user.";
         $message_type = "danger";
+    }
     }
 }
 
@@ -71,6 +76,7 @@ require_once "../includes/header.php";
         <div class="card">
             <div class="card-body">
                 <form method="POST" action="">
+                    <input type="hidden" name="csrf_token" value="<?php echo Auth::generateCSRF(); ?>">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">

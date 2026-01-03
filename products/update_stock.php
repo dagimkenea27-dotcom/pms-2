@@ -43,6 +43,10 @@ if (!$product) {
 
 // Handle form submission
 if ($_POST) {
+    if (!isset($_POST['csrf_token']) || !Auth::validateCSRF($_POST['csrf_token'])) {
+        $message = "Security Error: Invalid Token";
+        $message_type = "danger";
+    } else {
     try {
         $movement_type = $_POST['movement_type'];
         $quantity = intval($_POST['quantity']);
@@ -149,6 +153,7 @@ if ($_POST) {
         $message = "Error: " . $exception->getMessage();
         $message_type = "danger";
     }
+    }
 }
 
 // Get stock movement history
@@ -232,6 +237,7 @@ if ($message): ?>
             </div>
             <div class="card-body">
                 <form method="POST" action="">
+                    <input type="hidden" name="csrf_token" value="<?php echo Auth::generateCSRF(); ?>">
                     <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
                     
                     <div class="mb-3">

@@ -123,11 +123,11 @@ require_once "../includes/header.php";
             </div>
             <div class="col-md-2">
                 <label class="form-label">From Date</label>
-                <input type="date" name="date_from" class="form-control" value="<?php echo $_GET['date_from'] ?? ''; ?>">
+                <input type="date" name="date_from" class="form-control" value="<?php echo htmlspecialchars($_GET['date_from'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             </div>
             <div class="col-md-2">
                 <label class="form-label">To Date</label>
-                <input type="date" name="date_to" class="form-control" value="<?php echo $_GET['date_to'] ?? ''; ?>">
+                <input type="date" name="date_to" class="form-control" value="<?php echo htmlspecialchars($_GET['date_to'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             </div>
             <div class="col-md-3 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary me-2"><i class="fas fa-filter"></i> Filter</button>

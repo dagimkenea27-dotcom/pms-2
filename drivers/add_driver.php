@@ -14,6 +14,9 @@ $message = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_POST['csrf_token']) || !Auth::validateCSRF($_POST['csrf_token'])) {
+        $error = "Security Error: Invalid Token";
+    } else {
     try {
         $data = [
             'user_id' => $_POST['user_id'] ?? null,
@@ -41,6 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } catch (Exception $e) {
         $error = "Error: " . $e->getMessage();
     }
+    }
 }
 
 require_once '../includes/header.php';
@@ -66,6 +70,7 @@ require_once '../includes/header.php';
     </div>
     <div class="card-body">
         <form method="POST" action="">
+            <input type="hidden" name="csrf_token" value="<?php echo Auth::generateCSRF(); ?>">
             <div class="row g-3">
                 <!-- Basic Information -->
                 <div class="col-md-6">

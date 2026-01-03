@@ -52,7 +52,11 @@ if (!$product) {
 }
 
 // Handle form submission
-if ($_POST) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Validate CSRF Token
+    if (!isset($_POST['csrf_token']) || !Auth::validateCSRF($_POST['csrf_token'])) {
+        die("Security error: Invalid CSRF token. Please refresh the page and try again.");
+    }
     // Validate input
     $name = trim($_POST['name'] ?? '');
     $sku = trim($_POST['sku'] ?? '');
@@ -416,6 +420,7 @@ require_once "../includes/header.php";
     <!-- Main Content: Identity & Variants -->
     <div class="col-xl-8 col-lg-7">
         <form method="POST" action="" enctype="multipart/form-data" id="editProductForm">
+            <input type="hidden" name="csrf_token" value="<?php echo Auth::generateCSRF(); ?>">
             <!-- Product Identity Card -->
             <div class="card shadow-sm mb-3">
                 <div class="card-header bg-white py-3">
