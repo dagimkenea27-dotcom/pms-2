@@ -371,6 +371,11 @@ if (isset($_SESSION['message'])) {
                                 <td>$<?php echo number_format($product['price'], 2); ?></td>
                                 <td>
                                     <div class="btn-group" role="group">
+                                        <?php if (Auth::hasRole('manager')): ?>
+                                        <a href="update_stock.php?id=<?php echo $product['id']; ?>" class="btn btn-success btn-sm" title="Update Stock">
+                                            <i class="fas fa-boxes"></i>
+                                        </a>
+                                        <?php endif; ?>
                                         <a href="view_product.php?id=<?php echo $product['id']; ?>" class="btn btn-info btn-sm" title="View">
                                             <i class="fas fa-eye"></i>
                                         </a>
@@ -380,9 +385,6 @@ if (isset($_SESSION['message'])) {
                                         </a>
                                         <a href="?delete_id=<?php echo $product['id']; ?>" class="btn btn-danger btn-sm" title="Delete" onclick="return confirmDelete('<?php echo addslashes($product['name']); ?>')">
                                             <i class="fas fa-trash"></i>
-                                        </a>
-                                        <a href="update_stock.php?id=<?php echo $product['id']; ?>" class="btn btn-success btn-sm" title="Update Stock">
-                                            <i class="fas fa-boxes"></i>
                                         </a>
                                         <?php endif; ?>
                                     </div>
