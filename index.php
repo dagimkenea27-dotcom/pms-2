@@ -67,15 +67,16 @@ foreach ($daily_trends as $day) {
     $chart_data_out[] = $day['stock_out'];
 }
 
-// Get Top Selling Products (Last 30 Days)
+// Get Top Selling Products (Last 30 Days by Revenue)
 $top_products_query = "
-    SELECT p.name, SUM(sm.quantity) as total_sold
+    SELECT p.name, SUM(sm.quantity) as total_sold, SUM(sm.quantity * COALESCE(pv.price, p.price)) as total_revenue
     FROM stock_movements sm
     JOIN products p ON sm.product_id = p.id
+    LEFT JOIN product_variants pv ON sm.variant_id = pv.id
     WHERE sm.movement_type = 'OUT' 
     AND sm.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-    GROUP BY sm.product_id
-    ORDER BY total_sold DESC
+    GROUP BY sm.product_id, sm.variant_id
+    ORDER BY total_revenue DESC
     LIMIT 5";
 $top_products_stmt = $db->query($top_products_query);
 $top_products = $top_products_stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -93,6 +94,75 @@ $top_suppliers_query = "
     LIMIT 5";
 $top_suppliers_stmt = $db->query($top_suppliers_query);
 $top_suppliers = $top_suppliers_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get total sales value (Current Month) - Deducts Returns
+$sales_month_query = "
+    SELECT (
+        SELECT SUM(sm.quantity * COALESCE(pv.price, p.price))
+        FROM stock_movements sm
+        JOIN products p ON sm.product_id = p.id
+        LEFT JOIN product_variants pv ON sm.variant_id = pv.id
+        WHERE sm.movement_type = 'OUT' 
+        AND (sm.reason = 'Sale' OR sm.reason IS NULL OR sm.reason = '')
+        AND sm.created_at >= DATE_FORMAT(NOW() ,'%Y-%m-01')
+    ) - COALESCE((
+        SELECT SUM(sm.quantity * COALESCE(pv.price, p.price))
+        FROM stock_movements sm
+        JOIN products p ON sm.product_id = p.id
+        LEFT JOIN product_variants pv ON sm.variant_id = pv.id
+        WHERE sm.movement_type = 'IN' 
+        AND sm.reason = 'Return'
+        AND sm.created_at >= DATE_FORMAT(NOW() ,'%Y-%m-01')
+    ), 0) as net_sales";
+$sales_month_stmt = $db->prepare($sales_month_query);
+$sales_month_stmt->execute();
+$sales_month_val = $sales_month_stmt->fetch(PDO::FETCH_ASSOC)['net_sales'] ?? 0;
+
+// Get today's sales - Deducts Returns
+$sales_today_query = "
+    SELECT (
+        SELECT SUM(sm.quantity * COALESCE(pv.price, p.price))
+        FROM stock_movements sm
+        JOIN products p ON sm.product_id = p.id
+        LEFT JOIN product_variants pv ON sm.variant_id = pv.id
+        WHERE sm.movement_type = 'OUT' 
+        AND (sm.reason = 'Sale' OR sm.reason IS NULL OR sm.reason = '')
+        AND DATE(sm.created_at) = CURDATE()
+    ) - COALESCE((
+        SELECT SUM(sm.quantity * COALESCE(pv.price, p.price))
+        FROM stock_movements sm
+        JOIN products p ON sm.product_id = p.id
+        LEFT JOIN product_variants pv ON sm.variant_id = pv.id
+        WHERE sm.movement_type = 'IN' 
+        AND sm.reason = 'Return'
+        AND DATE(sm.created_at) = CURDATE()
+    ), 0) as net_sales";
+$sales_today_stmt = $db->prepare($sales_today_query);
+$sales_today_stmt->execute();
+$sales_today_val = $sales_today_stmt->fetch(PDO::FETCH_ASSOC)['net_sales'] ?? 0;
+
+// Get Gross Profit (Current Month) - Deducts Returns
+$profit_month_query = "
+    SELECT (
+        SELECT SUM(sm.quantity * (COALESCE(pv.price, p.price) - p.cost_price))
+        FROM stock_movements sm
+        JOIN products p ON sm.product_id = p.id
+        LEFT JOIN product_variants pv ON sm.variant_id = pv.id
+        WHERE sm.movement_type = 'OUT' 
+        AND (sm.reason = 'Sale' OR sm.reason IS NULL OR sm.reason = '')
+        AND sm.created_at >= DATE_FORMAT(NOW() ,'%Y-%m-01')
+    ) - COALESCE((
+        SELECT SUM(sm.quantity * (COALESCE(pv.price, p.price) - p.cost_price))
+        FROM stock_movements sm
+        JOIN products p ON sm.product_id = p.id
+        LEFT JOIN product_variants pv ON sm.variant_id = pv.id
+        WHERE sm.movement_type = 'IN' 
+        AND sm.reason = 'Return'
+        AND sm.created_at >= DATE_FORMAT(NOW() ,'%Y-%m-01')
+    ), 0) as net_profit";
+$profit_month_stmt = $db->prepare($profit_month_query);
+$profit_month_stmt->execute();
+$profit_month_val = $profit_month_stmt->fetch(PDO::FETCH_ASSOC)['net_profit'] ?? 0;
 
 // Get current user info
 $current_user = Auth::getCurrentUser();
@@ -247,19 +317,58 @@ require_once "includes/header.php";
         </a>
     </div>
 
+    <!-- Today's Sales Card -->
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card dashboard-card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            <?php echo __('today_sales'); ?></div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">$<?php echo number_format($sales_today_val, 2); ?></div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-calendar-day fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Sales Card -->
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card dashboard-card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            <?php echo __('monthly_sales'); ?> (<?php echo date('M'); ?>)</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">$<?php echo number_format($sales_month_val, 2); ?></div>
+                        <div class="text-xs mt-1 text-muted">
+                            <?php echo __('est_profit'); ?>: <span class="text-success font-weight-bold">$<?php echo number_format($profit_month_val, 2); ?></span>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Inventory Value Card -->
-    <div class="col-xl-3 col-md-6 mb-4">
+    <div class="col-xl-4 col-md-6 mb-4">
         <a href="reports/stock_valuation.php" class="text-decoration-none">
-            <div class="card dashboard-card border-left-success shadow h-100 py-2">
+            <div class="card dashboard-card border-left-secondary shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
                                 <?php echo __('inventory_value'); ?></div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">$<?php echo number_format($total_value['total_value'] ?? 0, 2); ?></div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                            <i class="fas fa-warehouse fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
@@ -284,14 +393,16 @@ require_once "includes/header.php";
                             <thead>
                                 <tr>
                                     <th><?php echo __('product'); ?></th>
-                                    <th class="text-end"><?php echo __('quantity'); ?></th>
+                                    <th class="text-center"><?php echo __('quantity'); ?></th>
+                                    <th class="text-end"><?php echo __('revenue'); ?></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($top_products as $prod): ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($prod['name']); ?></td>
-                                    <td class="text-end font-weight-bold"><?php echo number_format($prod['total_sold']); ?></td>
+                                    <td class="text-center"><?php echo number_format($prod['total_sold']); ?></td>
+                                    <td class="text-end font-weight-bold text-primary">$<?php echo number_format($prod['total_revenue'], 2); ?></td>
                                 </tr>
                                 <?php endforeach; ?>
                             </tbody>
