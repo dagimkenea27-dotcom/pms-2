@@ -157,6 +157,10 @@ Auth::startSession();
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/templates.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>routes/templates.php"><?php echo __('templates'); ?></a>
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'customers/address_book.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>customers/address_book.php"><?php echo __('address_book'); ?></a>
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'settings/route_preferences.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>settings/route_preferences.php"><?php echo __('preferences'); ?></a>
+                        <div class="dropdown-divider"></div>
+                        <a class="collapse-item" href="<?php echo BASE_URL; ?>routes/driver_center.php">
+                            <i class="fas fa-mobile-alt fa-sm"></i> Driver Mobile App
+                        </a>
                     </div>
                 </div>
             </li>
@@ -189,6 +193,13 @@ Auth::startSession();
                 <a class="nav-link" href="<?php echo BASE_URL; ?>reports/stock_valuation.php">
                     <i class="fas fa-fw fa-chart-pie"></i>
                     <span><?php echo __('stock_valuation'); ?></span>
+                </a>
+            </li>
+
+            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'reports/marketing_intelligence.php') !== false ? 'active' : ''; ?>">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>reports/marketing_intelligence.php">
+                    <i class="fas fa-fw fa-magic"></i>
+                    <span>Marketing Intel</span>
                 </a>
             </li>
 

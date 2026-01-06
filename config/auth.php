@@ -140,7 +140,19 @@ class Auth {
      */
     public static function isRole($role) {
         $user = self::getCurrentUser();
-        return strtolower($user['role']) === strtolower($role);
+        return strtolower($user['role'] ?? '') === strtolower($role);
+    }
+
+    public static function isAdmin() {
+        return self::isRole('admin');
+    }
+
+    public static function isManager() {
+        return self::isRole('manager');
+    }
+
+    public static function isStaff() {
+        return self::isRole('staff');
     }
 
     // --- CSRF Protection ---

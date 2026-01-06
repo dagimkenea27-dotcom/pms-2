@@ -167,43 +167,100 @@ $profit_month_val = $profit_month_stmt->fetch(PDO::FETCH_ASSOC)['net_profit'] ??
 // Get current user info
 $current_user = Auth::getCurrentUser();
 
+// Get Predictive Stockout Alerts (New Phase 1)
+require_once "models/InventoryForecaster.php";
+$forecaster = new InventoryForecaster($db);
+if ($current_user['role'] === 'admin') {
+    $forecaster->updateAllForecasts();
+}
+$predicted_stockout_query = "SELECT COUNT(*) as count FROM inventory_forecasts WHERE forecast_days_remaining <= 7";
+$predicted_stockout_stmt = $db->query($predicted_stockout_query);
+$predicted_stockout_count = $predicted_stockout_stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0;
+
+// Get Financial Summary (New Phase 3)
+require_once "models/Finance.php";
+$finance = new Finance($db);
+$current_month_start = date('Y-m-01');
+$current_month_end = date('Y-m-d');
+$fin_summary = $finance->getNetProfit($current_month_start, $current_month_end);
+
 require_once "includes/header.php";
 ?>
 <style>
-    .quick-action-btn {
-        margin: 5px;
-        min-width: 150px;
+    /* Professional Dashboard Design System */
+    :root {
+        --dash-primary: #4e73df;
+        --dash-success: #1cc88a;
+        --dash-info: #36b9cc;
+        --dash-warning: #f6c23e;
+        --dash-danger: #e74a3b;
+        --dash-purple: #6f42c1;
+        --glass-bg: rgba(255, 255, 255, 0.95);
+        --card-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
     }
-    
-    .dashboard-card {
-        border-radius: 0.5rem;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+    .kpi-card {
+        border: none;
+        border-radius: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+        background: var(--glass-bg);
+        box-shadow: var(--card-shadow);
     }
-    
-    .dashboard-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0,0,0,0.1);
     }
-    
-    .border-left-primary {
-        border-left: 0.25rem solid #4e73df !important;
+
+    .kpi-icon-box {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.75rem;
     }
-    
-    .border-left-warning {
-        border-left: 0.25rem solid #f6c23e !important;
+
+    .trend-indicator {
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-weight: 600;
     }
-    
-    .border-left-danger {
-        border-left: 0.25rem solid #e74a3b !important;
+
+    .trend-up { background: rgba(28, 200, 138, 0.1); color: var(--dash-success); }
+    .trend-down { background: rgba(231, 74, 59, 0.1); color: var(--dash-danger); }
+
+    .quick-action-strip {
+        background: #f8f9fc;
+        padding: 12px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+        border: 1px solid #e3e6f0;
     }
-    
-    .border-left-success {
-        border-left: 0.25rem solid #1cc88a !important;
+
+    .action-pill {
+        padding: 6px 14px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none !important;
     }
-    
-    .border-left-info {
-        border-left: 0.25rem solid #36b9cc !important;
+
+    .action-pill:hover {
+        transform: scale(1.02);
     }
+
+    .border-left-primary { border-left: 0.25rem solid #4e73df !important; }
+    .border-left-secondary { border-left: 0.25rem solid #858796 !important; }
+    .border-left-danger { border-left: 0.25rem solid #e74a3b !important; }
 </style>
 
 <!-- Page Heading -->
@@ -214,6 +271,7 @@ require_once "includes/header.php";
             <i class="fas fa-download fa-sm text-white-50"></i> <?php echo __('generate_report'); ?>
         </button>
         <ul class="dropdown-menu" aria-labelledby="reportDropdown">
+            <li><a class="dropdown-item" href="reports/finance.php"><i class="fas fa-wallet mr-2"></i>Net Profit (P&L)</a></li>
             <li><a class="dropdown-item" href="reports/stock_valuation.php"><i class="fas fa-file-invoice-dollar mr-2"></i><?php echo __('stock_valuation'); ?></a></li>
             <li><a class="dropdown-item" href="reports/stock_movement.php"><i class="fas fa-exchange-alt mr-2"></i><?php echo __('stock_movement'); ?></a></li>
             <li><a class="dropdown-item" href="reports/low_stock.php"><i class="fas fa-exclamation-triangle mr-2"></i><?php echo __('low_stock_items'); ?></a></li>
@@ -223,157 +281,138 @@ require_once "includes/header.php";
     </div>
 </div>
 
-<!-- Content Row -->
+<!-- Quick Actions Strip -->
+<div class="quick-action-strip d-flex flex-wrap gap-3 align-items-center shadow-sm">
+    <span class="text-xs font-weight-bold text-uppercase text-muted mr-2">Quick Actions:</span>
+    <a href="products/add_product.php" class="action-pill bg-primary text-white">
+        <i class="fas fa-plus"></i> New Product
+    </a>
+    <a href="#" class="action-pill bg-white text-dark shadow-sm border" data-bs-toggle="modal" data-bs-target="#barcodeScannerModal">
+        <i class="fas fa-barcode"></i> Scan Stock
+    </a>
+    <a href="routes/index.php" class="action-pill bg-info text-white">
+        <i class="fas fa-truck"></i> Plan Delivery
+    </a>
+    <a href="reports/marketing_intelligence.php" class="action-pill bg-purple text-white" style="background-color: #6f42c1;">
+        <i class="fas fa-magic"></i> AI Insights
+    </a>
+</div>
+
+<!-- Primary KPIs Row -->
 <div class="row">
-    <!-- Total Products Card -->
+    <!-- Revenue -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <a href="products/view_products.php" class="text-decoration-none">
-            <div class="card dashboard-card border-left-primary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                <?php echo __('total_products'); ?></div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $total_products['count']; ?></div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-box fa-2x text-gray-300"></i>
-                        </div>
+        <div class="card kpi-card h-100 p-3">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="kpi-icon-box bg-success text-white shadow-sm">
+                        <i class="fas fa-dollar-sign"></i>
                     </div>
+                    <div class="text-xs font-weight-bold text-muted text-uppercase"><?php echo __('today_sales'); ?></div>
+                    <div class="h4 font-weight-bold text-gray-800 mb-0">$<?php echo number_format($sales_today_val, 2); ?></div>
+                </div>
+                <div class="text-right">
+                    <span class="trend-indicator trend-up"><i class="fas fa-arrow-up"></i> Live</span>
                 </div>
             </div>
-        </a>
+        </div>
     </div>
 
-    <!-- Low Stock Card -->
+    <!-- Monthly Profit -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card kpi-card h-100 p-3">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="kpi-icon-box bg-info text-white shadow-sm">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="text-xs font-weight-bold text-muted text-uppercase">Monthly Net Profit</div>
+                    <div class="h4 font-weight-bold text-gray-800 mb-0">$<?php echo number_format($fin_summary['net_profit'], 2); ?></div>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs text-muted"><?php echo date('F'); ?></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Low Stock -->
     <div class="col-xl-3 col-md-6 mb-4">
         <a href="products/view_products.php?filter=low_stock" class="text-decoration-none">
-            <div class="card dashboard-card border-left-warning shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                <?php echo __('low_stock_alerts'); ?></div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $low_stock['count']; ?></div>
+            <div class="card kpi-card h-100 p-3">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="kpi-icon-box bg-warning text-white shadow-sm">
+                            <i class="fas fa-exclamation-triangle"></i>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
-                        </div>
+                        <div class="text-xs font-weight-bold text-muted text-uppercase"><?php echo __('low_stock_alerts'); ?></div>
+                        <div class="h4 font-weight-bold text-gray-800 mb-0"><?php echo $low_stock['count']; ?></div>
+                    </div>
+                    <div class="text-right">
+                        <?php if($low_stock['count'] > 0): ?>
+                            <span class="trend-indicator trend-down">Action Required</span>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
         </a>
     </div>
 
-    <!-- Out of Stock Card -->
+    <!-- AI Alerts -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <a href="products/view_products.php?filter=out_of_stock" class="text-decoration-none">
-            <div class="card dashboard-card border-left-danger shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                                <?php echo __('out_of_stock'); ?></div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $out_of_stock['count']; ?></div>
+        <a href="reports/marketing_intelligence.php" class="text-decoration-none">
+            <div class="card kpi-card h-100 p-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="d-flex justify-content-between text-white">
+                    <div>
+                        <div class="kpi-icon-box bg-white text-primary shadow-sm">
+                            <i class="fas fa-robot"></i>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-times-circle fa-2x text-gray-300"></i>
-                        </div>
+                        <div class="text-xs font-weight-bold text-uppercase opacity-75">Predicted Stockouts</div>
+                        <div class="h4 font-weight-bold mb-0"><?php echo $predicted_stockout_count; ?></div>
+                    </div>
+                    <div class="text-right">
+                        <i class="fas fa-bolt text-warning animate-pulse"></i>
                     </div>
                 </div>
             </div>
         </a>
     </div>
+</div>
 
-    <?php
-    // Get reorder alerts count
-    $reorder_stmt = $db->query("
-        SELECT COUNT(*) as count 
-        FROM products p
-        JOIN reorder_settings rs ON p.id = rs.product_id
-        WHERE p.quantity <= rs.reorder_point
-        AND p.reorder_enabled = 1
-    ");
-    $reorder_count = $reorder_stmt->fetch(PDO::FETCH_ASSOC)['count'];
-    ?>
-
-    <!-- Reorder Alerts Card -->
-    <div class="col-xl-3 col-md-6 mb-4">
-        <a href="products/reorder_suggestions.php" class="text-decoration-none">
-            <div class="card dashboard-card border-left-info shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                <?php echo __('reorder_needed'); ?></div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $reorder_count; ?></div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
+<!-- Secondary Metrics -->
+<div class="row mb-4">
+    <div class="col-xl-4 col-md-6 mb-2">
+        <div class="d-flex align-items-center bg-white p-3 rounded shadow-sm border-left-primary">
+            <div class="mr-3 p-3 bg-light rounded">
+                <i class="fas fa-box text-primary"></i>
             </div>
-        </a>
-    </div>
-
-    <!-- Today's Sales Card -->
-    <div class="col-xl-4 col-md-6 mb-4">
-        <div class="card dashboard-card border-left-success shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                            <?php echo __('today_sales'); ?></div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">$<?php echo number_format($sales_today_val, 2); ?></div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-calendar-day fa-2x text-gray-300"></i>
-                    </div>
-                </div>
+            <div>
+                <div class="text-xs text-muted text-uppercase"><?php echo __('total_products'); ?></div>
+                <div class="h5 font-weight-bold mb-0"><?php echo $total_products['count']; ?></div>
             </div>
         </div>
     </div>
-
-    <!-- Monthly Sales Card -->
-    <div class="col-xl-4 col-md-6 mb-4">
-        <div class="card dashboard-card border-left-info shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                            <?php echo __('monthly_sales'); ?> (<?php echo date('M'); ?>)</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">$<?php echo number_format($sales_month_val, 2); ?></div>
-                        <div class="text-xs mt-1 text-muted">
-                            <?php echo __('est_profit'); ?>: <span class="text-success font-weight-bold">$<?php echo number_format($profit_month_val, 2); ?></span>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-chart-line fa-2x text-gray-300"></i>
-                    </div>
-                </div>
+    <div class="col-xl-4 col-md-6 mb-2">
+        <div class="d-flex align-items-center bg-white p-3 rounded shadow-sm border-left-secondary">
+            <div class="mr-3 p-3 bg-light rounded">
+                <i class="fas fa-warehouse text-secondary"></i>
+            </div>
+            <div>
+                <div class="text-xs text-muted text-uppercase"><?php echo __('inventory_value'); ?></div>
+                <div class="h5 font-weight-bold mb-0">$<?php echo number_format($total_value['total_value'] ?? 0, 2); ?></div>
             </div>
         </div>
     </div>
-
-    <!-- Inventory Value Card -->
-    <div class="col-xl-4 col-md-6 mb-4">
-        <a href="reports/stock_valuation.php" class="text-decoration-none">
-            <div class="card dashboard-card border-left-secondary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
-                                <?php echo __('inventory_value'); ?></div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">$<?php echo number_format($total_value['total_value'] ?? 0, 2); ?></div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-warehouse fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
+    <div class="col-xl-4 col-md-6 mb-2">
+        <div class="d-flex align-items-center bg-white p-3 rounded shadow-sm border-left-danger">
+            <div class="mr-3 p-3 bg-light rounded">
+                <i class="fas fa-times-circle text-danger"></i>
             </div>
-        </a>
+            <div>
+                <div class="text-xs text-muted text-uppercase"><?php echo __('out_of_stock'); ?></div>
+                <div class="h5 font-weight-bold mb-0"><?php echo $out_of_stock['count']; ?></div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -544,26 +583,34 @@ require_once "includes/header.php";
         }
     }
 
-    // Daily Stock Trends Chart
+    // Stock Trends Chart
     var ctxDaily = document.getElementById("dailyStockChart");
     if (ctxDaily) {
         var myDailyChart = new Chart(ctxDaily, {
-            type: 'bar',
+            type: 'line', // Changed to line for a more professional look
             data: {
                 labels: <?php echo json_encode($chart_labels); ?>,
                 datasets: [
                     {
-                        label: "<?php echo __('stock_in'); ?>",
-                        backgroundColor: "#1cc88a",
-                        hoverBackgroundColor: "#17a673",
-                        borderColor: "#1cc88a",
+                        label: "Stock In",
+                        fill: true,
+                        tension: 0.4, // Curvy lines
+                        backgroundColor: "rgba(28, 200, 138, 0.05)",
+                        borderColor: "rgba(28, 200, 138, 1)",
+                        pointRadius: 3,
+                        pointBackgroundColor: "rgba(28, 200, 138, 1)",
+                        pointBorderColor: "rgba(28, 200, 138, 1)",
                         data: <?php echo json_encode($chart_data_in); ?>,
                     },
                     {
-                        label: "<?php echo __('stock_out'); ?>",
-                        backgroundColor: "#e74a3b",
-                        hoverBackgroundColor: "#be2617",
-                        borderColor: "#e74a3b",
+                        label: "Stock Out",
+                        fill: true,
+                        tension: 0.4, // Curvy lines
+                        backgroundColor: "rgba(231, 74, 59, 0.05)",
+                        borderColor: "rgba(231, 74, 59, 1)",
+                        pointRadius: 3,
+                        pointBackgroundColor: "rgba(231, 74, 59, 1)",
+                        pointBorderColor: "rgba(231, 74, 59, 1)",
                         data: <?php echo json_encode($chart_data_out); ?>,
                     }
                 ],
@@ -582,28 +629,29 @@ require_once "includes/header.php";
                         ticks: {
                             maxTicksLimit: 5,
                             padding: 10,
+                            callback: function(value) { return value + ' units'; }
                         },
                         grid: {
                             color: "rgb(234, 236, 244)",
-                            zeroLineColor: "rgb(234, 236, 244)",
                             drawBorder: false,
                             borderDash: [2],
-                            zeroLineBorderDash: [2]
                         }
                     },
                 },
-                legend: { display: true },
-                tooltips: {
-                    backgroundColor: "rgb(255,255,255)",
-                    bodyFontColor: "#858796",
-                    titleFontColor: '#6e707e',
-                    borderColor: '#dddfeb',
-                    borderWidth: 1,
-                    xPadding: 15,
-                    yPadding: 15,
-                    displayColors: false,
-                    caretPadding: 10,
-                },
+                plugins: {
+                    legend: { display: true, position: 'top', align: 'end' },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: "rgba(255, 255, 255, 0.9)",
+                        titleColor: "#6e707e",
+                        bodyColor: "#858796",
+                        borderColor: '#dddfeb',
+                        borderWidth: 1,
+                        displayColors: true,
+                        padding: 12
+                    }
+                }
             }
         });
     }
