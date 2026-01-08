@@ -66,6 +66,27 @@ require_once "../includes/header.php";
                                 <a href="view_po.php?id=<?php echo $po['id']; ?>" class="btn btn-sm btn-info" title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </a>
+                                <a href="print_po.php?id=<?php echo $po['id']; ?>" class="btn btn-sm btn-outline-secondary" title="Print PO" target="_blank">
+                                    <i class="fas fa-print"></i>
+                                </a>
+                                <?php if ($po['status'] !== 'received' || Auth::hasRole('admin')): ?>
+                                    <a href="delete_po.php?id=<?php echo $po['id']; ?>" class="btn btn-sm btn-danger" title="Delete PO" onclick="return confirm('Are you sure you want to delete this Purchase Order? This will also remove all item records associated with it.')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                <?php endif; ?>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-outline-info dropdown-toggle" data-bs-toggle="dropdown">
+                                        <i class="fas fa-share-alt"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <?php
+                                        $s_text = "📦 *PO: " . $po['order_number'] . "*\nSupplier: " . $po['supplier_name'] . "\nTotal: $" . number_format($po['total_amount'], 2);
+                                        $s_url = (isset($_SERVER['HTTPS']) ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'] . BASE_URL . "products/print_po.php?id=" . $po['id'];
+                                        ?>
+                                        <li><a class="dropdown-item" href="https://t.me/share/url?url=<?php echo urlencode($s_url); ?>&text=<?php echo urlencode($s_text); ?>" target="_blank"><i class="fab fa-telegram text-info"></i> Telegram</a></li>
+                                        <li><a class="dropdown-item" href="mailto:?subject=Purchase Order <?php echo $po['order_number']; ?>&body=<?php echo urlencode("PO: " . $po['order_number'] . "\nSupplier: " . $po['supplier_name'] . "\nTotal: $" . number_format($po['total_amount'], 2) . "\nPrintable PO: " . $s_url); ?>"><i class="fas fa-envelope text-primary"></i> Email</a></li>
+                                    </ul>
+                                </div>
                                 <?php if ($po['status'] == 'draft'): ?>
                                     <button class="btn btn-sm btn-success mark-ordered" data-id="<?php echo $po['id']; ?>" title="Mark as Ordered">
                                         <i class="fas fa-paper-plane"></i>

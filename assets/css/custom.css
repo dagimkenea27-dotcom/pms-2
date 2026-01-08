@@ -797,6 +797,49 @@ footer.sticky-footer .copyright {
     position: relative;
 }
 
+/* Fix dropdown clipping in responsive tables */
+.table-responsive {
+    overflow: visible !important;
+}
+
+/* Ensure share buttons look good and are centered */
+.btn-group .dropdown-menu {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0;
+    min-width: 180px;
+    z-index: 1060; /* Higher than table headers */
+}
+
+.btn-group .dropdown-item {
+    font-size: 0.9rem;
+    padding: 0.6rem 1rem;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.btn-group .dropdown-item:hover {
+    background-color: var(--bg-body);
+    padding-left: 1.25rem;
+}
+
+.btn-group .dropdown-item i {
+    font-size: 1rem;
+    width: 1.5rem;
+}
+
+/* Dark mode specific for dropdowns */
+[data-theme="dark"] .btn-group .dropdown-menu {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .btn-group .dropdown-item {
+    color: var(--text-main);
+}
+
 .searchable-select-container .dropdown-menu {
     display: none;
     max-height: 200px;

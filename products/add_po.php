@@ -60,6 +60,10 @@ $suppliers = $db->query("SELECT id, name FROM suppliers WHERE is_active = 1 ORDE
 require_once "../includes/header.php";
 ?>
 
+<!-- Add Select2 CSS or other styles before the form if needed -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-plus"></i> Create Purchase Order</h1>
     <a href="purchase_orders.php" class="btn btn-sm btn-secondary shadow-sm">
@@ -95,11 +99,11 @@ require_once "../includes/header.php";
                 <table class="table table-bordered" id="poItemsTable">
                     <thead class="bg-light">
                         <tr>
-                            <th width="40%">Product / Variant</th>
+                            <th width="45%">Product / Variant</th>
                             <th width="15%">Quantity</th>
                             <th width="15%">Unit Cost ($)</th>
                             <th width="15%">Subtotal</th>
-                            <th width="15%">Action</th>
+                            <th width="10%">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -123,7 +127,7 @@ require_once "../includes/header.php";
                                         if ($row['v_id']) {
                                             $label .= " - " . $row['size'] . "/" . $row['color'] . " (" . $row['v_sku'] . ")";
                                             $val = "v_" . $row['v_id'] . "_p_" . $row['p_id'];
-                                            $cost = $row['v_cost'] ?: $row['p_cost'];
+                                            $cost = ($row['v_cost'] && $row['v_cost'] > 0) ? $row['v_cost'] : $row['p_cost'];
                                         } else {
                                             $label .= " (" . $row['p_sku'] . ")";
                                         }
@@ -164,72 +168,96 @@ require_once "../includes/header.php";
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-let rowCount = 1;
+$(document).ready(function() {
+    let rowCount = 1;
 
-document.getElementById('addRow').addEventListener('click', function() {
-    const tbody = document.querySelector('#poItemsTable tbody');
-    const firstRow = tbody.querySelector('tr');
-    const newRow = firstRow.cloneNode(true);
-    
-    // Clear and update names
-    newRow.querySelectorAll('input, select').forEach(input => {
-        input.name = input.name.replace(/\[\d+\]/, `[${rowCount}]`);
-        if (input.tagName === 'INPUT') input.value = input.defaultValue;
-    });
-    newRow.querySelector('.subtotal-text').textContent = '$0.00';
-    
-    tbody.appendChild(newRow);
-    rowCount++;
-});
+    // Initialize Select2 on existing selectors
+    function initSelect2(element) {
+        $(element).select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Search for a product...',
+            width: '100%'
+        });
+    }
 
-document.addEventListener('change', function(e) {
-    if (e.target.classList.contains('product-selector')) {
-        const row = e.target.closest('tr');
-        const val = e.target.value;
-        const cost = e.target.options[e.target.selectedIndex].dataset.cost || 0;
+    initSelect2('.product-selector');
+
+    $('#addRow').on('click', function() {
+        const tbody = $('#poItemsTable tbody');
+        const firstRow = tbody.find('tr:first');
         
-        row.querySelector('.cost-input').value = cost;
+        // Destroy select2 on the row we're cloning to avoid issues
+        // firstRow.find('.product-selector').select2('destroy');
+        
+        const newRow = firstRow.clone();
+        
+        // Remove select2 container from the cloned row if it exists
+        newRow.find('.select2-container').remove();
+        newRow.find('select').show().removeClass('select2-hidden-accessible').removeAttr('data-select2-id').find('option').removeAttr('data-select2-id');
+        
+        // Update names and reset values
+        newRow.find('input, select').each(function() {
+            const name = $(this).attr('name');
+            if (name) {
+                $(this).attr('name', name.replace(/\[\d+\]/, `[${rowCount}]`));
+            }
+            if ($(this).is('input')) $(this).val($(this).prop('defaultValue'));
+            if ($(this).is('select')) $(this).val('');
+        });
+        
+        newRow.find('.subtotal-text').text('$0.00');
+        tbody.append(newRow);
+        
+        // Re-init Select2 on the new row's selector
+        initSelect2(newRow.find('.product-selector'));
+        
+        rowCount++;
+    });
+
+    $(document).on('change', '.product-selector', function() {
+        const row = $(this).closest('tr');
+        const val = $(this).val();
+        if (!val) return;
+        
+        const cost = $(this).find('option:selected').data('cost') || 0;
+        row.find('.cost-input').val(parseFloat(cost).toFixed(2));
         
         if (val.startsWith('v_')) {
             const parts = val.split('_');
-            row.querySelector('.h-variant-id').value = parts[1];
-            row.querySelector('.h-product-id').value = parts[3];
+            row.find('.h-variant-id').val(parts[1]);
+            row.find('.h-product-id').val(parts[3]);
         } else {
-            row.querySelector('.h-variant-id').value = '';
-            row.querySelector('.h-product-id').value = val.split('_')[1];
+            row.find('.h-variant-id').val('');
+            row.find('.h-product-id').val(val.split('_')[1]);
         }
         calculateTotal();
-    }
-});
+    });
 
-document.addEventListener('input', function(e) {
-    if (e.target.classList.contains('qty-input') || e.target.classList.contains('cost-input')) {
+    $(document).on('input', '.qty-input, .cost-input', function() {
         calculateTotal();
-    }
-});
+    });
 
-document.addEventListener('click', function(e) {
-    if (e.target.closest('.remove-row')) {
-        const row = e.target.closest('tr');
-        if (document.querySelectorAll('.item-row').length > 1) {
-            row.remove();
+    $(document).on('click', '.remove-row', function() {
+        if ($('.item-row').length > 1) {
+            $(this).closest('tr').remove();
             calculateTotal();
         }
+    });
+
+    function calculateTotal() {
+        let grandTotal = 0;
+        $('.item-row').each(function() {
+            const qty = parseFloat($(this).find('.qty-input').val()) || 0;
+            const cost = parseFloat($(this).find('.cost-input').val()) || 0;
+            const subtotal = qty * cost;
+            $(this).find('.subtotal-text').text('$' + subtotal.toFixed(2));
+            grandTotal += subtotal;
+        });
+        $('#grandTotalText').text('$' + grandTotal.toFixed(2));
     }
 });
-
-function calculateTotal() {
-    let grandTotal = 0;
-    document.querySelectorAll('.item-row').forEach(row => {
-        const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
-        const cost = parseFloat(row.querySelector('.cost-input').value) || 0;
-        const subtotal = qty * cost;
-        row.querySelector('.subtotal-text').textContent = '$' + subtotal.toFixed(2);
-        grandTotal += subtotal;
-    });
-    document.getElementById('grandTotalText').textContent = '$' + grandTotal.toFixed(2);
-}
 </script>
 
 <?php require_once "../includes/footer.php"; ?>

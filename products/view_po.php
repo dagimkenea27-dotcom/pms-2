@@ -115,9 +115,52 @@ require_once "../includes/header.php";
         <a href="purchase_orders.php" class="btn btn-sm btn-secondary shadow-sm">
             <i class="fas fa-arrow-left fa-sm"></i> Back
         </a>
-        <button onclick="window.print();" class="btn btn-sm btn-outline-primary shadow-sm ms-2">
+        <a href="print_po.php?id=<?php echo $po_id; ?>" class="btn btn-sm btn-outline-primary shadow-sm ms-2" target="_blank">
             <i class="fas fa-print fa-sm"></i> Print PO
-        </button>
+        </a>
+        
+        <div class="btn-group ms-2">
+            <button type="button" class="btn btn-sm btn-outline-info dropdown-toggle shadow-sm" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-share-alt fa-sm"></i> Share
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <?php
+                $share_text = "📦 *Purchase Order: " . $po['order_number'] . "*\n";
+                $share_text .= "Supplier: " . $po['supplier_name'] . "\n";
+                $share_text .= "Total: $" . number_format($po['total_amount'], 2) . "\n";
+                $share_text .= "Status: " . strtoupper($po['status']) . "\n";
+                
+                $share_url = (isset($_SERVER['HTTPS']) ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'] . BASE_URL . "products/print_po.php?id=" . $po_id;
+                $telegram_url = "https://t.me/share/url?url=" . urlencode($share_url) . "&text=" . urlencode($share_text);
+                
+                $email_subject = "Purchase Order #" . $po['order_number'] . " - GojoShop";
+                $email_body = "Hi,\n\nPlease find the details of Purchase Order #" . $po['order_number'] . " below:\n\n" .
+                             "Order Number: " . $po['order_number'] . "\n" .
+                             "Supplier: " . $po['supplier_name'] . "\n" .
+                             "Total Amount: $" . number_format($po['total_amount'], 2) . "\n" .
+                             "Status: " . strtoupper($po['status']) . "\n\n" .
+                             "Printable PO: " . $share_url . "\n\n" .
+                             "Regards,\n" . Auth::getCurrentUser()['full_name'];
+                $mailto_url = "mailto:?subject=" . urlencode($email_subject) . "&body=" . urlencode($email_body);
+                ?>
+                <li>
+                    <a class="dropdown-item" href="<?php echo $telegram_url; ?>" target="_blank">
+                        <i class="fab fa-telegram text-info me-2"></i> Send via Telegram
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="<?php echo $mailto_url; ?>">
+                        <i class="fas fa-envelope text-primary me-2"></i> Send via Email
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <?php if ($po['status'] !== 'received' || Auth::hasRole('admin')): ?>
+            <a href="delete_po.php?id=<?php echo $po_id; ?>" class="btn btn-sm btn-outline-danger shadow-sm ms-2" onclick="return confirm('Are you sure you want to delete this Purchase Order?')">
+                <i class="fas fa-trash fa-sm"></i> Delete
+            </a>
+        <?php endif; ?>
     </div>
 </div>
 
