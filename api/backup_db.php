@@ -14,8 +14,9 @@ if (!Auth::isLoggedIn() || Auth::getCurrentUser()['role'] !== 'admin') {
 error_reporting(0);
 ini_set('display_errors', 0);
 
-// Set time limit for large databases
-set_time_limit(300);
+// Set time and memory limit for large databases
+set_time_limit(600);
+ini_set('memory_limit', '512M');
 
 // Get credentials
 $host = getenv('DB_HOST') ?: 'localhost';
@@ -24,59 +25,53 @@ $pass = getenv('DB_PASS') ?: '';
 $name = getenv('DB_NAME') ?: 'inventory_system';
 
 try {
-    $mysqli = new mysqli($host, $user, $pass, $name);
-    if ($mysqli->connect_error) {
-        throw new Exception("Connection failed: " . $mysqli->connect_error);
-    }
-    $mysqli->set_charset("utf8mb4");
+    $db_obj = new Database();
+    $db = $db_obj->getConnection();
+    $db->exec("SET NAMES utf8mb4");
 
     $tables = array();
-    $result = $mysqli->query('SHOW TABLES');
-    while($row = $result->fetch_row()) {
+    $stmt = $db->query('SHOW TABLES');
+    while($row = $stmt->fetch(PDO::FETCH_NUM)) {
         $tables[] = $row[0];
     }
 
-    $sql = "-- Inventory Management System Database Backup\n";
-    $sql .= "-- Generated: " . date('Y-m-d H:i:s') . "\n";
-    $sql .= "-- Host: " . $host . "\n";
-    $sql .= "-- Database: " . $name . "\n\n";
-    
-    $sql .= "SET FOREIGN_KEY_CHECKS=0;\n";
-    $sql .= "SET SQL_MODE = \"NO_AUTO_VALUE_ON_ZERO\";\n";
-    $sql .= "SET time_zone = \"+00:00\";\n\n";
+    // Create a temporary file for the SQL
+    $tmp_sql_file = tempnam(sys_get_temp_dir(), 'db_sql');
+    $sql_handle = fopen($tmp_sql_file, 'w');
+
+    fwrite($sql_handle, "-- Inventory Management System Database Backup\n");
+    fwrite($sql_handle, "-- Generated: " . date('Y-m-d H:i:s') . "\n\n");
+    fwrite($sql_handle, "SET FOREIGN_KEY_CHECKS=0;\n");
+    fwrite($sql_handle, "SET SQL_MODE = \"NO_AUTO_VALUE_ON_ZERO\";\n");
+    fwrite($sql_handle, "SET time_zone = \"+00:00\";\n\n");
 
     foreach($tables as $table) {
-        $result = $mysqli->query('SELECT * FROM `'.$table.'`');
-        $num_fields = $result->field_count;
-
-        $sql .= "-- \n-- Table structure for table `".$table."` --\n--\n\n";
-        $sql .= 'DROP TABLE IF EXISTS `'.$table.'`;';
-        $row2 = $mysqli->query('SHOW CREATE TABLE `'.$table.'`')->fetch_row();
-        $sql .= "\n\n".$row2[1].";\n\n";
-
-        $sql .= "-- \n-- Dumping data for table `".$table."` --\n--\n\n";
+        fwrite($sql_handle, "-- Structure for table `$table` --\n");
+        fwrite($sql_handle, "DROP TABLE IF EXISTS `$table`;\n");
         
-        while($row = $result->fetch_row()) {
-            $sql .= 'INSERT INTO `'.$table.'` VALUES(';
-            for($j=0; $j<$num_fields; $j++) {
-                if (isset($row[$j])) {
-                    $val = $mysqli->real_escape_string($row[$j]);
-                    $sql .= '"'.$val.'"' ;
-                } else {
-                    $sql .= 'NULL';
-                }
-                if ($j<($num_fields-1)) { $sql .= ','; }
-            }
-            $sql .= ");\n";
+        $create_stmt = $db->query("SHOW CREATE TABLE `$table`")->fetch(PDO::FETCH_NUM);
+        fwrite($sql_handle, $create_stmt[1] . ";\n\n");
+
+        fwrite($sql_handle, "-- Dumping data for table `$table` --\n");
+        $data_stmt = $db->query("SELECT * FROM `$table`", PDO::FETCH_ASSOC);
+        
+        while($row = $data_stmt->fetch()) {
+            $keys = array_keys($row);
+            $values = array_values($row);
+            
+            $escaped_values = array_map(function($v) use ($db) {
+                if ($v === null) return 'NULL';
+                return $db->quote($v);
+            }, $values);
+            
+            fwrite($sql_handle, "INSERT INTO `$table` VALUES(" . implode(',', $escaped_values) . ");\n");
         }
-        $sql.="\n\n\n";
+        fwrite($sql_handle, "\n\n");
     }
 
-    $sql .= "SET FOREIGN_KEY_CHECKS=1;";
-    
-    $mysqli->close();
+    fwrite($sql_handle, "SET FOREIGN_KEY_CHECKS=1;");
+    fclose($sql_handle);
 
-    $filename_sql = 'database_backup.sql';
     $filename_zip = 'backup_' . $name . '_' . date('Y-m-d_H_i_s') . '.zip';
     
     // Create ZIP archive
@@ -87,12 +82,13 @@ try {
         // Fallback to plain SQL if ZIP creation fails
         header('Content-Type: application/sql');
         header('Content-Disposition: attachment; filename="' . str_replace('.zip', '.sql', $filename_zip) . '"');
-        echo $sql;
+        readfile($tmp_sql_file);
+        unlink($tmp_sql_file);
         exit();
     }
 
     // Add SQL file to ZIP
-    $zip->addFromString($filename_sql, $sql);
+    $zip->addFile($tmp_sql_file, 'database_backup.sql');
 
     // Add uploads folder to ZIP
     $uploads_path = realpath(dirname(__DIR__) . '/uploads');
@@ -125,7 +121,8 @@ try {
     header('Pragma: public');
     
     readfile($tmp_file);
-    unlink($tmp_file); // Delete the temporary file
+    unlink($tmp_file); // Delete the temporary ZIP file
+    unlink($tmp_sql_file); // Delete the temporary SQL file
     exit();
 
 } catch (Exception $e) {

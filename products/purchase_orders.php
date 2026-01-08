@@ -66,6 +66,11 @@ require_once "../includes/header.php";
                                 <a href="view_po.php?id=<?php echo $po['id']; ?>" class="btn btn-sm btn-info" title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </a>
+                                <?php if ($po['status'] !== 'received' && $po['status'] !== 'cancelled'): ?>
+                                    <a href="edit_po.php?id=<?php echo $po['id']; ?>" class="btn btn-sm btn-warning" title="Edit PO">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                <?php endif; ?>
                                 <a href="print_po.php?id=<?php echo $po['id']; ?>" class="btn btn-sm btn-outline-secondary" title="Print PO" target="_blank">
                                     <i class="fas fa-print"></i>
                                 </a>

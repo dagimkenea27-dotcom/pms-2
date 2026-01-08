@@ -14,6 +14,10 @@ if (!Auth::isLoggedIn() || Auth::getCurrentUser()['role'] !== 'admin') {
 $message = "";
 $status = "error";
 
+// Increase limits for restoration
+set_time_limit(600);
+ini_set('memory_limit', '512M');
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['backup_file'])) {
     $file = $_FILES['backup_file'];
     $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
@@ -37,19 +41,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['backup_file'])) {
                 
                 // 1. Restore Database
                 if (file_exists($sql_file)) {
-                    $sql_content = file_get_contents($sql_file);
-                    
-                    // Split SQL into individual statements
-                    // Note: This is a simple splitter, might need improvement for complex SQL
-                    $queries = explode(";\n", $sql_content);
-                    
                     $db->exec("SET FOREIGN_KEY_CHECKS=0;");
-                    foreach ($queries as $query) {
-                        $query = trim($query);
-                        if (!empty($query)) {
-                            $db->exec($query);
+                    
+                    $handle = fopen($sql_file, "r");
+                    if ($handle) {
+                        $templine = '';
+                        while (($line = fgets($handle)) !== false) {
+                            // Skip it if it's a comment
+                            if (substr($line, 0, 2) == '--' || $line == '') continue;
+                            
+                            // Add this line to the current segment
+                            $templine .= $line;
+                            
+                            // If it has a semicolon at the end, it's the end of the query
+                            if (substr(trim($line), -1, 1) == ';') {
+                                try {
+                                    $db->exec($templine);
+                                } catch (PDOException $e) {
+                                    // Ignore errors like "Table already exists" if it happens, 
+                                    // but usually DROP TABLE IF EXISTS is in the backup
+                                }
+                                // Reset temp variable to empty
+                                $templine = '';
+                            }
                         }
+                        fclose($handle);
                     }
+                    
                     $db->exec("SET FOREIGN_KEY_CHECKS=1;");
                 } else {
                     throw new Exception("SQL backup file not found in the ZIP archive.");

@@ -115,6 +115,11 @@ require_once "../includes/header.php";
         <a href="purchase_orders.php" class="btn btn-sm btn-secondary shadow-sm">
             <i class="fas fa-arrow-left fa-sm"></i> Back
         </a>
+        <?php if ($po['status'] !== 'received' && $po['status'] !== 'cancelled'): ?>
+            <a href="edit_po.php?id=<?php echo $po_id; ?>" class="btn btn-sm btn-warning shadow-sm ms-2">
+                <i class="fas fa-edit fa-sm"></i> Edit
+            </a>
+        <?php endif; ?>
         <a href="print_po.php?id=<?php echo $po_id; ?>" class="btn btn-sm btn-outline-primary shadow-sm ms-2" target="_blank">
             <i class="fas fa-print fa-sm"></i> Print PO
         </a>
@@ -187,6 +192,11 @@ require_once "../includes/header.php";
                         </span>
                     </td></tr>
                     <tr><th>Created By:</th><td><?php echo htmlspecialchars($po['creator_name']); ?></td></tr>
+                    <?php 
+                    $total_qty = 0;
+                    foreach($items as $i) $total_qty += $i['quantity_ordered'];
+                    ?>
+                    <tr><th>Total Items:</th><td><?php echo $total_qty; ?></td></tr>
                     <tr><th class="h5">Total:</th><td class="h5 text-primary">$<?php echo number_format($po['total_amount'], 2); ?></td></tr>
                 </table>
                 <hr>

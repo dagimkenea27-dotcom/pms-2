@@ -58,6 +58,15 @@ if (!Auth::isLoggedIn() || Auth::getCurrentUser()['role'] !== 'admin') {
                         Upload a previously downloaded <strong>.zip</strong> backup file to restore the database and images.
                     </p>
                     
+                    <div class="card bg-light mb-3">
+                        <div class="card-body py-2 small">
+                            <strong>System Limits:</strong><br>
+                            Max Upload: <span class="text-primary"><?php echo ini_get('upload_max_filesize'); ?></span><br>
+                            Max POST: <span class="text-primary"><?php echo ini_get('post_max_size'); ?></span><br>
+                            <span class="text-muted">If your backup is larger than these, ask your server admin to increase them in php.ini.</span>
+                        </div>
+                    </div>
+                    
                     <div class="alert alert-warning small py-2">
                         <i class="fas fa-exclamation-triangle"></i> <strong>Warning:</strong> This will <strong>overwrite</strong> your current database and images!
                     </div>

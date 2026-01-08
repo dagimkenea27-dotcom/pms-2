@@ -17,7 +17,7 @@ Auth::startSession();
     <script src="<?php echo BASE_URL; ?>assets/js/alerts.js"></script>
     <link href="<?php echo BASE_URL; ?>assets/css/custom.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="manifest" href="<?php echo BASE_URL; ?>manifest.json">
+    <link rel="icon" type="image/jpeg" href="<?php echo BASE_URL; ?>assets/img/logo.jpg">
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('<?php echo BASE_URL; ?>sw.js');
@@ -31,10 +31,10 @@ Auth::startSession();
         <ul class="navbar-nav sidebar accordion" id="accordionSidebar">
             <!-- Sidebar - Brand -->
             <a class="sidebar-brand d-flex align-items-center justify-content-center" href="<?php echo BASE_URL; ?>index.php">
-                <div class="sidebar-brand-icon rotate-n-15">
-                    <i class="fas fa-boxes"></i>
+                <div class="sidebar-brand-icon">
+                    <img src="<?php echo BASE_URL; ?>assets/img/logo.jpg" alt="Logo" style="width: 40px; height: 40px; border-radius: 8px;">
                 </div>
-                <div class="sidebar-brand-text mx-3">Inventory MS</div>
+                <!-- <div class="sidebar-brand-text mx-3">Inventory MS</div> -->
             </a>
 
             <!-- Divider -->

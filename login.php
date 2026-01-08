@@ -49,6 +49,7 @@ $csrf_token = Auth::generateCSRF();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Inventory System</title>
+    <link rel="icon" type="image/jpeg" href="<?php echo BASE_URL; ?>assets/img/logo.jpg">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -134,8 +135,8 @@ $csrf_token = Auth::generateCSRF();
         }
 
         .brand-icon-lg {
-            width: 64px;
-            height: 64px;
+            width: 80px;
+            height: 80px;
             background: rgba(255,255,255,0.2);
             border-radius: var(--radius-lg);
             display: flex;
@@ -144,10 +145,13 @@ $csrf_token = Auth::generateCSRF();
             margin-bottom: 1.5rem;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.3);
+            overflow: hidden;
         }
-
-        .brand-icon-lg i {
-            font-size: 2rem;
+        
+        .brand-icon-lg img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .login-right {
@@ -201,8 +205,8 @@ $csrf_token = Auth::generateCSRF();
         }
 
         .brand-icon {
-            width: 48px;
-            height: 48px;
+            width: 60px;
+            height: 60px;
             background: rgba(255,255,255,0.2);
             border-radius: var(--radius-lg);
             display: flex;
@@ -211,10 +215,13 @@ $csrf_token = Auth::generateCSRF();
             margin: 0 auto 1rem;
             backdrop-filter: blur(5px);
             border: 1px solid rgba(255,255,255,0.3);
+            overflow: hidden;
         }
 
-        .brand-icon i {
-            font-size: 1.4rem;
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .btn-login {
@@ -402,7 +409,7 @@ $csrf_token = Auth::generateCSRF();
         <div class="login-left">
             <div class="brand-showcase">
                 <div class="brand-icon-lg">
-                    <i class="fas fa-boxes"></i>
+                    <img src="<?php echo BASE_URL; ?>assets/img/logo.jpg" alt="Logo">
                 </div>
                 <h1 class="display-5 fw-bold mb-3"><?php echo __('welcome_back'); ?></h1>
                 <p class="lead opacity-90 mb-4">
@@ -430,7 +437,7 @@ $csrf_token = Auth::generateCSRF();
             <div class="login-card">
                 <div class="card-header">
                     <div class="brand-icon">
-                        <i class="fas fa-boxes"></i>
+                         <img src="<?php echo BASE_URL; ?>assets/img/logo.jpg" alt="Logo">
                     </div>
                     <h3 class="h4 mb-2"><?php echo __('inventory_system'); ?></h3>
                     <p class="opacity-90 mb-0"><?php echo __('sign_in_to_continue'); ?></p>

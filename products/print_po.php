@@ -398,6 +398,16 @@ $company_website = "https://gojotech.et/";
                     <td class="amount-col">$<?php echo number_format($po['total_amount'], 2); ?></td>
                 </tr>
                 <tr>
+                    <td>Total Quantity</td>
+                    <td class="amount-col">
+                        <?php 
+                        $total_qty = 0;
+                        foreach($items as $i) $total_qty += $i['quantity_ordered'];
+                        echo $total_qty;
+                        ?>
+                    </td>
+                </tr>
+                <tr>
                     <td>Tax (0%)</td>
                     <td class="amount-col">$0.00</td>
                 </tr>
