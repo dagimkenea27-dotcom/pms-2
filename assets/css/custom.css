@@ -142,7 +142,6 @@ body {
 .sidebar .sidebar-brand-icon {
     font-size: 2rem;
     margin-right: 0.5rem;
-    transform: rotate(-15deg);
 }
 
 .sidebar hr.sidebar-divider {
@@ -809,7 +808,8 @@ footer.sticky-footer .copyright {
     border-radius: 0.5rem;
     padding: 0.5rem 0;
     min-width: 180px;
-    z-index: 1060; /* Higher than table headers */
+    z-index: 1060;
+    /* Higher than table headers */
 }
 
 .btn-group .dropdown-item {
