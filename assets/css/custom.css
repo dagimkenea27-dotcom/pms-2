@@ -63,7 +63,7 @@ body {
     left: 0;
     height: 100vh;
     width: var(--sidebar-width);
-    background: linear-gradient(180deg, #042480 10%, #224abe 100%);
+    background: linear-gradient(180deg, #073b74 10%, #073b74 100%);
     transition: width 0.3s ease, left 0.3s ease;
     z-index: 1040;
     overflow-y: auto;
@@ -168,14 +168,14 @@ body {
     text-align: left;
     padding: 1rem;
     width: 14rem;
-    color: rgba(255, 255, 255, .8);
+    color: rgba(255, 255, 255, 0.938);
     transition: all 0.3s ease;
 }
 
 .sidebar .nav-item .nav-link i {
     font-size: .85rem;
     margin-right: .25rem;
-    color: rgba(255, 255, 255, .3);
+    color: rgba(255, 255, 255, 0.486);
     transition: all 0.3s ease;
 }
 
@@ -864,4 +864,37 @@ footer.sticky-footer .copyright {
     color: #6c757d;
     cursor: not-allowed;
     background-color: transparent;
+}
+
+/* Sidebar Sub-menu Styles */
+.sidebar .collapse-inner {
+    border-radius: 0.35rem;
+    background-color: rgba(255, 255, 255, 0.1);
+    margin: 0 1rem 1rem;
+    padding: 0.5rem 0;
+}
+
+.sidebar .collapse-item {
+    color: rgba(255, 255, 255, 0.8) !important;
+    display: block;
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border-radius: 0.25rem;
+    margin: 0 0.5rem;
+}
+
+.sidebar .collapse-item:hover {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    color: #fff !important;
+    text-decoration: none;
+    padding-left: 1.25rem;
+}
+
+.sidebar .collapse-item.active {
+    color: #fff !important;
+    font-weight: 700;
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    border-left: 3px solid #fff;
 }

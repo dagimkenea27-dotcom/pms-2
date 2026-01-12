@@ -85,11 +85,29 @@
         }
     }
 
+    const SCROLL_KEY = "ims_sidebar_scroll";
+
+    function saveScrollPosition() {
+        localStorage.setItem(SCROLL_KEY, $sidebar.scrollTop());
+    }
+
+    function restoreScrollPosition() {
+        const savedScroll = localStorage.getItem(SCROLL_KEY);
+        if (savedScroll) {
+            $sidebar.scrollTop(savedScroll);
+        }
+    }
+
     $(document).ready(function () {
         applyInitialState();
+        restoreScrollPosition(); // Restore scroll position on load
+
         $toggle.on('click', toggle);
         $window.on('resize', handleResize);
         $(document).on('click', closeOnOverlayClick);
+
+        // Save scroll position on scroll event (throttled/debounced ideally, but simple for now)
+        $sidebar.on('scroll', saveScrollPosition);
     });
 
 })(jQuery);

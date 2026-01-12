@@ -15,7 +15,7 @@ Auth::startSession();
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="<?php echo BASE_URL; ?>assets/js/theme.js"></script>
     <script src="<?php echo BASE_URL; ?>assets/js/alerts.js"></script>
-    <link href="<?php echo BASE_URL; ?>assets/css/custom.css" rel="stylesheet">
+    <link href="<?php echo BASE_URL; ?>assets/css/custom.css?v=<?php echo time(); ?>_1" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" type="image/jpeg" href="<?php echo BASE_URL; ?>assets/img/logo.jpg">
     <script>
@@ -52,37 +52,44 @@ Auth::startSession();
             <hr class="sidebar-divider">
 
             <!-- Heading -->
+            <!-- Heading -->
             <div class="sidebar-heading">
                 <?php echo __('product_management'); ?>
             </div>
 
             <!-- Nav Item - Pricing -->
-            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'price') !== false ? 'active' : ''; ?>">
-                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapsePricing"
-                    aria-expanded="true" aria-controls="collapsePricing">
+            <?php 
+            $isPricingActive = strpos($_SERVER['REQUEST_URI'], 'price') !== false;
+            ?>
+            <li class="nav-item <?php echo $isPricingActive ? 'active' : ''; ?>">
+                <a class="nav-link <?php echo $isPricingActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapsePricing"
+                    aria-expanded="<?php echo $isPricingActive ? 'true' : 'false'; ?>" aria-controls="collapsePricing">
                     <i class="fas fa-fw fa-tag"></i>
                     <span><?php echo __('pricing'); ?></span>
                 </a>
-                <div id="collapsePricing" class="collapse <?php echo strpos($_SERVER['REQUEST_URI'], 'price') !== false ? 'show' : ''; ?>" aria-labelledby="headingPricing" data-parent="#accordionSidebar">
+                <div id="collapsePricing" class="collapse <?php echo $isPricingActive ? 'show' : ''; ?>" aria-labelledby="headingPricing" data-parent="#accordionSidebar">
                     <div class="py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>price.php"><?php echo __('price_calculator'); ?></a>
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>price_analytics.php"><?php echo __('price_analytics'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'price.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>price.php"><?php echo __('price_calculator'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'price_analytics.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>price_analytics.php"><?php echo __('price_analytics'); ?></a>
                     </div>
                 </div>
             </li>
 
             <!-- Nav Item - Catalog -->
-            <li class="nav-item <?php echo ((strpos($_SERVER['REQUEST_URI'], 'products/') !== false && strpos($_SERVER['REQUEST_URI'], 'stock_') === false) || strpos($_SERVER['REQUEST_URI'], 'categories/') !== false || strpos($_SERVER['REQUEST_URI'], 'brands/') !== false) ? 'active' : ''; ?>">
-                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseCatalog"
-                    aria-expanded="true" aria-controls="collapseCatalog">
+            <?php 
+            $isCatalogActive = (strpos($_SERVER['REQUEST_URI'], 'products/') !== false && strpos($_SERVER['REQUEST_URI'], 'stock_') === false && strpos($_SERVER['REQUEST_URI'], 'purchase_orders') === false && strpos($_SERVER['REQUEST_URI'], 'edit_po.php') === false) || strpos($_SERVER['REQUEST_URI'], 'categories/') !== false || strpos($_SERVER['REQUEST_URI'], 'brands/') !== false;
+            ?>
+            <li class="nav-item <?php echo $isCatalogActive ? 'active' : ''; ?>">
+                <a class="nav-link <?php echo $isCatalogActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseCatalog"
+                    aria-expanded="<?php echo $isCatalogActive ? 'true' : 'false'; ?>" aria-controls="collapseCatalog">
                     <i class="fas fa-fw fa-box-open"></i>
                     <span><?php echo __('catalog'); ?></span>
                 </a>
-                <div id="collapseCatalog" class="collapse <?php echo ((strpos($_SERVER['REQUEST_URI'], 'products/') !== false && strpos($_SERVER['REQUEST_URI'], 'stock_') === false) || strpos($_SERVER['REQUEST_URI'], 'categories/') !== false || strpos($_SERVER['REQUEST_URI'], 'brands/') !== false) ? 'show' : ''; ?>" aria-labelledby="headingCatalog" data-parent="#accordionSidebar">
+                <div id="collapseCatalog" class="collapse <?php echo $isCatalogActive ? 'show' : ''; ?>" aria-labelledby="headingCatalog" data-parent="#accordionSidebar">
                     <div class="py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>products/view_products.php"><?php echo __('products'); ?></a>
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>categories/"><?php echo __('categories'); ?></a>
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>brands/"><?php echo __('brands'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'products/view_products.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>products/view_products.php"><?php echo __('products'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'categories/') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>categories/"><?php echo __('categories'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'brands/') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>brands/"><?php echo __('brands'); ?></a>
                     </div>
                 </div>
             </li>
@@ -96,17 +103,20 @@ Auth::startSession();
             </div>
 
             <!-- Nav Item - Stock Movements -->
-            <li class="nav-item <?php echo (strpos($_SERVER['REQUEST_URI'], 'products/stock_in') !== false || strpos($_SERVER['REQUEST_URI'], 'products/stock_out') !== false) ? 'active' : ''; ?>">
-                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseStock"
-                    aria-expanded="true" aria-controls="collapseStock">
+            <?php 
+            $isStockActive = strpos($_SERVER['REQUEST_URI'], 'products/stock_in') !== false || strpos($_SERVER['REQUEST_URI'], 'products/stock_out') !== false || strpos($_SERVER['REQUEST_URI'], 'products/purchase_orders') !== false || strpos($_SERVER['REQUEST_URI'], 'products/edit_po.php') !== false;
+            ?>
+            <li class="nav-item <?php echo $isStockActive ? 'active' : ''; ?>">
+                <a class="nav-link <?php echo $isStockActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseStock"
+                    aria-expanded="<?php echo $isStockActive ? 'true' : 'false'; ?>" aria-controls="collapseStock">
                     <i class="fas fa-fw fa-exchange-alt"></i>
                     <span><?php echo __('stock_operations'); ?></span>
                 </a>
-                <div id="collapseStock" class="collapse <?php echo (strpos($_SERVER['REQUEST_URI'], 'products/stock_in') !== false || strpos($_SERVER['REQUEST_URI'], 'products/stock_out') !== false) ? 'show' : ''; ?>" aria-labelledby="headingStock" data-parent="#accordionSidebar">
+                <div id="collapseStock" class="collapse <?php echo $isStockActive ? 'show' : ''; ?>" aria-labelledby="headingStock" data-parent="#accordionSidebar">
                     <div class="py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>products/stock_in.php"><?php echo __('stock_in'); ?></a>
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>products/stock_out.php"><?php echo __('stock_out'); ?></a>
-                        <a class="collapse-item fw-bold text-primary" href="<?php echo BASE_URL; ?>products/purchase_orders.php">
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'products/stock_in.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>products/stock_in.php"><?php echo __('stock_in'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'products/stock_out.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>products/stock_out.php"><?php echo __('stock_out'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'products/purchase_orders.php') !== false || strpos($_SERVER['REQUEST_URI'], 'products/edit_po.php') !== false ? 'active' : ''; ?> fw-bold" href="<?php echo BASE_URL; ?>products/purchase_orders.php">
                             <i class="fas fa-file-invoice fa-sm"></i> Purchase Orders
                         </a>
                     </div>
@@ -114,43 +124,52 @@ Auth::startSession();
             </li>
 
             <!-- Nav Item - Suppliers -->
-            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'suppliers/') !== false ? 'active' : ''; ?>">
-                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseSuppliers"
-                    aria-expanded="true" aria-controls="collapseSuppliers">
+            <?php 
+            $isSupplierActive = strpos($_SERVER['REQUEST_URI'], 'suppliers/') !== false;
+            ?>
+            <li class="nav-item <?php echo $isSupplierActive ? 'active' : ''; ?>">
+                <a class="nav-link <?php echo $isSupplierActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseSuppliers"
+                    aria-expanded="<?php echo $isSupplierActive ? 'true' : 'false'; ?>" aria-controls="collapseSuppliers">
                     <i class="fas fa-fw fa-truck"></i>
                     <span><?php echo __('suppliers'); ?></span>
                 </a>
-                <div id="collapseSuppliers" class="collapse <?php echo strpos($_SERVER['REQUEST_URI'], 'suppliers/') !== false ? 'show' : ''; ?>" aria-labelledby="headingSuppliers" data-parent="#accordionSidebar">
+                <div id="collapseSuppliers" class="collapse <?php echo $isSupplierActive ? 'show' : ''; ?>" aria-labelledby="headingSuppliers" data-parent="#accordionSidebar">
                     <div class="py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>suppliers/view_suppliers.php"><?php echo __('view_suppliers'); ?></a>
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>suppliers/add_supplier.php"><?php echo __('add_supplier'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'suppliers/view_suppliers.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>suppliers/view_suppliers.php"><?php echo __('view_suppliers'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'suppliers/add_supplier.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>suppliers/add_supplier.php"><?php echo __('add_supplier'); ?></a>
                     </div>
                 </div>
             </li>
 
             <!-- Nav Item - Drivers & Fleet -->
-            <li class="nav-item <?php echo (strpos($_SERVER['REQUEST_URI'], 'drivers/') !== false || strpos($_SERVER['REQUEST_URI'], 'vehicles/') !== false) ? 'active' : ''; ?>">
-                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseFleet"
-                    aria-expanded="true" aria-controls="collapseFleet">
+            <?php 
+            $isFleetActive = strpos($_SERVER['REQUEST_URI'], 'drivers/') !== false || strpos($_SERVER['REQUEST_URI'], 'vehicles/') !== false;
+            ?>
+            <li class="nav-item <?php echo $isFleetActive ? 'active' : ''; ?>">
+                <a class="nav-link <?php echo $isFleetActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseFleet"
+                    aria-expanded="<?php echo $isFleetActive ? 'true' : 'false'; ?>" aria-controls="collapseFleet">
                     <i class="fas fa-fw fa-users-cog"></i>
                     <span><?php echo __('driver_fleet'); ?></span>
                 </a>
-                <div id="collapseFleet" class="collapse <?php echo (strpos($_SERVER['REQUEST_URI'], 'drivers/') !== false || strpos($_SERVER['REQUEST_URI'], 'vehicles/') !== false) ? 'show' : ''; ?>" aria-labelledby="headingFleet" data-parent="#accordionSidebar">
+                <div id="collapseFleet" class="collapse <?php echo $isFleetActive ? 'show' : ''; ?>" aria-labelledby="headingFleet" data-parent="#accordionSidebar">
                     <div class="py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>drivers/index.php"><?php echo __('drivers'); ?></a>
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>vehicles/index.php"><?php echo __('vehicles'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'drivers/index.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>drivers/index.php"><?php echo __('drivers'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'vehicles/index.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>vehicles/index.php"><?php echo __('vehicles'); ?></a>
                     </div>
                 </div>
             </li>
 
             <!-- Nav Item - Route Optimizer -->
-            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/') !== false ? 'active' : ''; ?>">
-                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseRoutes"
-                    aria-expanded="true" aria-controls="collapseRoutes">
+            <?php 
+            $isRouteActive = strpos($_SERVER['REQUEST_URI'], 'routes/') !== false;
+            ?>
+            <li class="nav-item <?php echo $isRouteActive ? 'active' : ''; ?>">
+                <a class="nav-link <?php echo $isRouteActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseRoutes"
+                    aria-expanded="<?php echo $isRouteActive ? 'true' : 'false'; ?>" aria-controls="collapseRoutes">
                     <i class="fas fa-fw fa-map-marked-alt"></i>
                     <span><?php echo __('route_management'); ?></span>
                 </a>
-                <div id="collapseRoutes" class="collapse <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/') !== false ? 'show' : ''; ?>" aria-labelledby="headingRoutes" data-parent="#accordionSidebar">
+                <div id="collapseRoutes" class="collapse <?php echo $isRouteActive ? 'show' : ''; ?>" aria-labelledby="headingRoutes" data-parent="#accordionSidebar">
                     <div class="py-2 collapse-inner rounded">
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/index.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>routes/index.php"><?php echo __('optimize_routes'); ?></a>
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'routes/manage.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>routes/manage.php"><?php echo __('saved_routes'); ?></a>
@@ -213,17 +232,20 @@ Auth::startSession();
 
             <!-- Nav Item - Admin Tools -->
             <?php if (Auth::isLoggedIn() && Auth::getCurrentUser()['role'] == 'admin'): ?>
-            <li class="nav-item <?php echo (strpos($_SERVER['REQUEST_URI'], 'users/') !== false || strpos($_SERVER['REQUEST_URI'], 'admin/') !== false || strpos($_SERVER['REQUEST_URI'], 'tax_fee_admin.php') !== false) ? 'active' : ''; ?>">
-                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseAdmin"
-                    aria-expanded="true" aria-controls="collapseAdmin">
+            <?php 
+            $isAdminActive = strpos($_SERVER['REQUEST_URI'], 'users/') !== false || strpos($_SERVER['REQUEST_URI'], 'admin/') !== false || strpos($_SERVER['REQUEST_URI'], 'tax_fee_admin.php') !== false || strpos($_SERVER['REQUEST_URI'], 'settings/backup.php') !== false;
+            ?>
+            <li class="nav-item <?php echo $isAdminActive ? 'active' : ''; ?>">
+                <a class="nav-link <?php echo $isAdminActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseAdmin"
+                    aria-expanded="<?php echo $isAdminActive ? 'true' : 'false'; ?>" aria-controls="collapseAdmin">
                     <i class="fas fa-fw fa-cogs"></i>
                     <span><?php echo __('admin_tools'); ?></span>
                 </a>
-                <div id="collapseAdmin" class="collapse <?php echo (strpos($_SERVER['REQUEST_URI'], 'users/') !== false || strpos($_SERVER['REQUEST_URI'], 'admin/') !== false || strpos($_SERVER['REQUEST_URI'], 'tax_fee_admin.php') !== false) ? 'show' : ''; ?>" aria-labelledby="headingAdmin" data-parent="#accordionSidebar">
+                <div id="collapseAdmin" class="collapse <?php echo $isAdminActive ? 'show' : ''; ?>" aria-labelledby="headingAdmin" data-parent="#accordionSidebar">
                     <div class="py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>users/view_users.php"><?php echo __('user_management'); ?></a>
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>admin/audit_logs.php"><?php echo __('audit_logs'); ?></a>
-                        <a class="collapse-item" href="<?php echo BASE_URL; ?>tax_fee_admin.php"><?php echo __('tax_fee_config'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'users/view_users.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>users/view_users.php"><?php echo __('user_management'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'admin/audit_logs.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>admin/audit_logs.php"><?php echo __('audit_logs'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'tax_fee_admin.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>tax_fee_admin.php"><?php echo __('tax_fee_config'); ?></a>
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'settings/backup.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>settings/backup.php"><?php echo __('database_backup'); ?></a>
                     </div>
                 </div>

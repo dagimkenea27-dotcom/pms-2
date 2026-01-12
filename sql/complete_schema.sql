@@ -96,6 +96,8 @@ CREATE TABLE IF NOT EXISTS product_variants (
     color VARCHAR(50),
     quantity INT DEFAULT 0,
     price DECIMAL(10,2),
+    cost_price DECIMAL(10,2),
+    location VARCHAR(100),
     min_stock INT DEFAULT 5,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

@@ -421,7 +421,7 @@ require_once "../includes/header.php";
                                     <th class="border-0">Color</th>
                                     <th class="border-0">SKU</th>
                                     <th class="border-0">Qty</th>
-                                    <th class="border-0">Cost</th>
+                                    <th class="border-0">Cost Price</th>
                                     <th class="border-0">Price</th>
                                     <th class="border-0">Location</th>
                                     <th class="border-0 text-center">Action</th>
@@ -588,8 +588,8 @@ function addVariantRow() {
         <td><input type="text" class="form-control form-control-sm border-0 bg-light" name="variant_color[]" placeholder="Color"></td>
         <td><input type="text" class="form-control form-control-sm border-0 bg-light variant-sku" name="variant_sku[]" placeholder="Auto SKU"></td>
         <td><input type="number" class="form-control form-control-sm border-0 bg-light" name="variant_qty[]" value="0" min="0" style="width: 70px;"></td>
-        <td><input type="number" class="form-control form-control-sm border-0 bg-light" name="variant_cost[]" step="0.01" placeholder="Cost" style="width: 80px;"></td>
-        <td><input type="number" class="form-control form-control-sm border-0 bg-light" name="variant_price[]" step="0.01" placeholder="Price" style="width: 80px;"></td>
+        <td><input type="number" class="form-control form-control-sm border-0 bg-light" name="variant_cost[]" step="0.01" placeholder="0.00" style="width: 80px;"></td>
+        <td><input type="number" class="form-control form-control-sm border-0 bg-light" name="variant_price[]" step="0.01" placeholder="0.00" style="width: 80px;"></td>
         <td><input type="text" class="form-control form-control-sm border-0 bg-light" name="variant_location[]" placeholder="Bin"></td>
         <td class="text-center"><button type="button" class="btn btn-link text-danger btn-sm remove-variant"><i class="fas fa-trash"></i></button></td>
     `;

@@ -55,7 +55,7 @@ $csrf_token = Auth::generateCSRF();
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --primary-gradient: linear-gradient(135deg, #073b74 0%, #073b74 100%);
             --primary-dark: #5a67d8;
             --accent-color: #10b981;
             --light-bg: #f8fafc;
@@ -408,9 +408,6 @@ $csrf_token = Auth::generateCSRF();
         </div>
         <div class="login-left">
             <div class="brand-showcase">
-                <div class="brand-icon-lg">
-                    <img src="<?php echo BASE_URL; ?>assets/img/logo.jpg" alt="Logo">
-                </div>
                 <h1 class="display-5 fw-bold mb-3"><?php echo __('welcome_back'); ?></h1>
                 <p class="lead opacity-90 mb-4">
                     Streamline your inventory management with our powerful system.

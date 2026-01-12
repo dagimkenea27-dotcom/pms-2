@@ -99,10 +99,10 @@ function generateSKU($db, $extra_excludes = []) {
 /**
  * Log a stock change event for audit trail
  */
-function logStockChange($db, $product_id, $variant_id, $user_id, $change_type, $qty_before, $qty_after, $notes = '') {
+function logStockChange($db, $product_id, $variant_id, $user_id, $change_type, $qty_before, $qty_after, $notes = '', $reference = null) {
     $qty_change = $qty_after - $qty_before;
-    $query = "INSERT INTO stock_movements (product_id, variant_id, user_id, movement_type, quantity, reason) 
-              VALUES (?, ?, ?, ?, ?, ?)";
+    $query = "INSERT INTO stock_movements (product_id, variant_id, user_id, movement_type, quantity, reason, reference) 
+              VALUES (?, ?, ?, ?, ?, ?, ?)";
     
     // Map existing parameters to new schema
     // change_type in old function was 'in'/'out' which matches roughly?
@@ -113,5 +113,5 @@ function logStockChange($db, $product_id, $variant_id, $user_id, $change_type, $
     $reason = $notes;
     
     $stmt = $db->prepare($query);
-    return $stmt->execute([$product_id, $variant_id, $user_id, $movement_type, $quantity, $reason]);
+    return $stmt->execute([$product_id, $variant_id, $user_id, $movement_type, $quantity, $reason, $reference]);
 }

@@ -22,10 +22,12 @@ if (isset($_POST['action']) && $_POST['action'] === 'receive' && Auth::hasRole('
     try {
         $db->beginTransaction();
         
-        // Get PO status
-        $status_check = $db->prepare("SELECT status FROM purchase_orders WHERE id = ?");
+        // Get PO status and number
+        $status_check = $db->prepare("SELECT status, order_number FROM purchase_orders WHERE id = ?");
         $status_check->execute([$po_id]);
-        $current_status = $status_check->fetchColumn();
+        $po_data = $status_check->fetch(PDO::FETCH_ASSOC);
+        $current_status = $po_data['status'];
+        $po_number = $po_data['order_number'];
         
         if ($current_status === 'received') {
             throw new Exception("This PO has already been received.");
@@ -52,13 +54,13 @@ if (isset($_POST['action']) && $_POST['action'] === 'receive' && Auth::hasRole('
                 $db->prepare("UPDATE products SET quantity = quantity + ? WHERE id = ?")
                    ->execute([$received_qty, $item['product_id']]);
                 
-                logStockChange($db, $item['product_id'], $item['variant_id'], Auth::getCurrentUser()['id'], 'in', $item['v_current_qty'], $item['v_current_qty'] + $received_qty, "PO Received: " . $_GET['id']);
+                logStockChange($db, $item['product_id'], $item['variant_id'], Auth::getCurrentUser()['id'], 'in', $item['v_current_qty'], $item['v_current_qty'] + $received_qty, "PO Received", "PO #" . $po_number);
             } else {
                 // Update Product
                 $db->prepare("UPDATE products SET quantity = quantity + ? WHERE id = ?")
                    ->execute([$received_qty, $item['product_id']]);
                 
-                logStockChange($db, $item['product_id'], null, Auth::getCurrentUser()['id'], 'in', $item['p_current_qty'], $item['p_current_qty'] + $received_qty, "PO Received: " . $_GET['id']);
+                logStockChange($db, $item['product_id'], null, Auth::getCurrentUser()['id'], 'in', $item['p_current_qty'], $item['p_current_qty'] + $received_qty, "PO Received", "PO #" . $po_number);
             }
             
             // Mark items as received in PO items table
