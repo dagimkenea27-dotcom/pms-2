@@ -4,7 +4,8 @@ require_once 'models/User.php';
 
 // Check if logged in
 if (!Auth::isLoggedIn()) {
-    header("Location: " . (defined('BASE_URL') ? BASE_URL : '') . "login.php");
+    $base = defined('BASE_URL') ? BASE_URL : '/';
+    header("Location: " . $base . "login.php");
     exit();
 }
 

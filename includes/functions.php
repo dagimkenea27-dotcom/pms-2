@@ -99,19 +99,24 @@ function generateSKU($db, $extra_excludes = []) {
 /**
  * Log a stock change event for audit trail
  */
-function logStockChange($db, $product_id, $variant_id, $user_id, $change_type, $qty_before, $qty_after, $notes = '', $reference = null) {
-    $qty_change = $qty_after - $qty_before;
-    $query = "INSERT INTO stock_movements (product_id, variant_id, user_id, movement_type, quantity, reason, reference) 
-              VALUES (?, ?, ?, ?, ?, ?, ?)";
-    
-    // Map existing parameters to new schema
-    // change_type in old function was 'in'/'out' which matches roughly?
-    // But table schema probably expects 'IN'/'OUT'
-    
+function logStockChange($db, $product_id, $variant_id, $user_id, $change_type, $qty_before, $qty_after, $notes = '', $reference = null, $driver_id = null, $supplier_id = null) {
+    // Quantity is stored as positive, type (IN/OUT) determines direction
+    $quantity = abs($qty_after - $qty_before);
     $movement_type = strtoupper($change_type);
-    $quantity = abs($qty_change); // Quantity is usually positive, type determines direction
-    $reason = $notes;
+    
+    $query = "INSERT INTO stock_movements (product_id, variant_id, user_id, movement_type, quantity, reason, reference, driver_id, supplier_id) 
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
     
     $stmt = $db->prepare($query);
-    return $stmt->execute([$product_id, $variant_id, $user_id, $movement_type, $quantity, $reason, $reference]);
+    return $stmt->execute([
+        $product_id, 
+        $variant_id, 
+        $user_id, 
+        $movement_type, 
+        $quantity, 
+        $notes, 
+        $reference, 
+        $driver_id, 
+        $supplier_id
+    ]);
 }

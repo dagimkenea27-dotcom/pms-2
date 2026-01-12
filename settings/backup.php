@@ -3,7 +3,8 @@ require_once dirname(__DIR__) . '/includes/header.php';
 
 // Check if logged in and is admin
 if (!Auth::isLoggedIn() || Auth::getCurrentUser()['role'] !== 'admin') {
-    header("Location: " . (defined('BASE_URL') ? BASE_URL : '') . "index.php");
+    $base = defined('BASE_URL') ? BASE_URL : '/';
+    header("Location: " . $base . "index.php");
     exit();
 }
 ?>

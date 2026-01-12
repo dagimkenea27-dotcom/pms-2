@@ -60,8 +60,8 @@ if ($_POST) {
         
         $db->beginTransaction();
 
-        $current_qty = 0;
-        
+        $driver_id = !empty($_POST['driver_id']) ? $_POST['driver_id'] : null;
+
         // Update logic depending on variant or simple
         if ($variant_id) {
             // Get current variant qty
@@ -80,13 +80,13 @@ if ($_POST) {
                 // Update master product quantity
                 $db->prepare("UPDATE products SET quantity = quantity + ? WHERE id = ?")->execute([$quantity, $product['id']]);
                 $new_qty = $current_qty + $quantity;
-                logStockChange($db, $product['id'], $variant_id, Auth::getCurrentUser()['id'], 'in', $current_qty, $new_qty, "Movement: $reason ($reference)");
+                logStockChange($db, $product['id'], $variant_id, Auth::getCurrentUser()['id'], 'in', $current_qty, $new_qty, "Movement: $reason ($reference)", $reference, $driver_id);
             } else {
                 $db->prepare("UPDATE product_variants SET quantity = quantity - ? WHERE id = ?")->execute([$quantity, $variant_id]);
                 // Update master product quantity
                 $db->prepare("UPDATE products SET quantity = quantity - ? WHERE id = ?")->execute([$quantity, $product['id']]);
                 $new_qty = $current_qty - $quantity;
-                logStockChange($db, $product['id'], $variant_id, Auth::getCurrentUser()['id'], 'out', $current_qty, $new_qty, "Movement: $reason ($reference)");
+                logStockChange($db, $product['id'], $variant_id, Auth::getCurrentUser()['id'], 'out', $current_qty, $new_qty, "Movement: $reason ($reference)", $reference, $driver_id);
             }
 
         } else {
@@ -100,30 +100,15 @@ if ($_POST) {
             if ($movement_type == 'IN') {
                  $db->prepare("UPDATE products SET quantity = quantity + ? WHERE id = ?")->execute([$quantity, $product['id']]);
                  $new_qty = $current_qty + $quantity;
-                 logStockChange($db, $product['id'], null, Auth::getCurrentUser()['id'], 'in', $current_qty, $new_qty, "Movement: $reason ($reference)");
+                 logStockChange($db, $product['id'], null, Auth::getCurrentUser()['id'], 'in', $current_qty, $new_qty, "Movement: $reason ($reference)", $reference, $driver_id);
             } else {
                  $db->prepare("UPDATE products SET quantity = quantity - ? WHERE id = ?")->execute([$quantity, $product['id']]);
                  $new_qty = $current_qty - $quantity;
-                 logStockChange($db, $product['id'], null, Auth::getCurrentUser()['id'], 'out', $current_qty, $new_qty, "Movement: $reason ($reference)");
+                 logStockChange($db, $product['id'], null, Auth::getCurrentUser()['id'], 'out', $current_qty, $new_qty, "Movement: $reason ($reference)", $reference, $driver_id);
             }
         }
 
-        // Log movement
-        $driver_id = !empty($_POST['driver_id']) ? $_POST['driver_id'] : null;
-        $movement_query = "INSERT INTO stock_movements 
-                          (product_id, variant_id, movement_type, quantity, reason, reference, user_id, driver_id) 
-                          VALUES (:product_id, :variant_id, :movement_type, :quantity, :reason, :reference, :user_id, :driver_id)";
-        $movement_stmt = $db->prepare($movement_query);
-        $movement_stmt->execute([
-            ':product_id' => $product['id'],
-            ':variant_id' => $variant_id,
-            ':movement_type' => $movement_type,
-            ':quantity' => $quantity,
-            ':reason' => $reason,
-            ':reference' => $reference,
-            ':user_id' => Auth::getCurrentUser()['id'],
-            ':driver_id' => $driver_id
-        ]);
+        // Duplicate log removed as it is now handled by logStockChange
 
         $db->commit();
         

@@ -252,32 +252,12 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                             ]);
                             $variant_id = $db->lastInsertId();
 
-                            // Log Audit Trail
-                            logStockChange($db, $product_id, $variant_id, Auth::getCurrentUser()['id'], 'in', 0, $v['qty'], 'Initial stock');
-
-                            // Log legacy movement for backward compatibility
-                            $movement_query = "INSERT INTO stock_movements (product_id, variant_id, movement_type, quantity, reason, supplier_id) 
-                                              VALUES (:product_id, :variant_id, 'IN', :quantity, 'Initial stock', :supplier_id)";
-                            $m_stmt = $db->prepare($movement_query);
-                            $m_stmt->execute([
-                                ':product_id' => $product_id,
-                                ':variant_id' => $variant_id,
-                                ':quantity' => $v['qty'],
-                                ':supplier_id' => $supplier_id
-                            ]);
+                            // Log Audit Trail & Movement
+                            logStockChange($db, $product_id, $variant_id, Auth::getCurrentUser()['id'], 'in', 0, $v['qty'], 'Initial stock', null, null, $supplier_id);
                         }
                     } else {
-                        // Log Audit Trail
-                        logStockChange($db, $product_id, null, Auth::getCurrentUser()['id'], 'in', 0, $quantity, 'Initial stock');
-
-                        // Log legacy movement
-                        $movement_query = "INSERT INTO stock_movements (product_id, movement_type, quantity, reason, supplier_id) 
-                                          VALUES (:product_id, 'IN', :quantity, 'Initial stock', :supplier_id)";
-                        $movement_stmt = $db->prepare($movement_query);
-                        $movement_stmt->bindParam(":product_id", $product_id);
-                        $movement_stmt->bindParam(":quantity", $quantity);
-                        $movement_stmt->bindParam(":supplier_id", $supplier_id);
-                        $movement_stmt->execute();
+                        // Log Audit Trail & Movement
+                        logStockChange($db, $product_id, null, Auth::getCurrentUser()['id'], 'in', 0, $quantity, 'Initial stock', null, null, $supplier_id);
                     }
 
                     $db->commit();

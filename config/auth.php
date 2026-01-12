@@ -42,7 +42,8 @@ class Auth {
 
     public static function requireLogin() {
         if (!self::isLoggedIn()) {
-            header("Location: " . (defined('BASE_URL') ? BASE_URL : '') . "login.php");
+            $base = defined('BASE_URL') ? BASE_URL : '/';
+            header("Location: " . $base . "login.php");
             exit();
         }
     }
@@ -75,7 +76,8 @@ class Auth {
         if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $timeout)) {
             // Session has timed out
             self::logout();
-            header("Location: " . (defined('BASE_URL') ? BASE_URL : '') . "login.php?timeout=1");
+            $base = defined('BASE_URL') ? BASE_URL : '/';
+            header("Location: " . $base . "login.php?timeout=1");
             exit();
         }
         

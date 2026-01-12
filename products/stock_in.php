@@ -80,28 +80,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->prepare("UPDATE product_variants SET quantity = quantity + ? WHERE id = ?")->execute([$quantity, $variant_id]);
             $db->prepare("UPDATE products SET quantity = quantity + ? WHERE id = ?")->execute([$quantity, $product_id]);
             
-            logStockChange($db, $product_id, $variant_id, Auth::getCurrentUser()['id'], 'in', $v_qty_before, $v_qty_before + $quantity, "Stock In: $reason ($reference)");
+            $driver_id = !empty($_POST['driver_id']) ? $_POST['driver_id'] : null;
+            logStockChange($db, $product_id, $variant_id, Auth::getCurrentUser()['id'], 'in', $v_qty_before, $v_qty_before + $quantity, "Stock In: $reason ($reference)", $reference, $driver_id, $supplier_id);
         } else {
             $db->prepare("UPDATE products SET quantity = quantity + ? WHERE id = ?")->execute([$quantity, $product_id]);
-            logStockChange($db, $product_id, null, Auth::getCurrentUser()['id'], 'in', $p_data['quantity'], $p_data['quantity'] + $quantity, "Stock In: $reason ($reference)");
+            $driver_id = !empty($_POST['driver_id']) ? $_POST['driver_id'] : null;
+            logStockChange($db, $product_id, null, Auth::getCurrentUser()['id'], 'in', $p_data['quantity'], $p_data['quantity'] + $quantity, "Stock In: $reason ($reference)", $reference, $driver_id, $supplier_id);
         }
         
-        // Log the legacy stock movement
-        $driver_id = !empty($_POST['driver_id']) ? $_POST['driver_id'] : null;
-        $movement_query = "INSERT INTO stock_movements 
-                          (product_id, variant_id, movement_type, quantity, reason, reference, supplier_id, user_id, driver_id) 
-                          VALUES (:product_id, :variant_id, 'IN', :quantity, :reason, :reference, :supplier_id, :user_id, :driver_id)";
-        $movement_stmt = $db->prepare($movement_query);
-        $movement_stmt->execute([
-            ':product_id' => $product_id,
-            ':variant_id' => $variant_id,
-            ':quantity' => $quantity,
-            ':reason' => $reason,
-            ':reference' => $reference,
-            ':supplier_id' => $supplier_id,
-            ':user_id' => Auth::getCurrentUser()['id'],
-            ':driver_id' => $driver_id
-        ]);
+        // Duplicate log removed as it is now handled by logStockChange
         
         $db->commit();
         $message = "Stock added successfully!";
