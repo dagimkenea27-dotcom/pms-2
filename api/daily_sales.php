@@ -64,7 +64,7 @@ try {
                 ':notes' => $input['notes'] ?? '',
                 ':needs_followup' => isset($input['needs_followup']) ? (int)$input['needs_followup'] : 0,
                 ':followup_reason' => $input['followup_reason'] ?? '',
-                ':created_at' => $input['created_at'] ?? date('Y-m-d H:i:s')
+                ':created_at' => isset($input['created_at']) ? date('Y-m-d H:i:s', strtotime($input['created_at'])) : date('Y-m-d H:i:s')
             ];
             
             $result = $stmt->execute($params);
