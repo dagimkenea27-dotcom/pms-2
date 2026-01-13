@@ -209,6 +209,23 @@ CREATE TABLE IF NOT EXISTS route_optimization_settings (
     FOREIGN KEY (route_id) REFERENCES routes(id) ON DELETE CASCADE
 );
 
+-- Daily sales tracker table
+CREATE TABLE IF NOT EXISTS daily_sales_tracker (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    date DATE NOT NULL,
+    product_type VARCHAR(100),
+    size VARCHAR(20),
+    color VARCHAR(50),
+    price VARCHAR(50),
+    customer_info TEXT,
+    customer_location VARCHAR(255),
+    purchased BOOLEAN DEFAULT FALSE,
+    notes TEXT,
+    needs_followup BOOLEAN DEFAULT FALSE,
+    followup_reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Attributes table (for product attributes)
 CREATE TABLE IF NOT EXISTS attributes (
     id INT AUTO_INCREMENT PRIMARY KEY,

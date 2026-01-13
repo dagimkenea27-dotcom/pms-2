@@ -1,7 +1,7 @@
 <?php
 header("Content-Type: application/json");
-require_once "../config/database.php";
-require_once "../config/auth.php";
+require_once dirname(__DIR__) . "/config/database.php";
+require_once dirname(__DIR__) . "/config/auth.php";
 
 Auth::startSession();
 if (!Auth::isLoggedIn()) {
@@ -11,6 +11,11 @@ if (!Auth::isLoggedIn()) {
 
 $database = new Database();
 $db = $database->getConnection();
+
+if (!$db) {
+    echo json_encode(["isOk" => false, "message" => "Database connection failed"]);
+    exit;
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 
