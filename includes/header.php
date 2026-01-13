@@ -222,6 +222,13 @@ Auth::startSession();
                 </a>
             </li>
 
+            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'daily_sales.php') !== false ? 'active' : ''; ?>">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>daily_sales.php">
+                    <i class="fas fa-fw fa-shopping-cart"></i>
+                    <span>Daily Sales Track</span>
+                </a>
+            </li>
+
             <!-- Divider -->
             <hr class="sidebar-divider">
 
