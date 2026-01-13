@@ -359,6 +359,7 @@ require_once "includes/header.php";
             try {
                 const response = await fetch('api/daily_sales.php');
                 const data = await response.json();
+                if (data.isOk === false) throw new Error(data.message);
                 this.handler.onDataChanged(data);
                 return { isOk: true };
             } catch (e) {
@@ -374,9 +375,16 @@ require_once "includes/header.php";
                     body: JSON.stringify(entry)
                 });
                 const result = await response.json();
-                if (result.isOk) this.refresh();
+                if (result.isOk) {
+                    this.refresh();
+                } else {
+                    console.error('API Error:', result.message);
+                    showToast('Error: ' + (result.message || 'Action failed'), 'error');
+                }
                 return result;
             } catch (e) {
+                console.error('Network Error:', e);
+                showToast('Network error, please check console', 'error');
                 return { isOk: false };
             }
         },
@@ -388,9 +396,16 @@ require_once "includes/header.php";
                     body: JSON.stringify(entry)
                 });
                 const result = await response.json();
-                if (result.isOk) this.refresh();
+                if (result.isOk) {
+                    this.refresh();
+                } else {
+                    console.error('API Error:', result.message);
+                    showToast('Error: ' + (result.message || 'Action failed'), 'error');
+                }
                 return result;
             } catch (e) {
+                console.error('Network Error:', e);
+                showToast('Network error, please check console', 'error');
                 return { isOk: false };
             }
         },
@@ -402,16 +417,31 @@ require_once "includes/header.php";
                     body: JSON.stringify({ __backendId: entry.__backendId })
                 });
                 const result = await response.json();
-                if (result.isOk) this.refresh();
+                if (result.isOk) {
+                    this.refresh();
+                } else {
+                    console.error('API Error:', result.message);
+                    showToast('Error: ' + (result.message || 'Action failed'), 'error');
+                }
                 return result;
             } catch (e) {
+                console.error('Network Error:', e);
+                showToast('Network error, please check console', 'error');
                 return { isOk: false };
             }
         },
         async refresh() {
-            const response = await fetch('api/daily_sales.php');
-            const data = await response.json();
-            this.handler.onDataChanged(data);
+            try {
+                const response = await fetch('api/daily_sales.php');
+                const data = await response.json();
+                if (Array.isArray(data)) {
+                    this.handler.onDataChanged(data);
+                } else if (data.isOk === false) {
+                    console.error('Refresh failed:', data.message);
+                }
+            } catch (e) {
+                console.error('Refresh error:', e);
+            }
         }
     };
 </script>
