@@ -202,6 +202,10 @@ require_once "includes/header.php";
                 <option value="Olive">Olive</option>
                 <option value="Navy">Navy</option>
                 <option value="Brown">Brown</option>
+                <option value="White">White</option>    
+                <option value="Yellow">Yellow</option>
+                <option value="Pink">Pink</option>
+                <option value="Green">Green</option>
               </select>
             </div>
             <div class="md:col-span-1" id="khaki-size-container" style="display: none;">
