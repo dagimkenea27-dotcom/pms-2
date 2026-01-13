@@ -197,6 +197,7 @@ require_once "includes/header.php";
                 <option value="Black">Black</option>
                 <option value="Blue">Blue</option>
                 <option value="Grey">Grey</option>
+                <option value="Beige">Beige</option>
                 <option value="Khaki">Khaki</option>
                 <option value="Olive">Olive</option>
                 <option value="Navy">Navy</option>
