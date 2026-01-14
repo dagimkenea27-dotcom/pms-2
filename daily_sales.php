@@ -300,7 +300,12 @@ require_once "includes/header.php";
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
           Back to Tracking
         </button>
-        <div class="glass-card rounded-3xl p-8 mb-6 text-center shadow-2xl">
+        <div class="glass-card rounded-3xl p-8 mb-6 text-center shadow-2xl relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4">
+              <a href="reports/daily_sales_report.php" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-4 rounded-lg shadow-sm transition-all no-underline inline-flex items-center gap-2">
+                  <i class="fas fa-chart-line"></i> View History
+              </a>
+          </div>
           <h1 id="present-store-name" class="text-4xl font-bold text-slate-800 mb-2">Daily Sales Report</h1>
           <p id="present-date" class="text-xl text-slate-600 font-medium mono-font"></p>
         </div>

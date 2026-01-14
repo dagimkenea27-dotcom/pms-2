@@ -147,7 +147,7 @@
         </div>
     </div>
 
-    <script src="<?php echo BASE_URL; ?>assets/js/sidebar.js"></script>
+    <script src="<?php echo BASE_URL; ?>assets/js/sidebar.js?v=<?php echo time(); ?>"></script>
     
     <script>
         // Auto-dismiss alerts

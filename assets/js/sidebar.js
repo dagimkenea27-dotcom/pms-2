@@ -100,13 +100,14 @@
 
     $(document).ready(function () {
         applyInitialState();
-        restoreScrollPosition(); // Restore scroll position on load
+        restoreScrollPosition();
 
-        $toggle.on('click', toggle);
+        // Use event delegation for better reliability on all pages
+        $(document).on('click', '#sidebarToggle, #sidebarToggleTop', toggle);
+
         $window.on('resize', handleResize);
         $(document).on('click', closeOnOverlayClick);
 
-        // Save scroll position on scroll event (throttled/debounced ideally, but simple for now)
         $sidebar.on('scroll', saveScrollPosition);
     });
 

@@ -13,9 +13,9 @@ Auth::startSession();
     <title>Inventory Management System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="<?php echo BASE_URL; ?>assets/js/theme.js"></script>
-    <script src="<?php echo BASE_URL; ?>assets/js/alerts.js"></script>
-    <link href="<?php echo BASE_URL; ?>assets/css/custom.css?v=<?php echo time(); ?>_1" rel="stylesheet">
+    <script src="<?php echo BASE_URL; ?>assets/js/theme.js?v=<?php echo filemtime(ROOT_PATH . 'assets/js/theme.js'); ?>"></script>
+    <script src="<?php echo BASE_URL; ?>assets/js/alerts.js?v=<?php echo filemtime(ROOT_PATH . 'assets/js/alerts.js'); ?>"></script>
+    <link href="<?php echo BASE_URL; ?>assets/css/custom.css?v=<?php echo filemtime(ROOT_PATH . 'assets/css/custom.css'); ?>" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" type="image/jpeg" href="<?php echo BASE_URL; ?>assets/img/logo.jpg">
     <script>
@@ -222,11 +222,22 @@ Auth::startSession();
                 </a>
             </li>
 
-            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'daily_sales.php') !== false ? 'active' : ''; ?>">
-                <a class="nav-link" href="<?php echo BASE_URL; ?>daily_sales.php">
+            <!-- Nav Item - Daily Sales -->
+            <?php 
+            $isDailySalesActive = strpos($_SERVER['REQUEST_URI'], 'daily_sales.php') !== false || strpos($_SERVER['REQUEST_URI'], 'reports/daily_sales_report.php') !== false;
+            ?>
+            <li class="nav-item <?php echo $isDailySalesActive ? 'active' : ''; ?>">
+                <a class="nav-link <?php echo $isDailySalesActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseDailySales"
+                    aria-expanded="<?php echo $isDailySalesActive ? 'true' : 'false'; ?>" aria-controls="collapseDailySales">
                     <i class="fas fa-fw fa-shopping-cart"></i>
-                    <span>Daily Sales Track</span>
+                    <span>Daily Sales</span>
                 </a>
+                <div id="collapseDailySales" class="collapse <?php echo $isDailySalesActive ? 'show' : ''; ?>" aria-labelledby="headingDailySales" data-parent="#accordionSidebar">
+                    <div class="py-2 collapse-inner rounded">
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'daily_sales.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>daily_sales.php">Sales Tracker</a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'reports/daily_sales_report.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>reports/daily_sales_report.php">Performance Report</a>
+                    </div>
+                </div>
             </li>
 
             <!-- Divider -->
