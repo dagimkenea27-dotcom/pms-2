@@ -28,6 +28,11 @@ try {
     $method = $_SERVER['REQUEST_METHOD'];
     $input = json_decode(file_get_contents("php://input"), true);
 
+    // Support Method Tunneling for servers that block PUT/DELETE
+    if ($method === 'POST' && isset($input['_method'])) {
+        $method = strtoupper($input['_method']);
+    }
+
     switch ($method) {
         case 'GET':
             $query = "SELECT *, id as __backendId FROM daily_sales_tracker ORDER BY created_at DESC";

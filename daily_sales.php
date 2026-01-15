@@ -375,12 +375,22 @@ require_once "includes/header.php";
             return res.json();
         },
         async update(entry) {
-            const res = await fetch('api/daily_sales.php', { method: 'PUT', body: JSON.stringify(entry), headers: {'Content-Type': 'application/json'} });
+            // Tunnel PUT via POST
+            const res = await fetch('api/daily_sales.php', { 
+                method: 'POST', 
+                body: JSON.stringify({...entry, _method: 'PUT'}), 
+                headers: {'Content-Type': 'application/json'} 
+            });
             if(res.ok) this.refresh();
             return res.json();
         },
         async delete(entry) {
-            const res = await fetch('api/daily_sales.php', { method: 'DELETE', body: JSON.stringify({__backendId: entry.__backendId}), headers: {'Content-Type': 'application/json'} });
+            // Tunnel DELETE via POST
+            const res = await fetch('api/daily_sales.php', { 
+                method: 'POST', 
+                body: JSON.stringify({__backendId: entry.__backendId, _method: 'DELETE'}), 
+                headers: {'Content-Type': 'application/json'} 
+            });
             if(res.ok) this.refresh();
             return res.json();
         },
@@ -634,6 +644,7 @@ require_once "includes/header.php";
     }
 
     // Edit Logic
+    // Edit Logic
     window.startEdit = (id) => {
         // Use loose equality to handle potentially different types (string vs number)
         const entry = entries.find(e => e.__backendId == id);
@@ -661,7 +672,7 @@ require_once "includes/header.php";
         colorSelect.value = entry.color;
         
         qtyInput.value = 1;
-        qtyInput.disabled = true; 
+        qtyInput.disabled = false; // Allow editing quantity
         
         updatePriceDisplay();
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -689,8 +700,26 @@ require_once "includes/header.php";
          };
          
          updateBtn.innerHTML = 'Updating...';
+         updateBtn.disabled = true;
+         
+         // 1. Update the original entry
          await window.dataSdk.update(newData);
+
+         // 2. Handle Quantity Increase
+         const extraQty = (parseInt(qtyInput.value) || 1) - 1;
+         if (extraQty > 0) {
+             const { __backendId, ...copyData } = newData; // Remove ID to create new
+             // Create copies
+             for(let i=0; i<extraQty; i++) {
+                  await window.dataSdk.create({
+                      ...copyData,
+                      created_at: new Date().toISOString()
+                  });
+             }
+         }
+
          updateBtn.innerHTML = 'Update Sale';
+         updateBtn.disabled = false;
          exitEditMode();
     };
     
