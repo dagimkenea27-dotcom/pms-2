@@ -726,12 +726,13 @@ require_once "includes/header.php";
          if (extraQty > 0) {
              const { __backendId, ...copyData } = newData; // Remove ID to create new
              // Create copies
-             for(let i=0; i<extraQty; i++) {
-                  await window.dataSdk.create({
-                      ...copyData,
-                      created_at: new Date().toISOString()
-                  });
-             }
+             // Create copies (Parallel Optimization)
+             await Promise.all(Array.from({length: extraQty}).map(() => 
+                 window.dataSdk.create({
+                     ...copyData,
+                     created_at: new Date().toISOString()
+                 })
+             ));
          }
 
          updateBtn.innerHTML = 'Update Sale';
@@ -782,9 +783,9 @@ require_once "includes/header.php";
             !e.purchased
         );
         
-        for(const t of targets) {
-            await window.dataSdk.update({...t, purchased: true});
-        }
+        // Optimize: Parallel Execution using Promise.all
+        // This prevents the UI from blocking/lagging for ~1s for multiple items
+        await Promise.all(targets.map(t => window.dataSdk.update({...t, purchased: true})));
     };
     
     window.deleteEntry = async (id) => {
