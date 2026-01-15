@@ -376,23 +376,39 @@ require_once "includes/header.php";
         },
         async update(entry) {
             // Tunnel PUT via POST
-            const res = await fetch('api/daily_sales.php', { 
-                method: 'POST', 
-                body: JSON.stringify({...entry, _method: 'PUT'}), 
-                headers: {'Content-Type': 'application/json'} 
-            });
-            if(res.ok) this.refresh();
-            return res.json();
+            try {
+                const res = await fetch('api/daily_sales.php', { 
+                    method: 'POST', 
+                    body: JSON.stringify({...entry, _method: 'PUT'}), 
+                    headers: {'Content-Type': 'application/json'} 
+                });
+                const data = await res.json();
+                if(data.isOk) {
+                    this.refresh();
+                } else {
+                    alert("Update Failed: " + (data.message || 'Unknown Error'));
+                    console.error("Update Error:", data);
+                }
+                return data;
+            } catch(e) { alert("Connection Error: " + e.message); }
         },
         async delete(entry) {
             // Tunnel DELETE via POST
-            const res = await fetch('api/daily_sales.php', { 
-                method: 'POST', 
-                body: JSON.stringify({__backendId: entry.__backendId, _method: 'DELETE'}), 
-                headers: {'Content-Type': 'application/json'} 
-            });
-            if(res.ok) this.refresh();
-            return res.json();
+            try {
+                const res = await fetch('api/daily_sales.php', { 
+                    method: 'POST', 
+                    body: JSON.stringify({__backendId: entry.__backendId, _method: 'DELETE'}), 
+                    headers: {'Content-Type': 'application/json'} 
+                });
+                const data = await res.json();
+                if(data.isOk) {
+                    this.refresh();
+                } else {
+                    alert("Delete Failed: " + (data.message || 'Unknown Error'));
+                    console.error("Delete Error:", data);
+                }
+                return data;
+            } catch(e) { alert("Connection Error: " + e.message); }
         },
         async refresh() {
             try {
