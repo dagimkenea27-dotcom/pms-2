@@ -618,6 +618,9 @@ require_once "includes/header.php";
                                    Sell All
                                  </button>` : ''
                             }
+                            <button onclick="deleteAll('${customerName.replace(/'/g, "\\'")}')" class="ml-2 text-[9px] uppercase tracking-wide font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded shadow-sm hover:bg-red-100 hover:text-red-700 transition-all">
+                               Delete All
+                            </button>
                         </div>
                         <span class="text-xs font-bold text-slate-600 bg-white px-2 py-1 rounded border border-slate-200">
                              Total: ${totalForCustomer} Birr
@@ -793,6 +796,22 @@ require_once "includes/header.php";
         // Optimize: Parallel Execution using Promise.all
         // This prevents the UI from blocking/lagging for ~1s for multiple items
         await Promise.all(targets.map(t => window.dataSdk.update({...t, purchased: true}, { skipRefresh: true })));
+        await window.dataSdk.refresh();
+    };
+
+    window.deleteAll = async (customerName) => {
+        if(!confirm(`Delete all items for ${customerName}? This cannot be undone.`)) return;
+        
+        const today = new Date().toISOString().split('T')[0];
+        const targets = entries.filter(e => 
+            e.date === today && 
+            (e.customer_info || 'Unknown Customer') === customerName
+        );
+        
+        if(targets.length === 0) return;
+
+        // Optimize: Parallel Execution using Promise.all
+        await Promise.all(targets.map(t => window.dataSdk.delete(t, { skipRefresh: true })));
         await window.dataSdk.refresh();
     };
     
