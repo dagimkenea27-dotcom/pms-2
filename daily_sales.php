@@ -369,12 +369,13 @@ require_once "includes/header.php";
             this.handler = handler;
             this.refresh();
         },
-        async create(entry) {
+        async create(entry, options = {}) {
             const res = await fetch('api/daily_sales.php', { method: 'POST', body: JSON.stringify(entry), headers: {'Content-Type': 'application/json'} });
-            if(res.ok) this.refresh();
-            return res.json();
+            const data = await res.json();
+            if(res.ok && !options.skipRefresh) this.refresh();
+            return data;
         },
-        async update(entry) {
+        async update(entry, options = {}) {
             // Tunnel PUT via POST
             try {
                 const res = await fetch('api/daily_sales.php', { 
@@ -384,7 +385,7 @@ require_once "includes/header.php";
                 });
                 const data = await res.json();
                 if(data.isOk) {
-                    this.refresh();
+                    if(!options.skipRefresh) this.refresh();
                 } else {
                     alert("Update Failed: " + (data.message || 'Unknown Error'));
                     console.error("Update Error:", data);
@@ -392,7 +393,7 @@ require_once "includes/header.php";
                 return data;
             } catch(e) { alert("Connection Error: " + e.message); }
         },
-        async delete(entry) {
+        async delete(entry, options = {}) {
             // Tunnel DELETE via POST
             try {
                 const res = await fetch('api/daily_sales.php', { 
@@ -402,7 +403,7 @@ require_once "includes/header.php";
                 });
                 const data = await res.json();
                 if(data.isOk) {
-                    this.refresh();
+                    if(!options.skipRefresh) this.refresh();
                 } else {
                     alert("Delete Failed: " + (data.message || 'Unknown Error'));
                     console.error("Delete Error:", data);
@@ -551,6 +552,7 @@ require_once "includes/header.php";
         // Actually, usually 1 row per item if tracking unique serialized items, but here maybe just 1 row per variant line?
         // The old code created N loops for quantity. Let's stick to that for granularity (tracking individual sold items).
         
+        const promises = [];
         for(const item of cartItems) {
             for(let i=0; i<item.quantity; i++) {
                 const entry = {
@@ -562,9 +564,12 @@ require_once "includes/header.php";
                     needs_followup: item.needs_followup,
                     followup_reason: item.needs_followup ? `Requested size ${item.size}` : ''
                 };
-                await window.dataSdk.create(entry);
+                promises.push(window.dataSdk.create(entry, { skipRefresh: true }));
             }
         }
+        
+        await Promise.all(promises);
+        await window.dataSdk.refresh();
         
         cartItems = [];
         renderCart();
@@ -719,21 +724,22 @@ require_once "includes/header.php";
          updateBtn.disabled = true;
          
          // 1. Update the original entry
-         await window.dataSdk.update(newData);
+         await window.dataSdk.update(newData, { skipRefresh: true });
 
          // 2. Handle Quantity Increase
          const extraQty = (parseInt(qtyInput.value) || 1) - 1;
          if (extraQty > 0) {
              const { __backendId, ...copyData } = newData; // Remove ID to create new
-             // Create copies
              // Create copies (Parallel Optimization)
              await Promise.all(Array.from({length: extraQty}).map(() => 
                  window.dataSdk.create({
                      ...copyData,
                      created_at: new Date().toISOString()
-                 })
+                 }, { skipRefresh: true })
              ));
          }
+         
+         await window.dataSdk.refresh();
 
          updateBtn.innerHTML = 'Update Sale';
          updateBtn.disabled = false;
@@ -768,7 +774,8 @@ require_once "includes/header.php";
 
     // Other Actions
     window.togglePurchased = async (id) => {
-        const entry = entries.find(e => e.__backendId === id);
+        // Use loose equality for ID matching to handle string/number differences
+        const entry = entries.find(e => e.__backendId == id);
         if(entry) await window.dataSdk.update({...entry, purchased: !entry.purchased});
     };
     
@@ -785,13 +792,20 @@ require_once "includes/header.php";
         
         // Optimize: Parallel Execution using Promise.all
         // This prevents the UI from blocking/lagging for ~1s for multiple items
-        await Promise.all(targets.map(t => window.dataSdk.update({...t, purchased: true})));
+        await Promise.all(targets.map(t => window.dataSdk.update({...t, purchased: true}, { skipRefresh: true })));
+        await window.dataSdk.refresh();
     };
     
     window.deleteEntry = async (id) => {
         if(confirm('Delete this sale?')) {
-            const entry = entries.find(e => e.__backendId === id);
-            if(entry) await window.dataSdk.delete(entry);
+            // Use loose equality for ID matching
+            const entry = entries.find(e => e.__backendId == id);
+            if(entry) {
+                await window.dataSdk.delete(entry);
+            } else {
+                console.error("Entry not found for ID:", id);
+                alert("Error: Item not found. Please refresh the page.");
+            }
         }
     };
     
