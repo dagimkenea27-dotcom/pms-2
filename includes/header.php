@@ -222,6 +222,13 @@ Auth::startSession();
                 </a>
             </li>
 
+            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'reports/gojo_analysis.php') !== false ? 'active' : ''; ?>">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>reports/gojo_analysis.php">
+                    <i class="fas fa-fw fa-chart-bar"></i>
+                    <span>Gojo Analysis</span>
+                </a>
+            </li>
+
             <!-- Nav Item - Daily Sales -->
             <?php 
             $isDailySalesActive = strpos($_SERVER['REQUEST_URI'], 'daily_sales.php') !== false || strpos($_SERVER['REQUEST_URI'], 'reports/daily_sales_report.php') !== false;
