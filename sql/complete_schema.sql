@@ -80,6 +80,9 @@ CREATE TABLE IF NOT EXISTS products (
     image VARCHAR(255) NULL,
     barcode VARCHAR(100) NULL,
     has_variants BOOLEAN DEFAULT FALSE,
+    forecast_enabled BOOLEAN DEFAULT TRUE,
+    avg_daily_sales DECIMAL(10,2) DEFAULT 0.00,
+    reorder_enabled BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL,
@@ -225,6 +228,66 @@ CREATE TABLE IF NOT EXISTS daily_sales_tracker (
     followup_reason TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Marketing attribution for Gojo Shop Analysis
+CREATE TABLE IF NOT EXISTS marketing_attribution (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_name VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(20),
+    product_ordered VARCHAR(255) NOT NULL,
+    product_interested VARCHAR(255),
+    dormant_days INT,
+    incentive_used VARCHAR(100),
+    last_touch_point VARCHAR(100),
+    channel_combination VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Inventory forecasting table
+CREATE TABLE IF NOT EXISTS inventory_forecasts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    variant_id INT DEFAULT NULL,
+    avg_daily_sales DECIMAL(10,4) DEFAULT 0.0000,
+    forecast_days_remaining INT DEFAULT NULL,
+    predicted_stockout_date DATE NULL,
+    recommended_min_stock INT DEFAULT NULL,
+    confidence_score DECIMAL(3,2) DEFAULT 0.00,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE,
+    INDEX idx_stockout (predicted_stockout_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Expense categories
+CREATE TABLE IF NOT EXISTS expense_categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    icon VARCHAR(50) DEFAULT 'fas fa-money-bill',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Business expenses
+CREATE TABLE IF NOT EXISTS business_expenses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    category_id INT NOT NULL,
+    amount DECIMAL(15,2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'ETB',
+    expense_date DATE NOT NULL,
+    description TEXT,
+    reference_number VARCHAR(100),
+    payment_method ENUM('cash', 'bank_transfer', 'check', 'credit_card') DEFAULT 'cash',
+    attachment_path VARCHAR(255),
+    vehicle_id INT DEFAULT NULL,
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES expense_categories(id),
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_date (expense_date),
+    INDEX idx_category (category_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Attributes table (for product attributes)
 CREATE TABLE IF NOT EXISTS attributes (
