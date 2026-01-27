@@ -32,6 +32,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         echo json_encode(['success' => $success]);
         exit;
+    } elseif ($_POST['action'] === 'update') {
+        $id = $_POST['id'] ?? 0;
+        $name = $_POST['name'] ?? '';
+        $phone = $_POST['phone'] ?? '';
+        $ordered = $_POST['ordered'] ?? '';
+        $interested = $_POST['interested'] ?? '';
+        $dormant = $_POST['dormant'] ?? 0;
+        $incentive = $_POST['incentive'] ?? '';
+        $lastTouch = $_POST['last_touch'] ?? '';
+
+        $query = "UPDATE marketing_attribution SET customer_name=?, phone_number=?, product_ordered=?, product_interested=?, dormant_days=?, incentive_used=?, last_touch_point=? WHERE id=?";
+        $stmt = $db->prepare($query);
+        $success = $stmt->execute([$name, $phone, $ordered, $interested, $dormant, $incentive, $lastTouch, $id]);
+
+        echo json_encode(['success' => $success]);
+        exit;
     }
 }
 
@@ -179,8 +195,8 @@ require_once "../includes/header.php";
                             </div>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Days App was Dormant</label>
-                            <input type="number" id="dormantDays" class="form-input" placeholder="Days since install" required>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Joined Date</label>
+                            <input type="date" id="joinedDate" class="form-input" placeholder="Select date" required>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Incentive Used</label>
@@ -196,15 +212,24 @@ require_once "../includes/header.php";
                             <select id="lastTouch" class="form-input" required>
                                 <option value="TikTok Ad">TikTok Ad</option>
                                 <option value="Instagram Ad">Instagram Ad</option>
+                                <option value="Facebook Ad">Facebook Ad</option>
                                 <option value="SMS">SMS Notification</option>
+                                <option value="Telegram">Telegram</option>
                                 <option value="In-App Popup">In-App Popup</option>
                                 <option value="Email">Email</option>
                                 <option value="Referral">Referral</option>
+                                <option value="Other">Other</option>
                             </select>
                         </div>
-                        <button type="submit" class="btn-primary-gojo">
-                            REGISTER DATA
-                        </button>
+                        <input type="hidden" id="editRecordId">
+                        <div class="flex gap-2">
+                             <button type="submit" id="submitBtn" class="btn-primary-gojo flex-grow">
+                                REGISTER DATA
+                            </button>
+                            <button type="button" id="cancelEditBtn" class="hidden px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300 transition-colors" onclick="resetForm()">
+                                Cancel
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -279,10 +304,13 @@ require_once "../includes/header.php";
                                 <option value="">All Channels</option>
                                 <option value="TikTok Ad">TikTok Ad</option>
                                 <option value="Instagram Ad">Instagram Ad</option>
+                                <option value="Facebook Ad">Facebook Ad</option>
                                 <option value="SMS">SMS Notification</option>
+                                <option value="Telegram">Telegram</option>
                                 <option value="In-App Popup">In-App Popup</option>
                                 <option value="Email">Email</option>
                                 <option value="Referral">Referral</option>
+                                <option value="Other">Other</option>
                             </select>
                             <!-- Filter Incentive -->
                             <select id="filterIncentive" class="text-xs border border-gray-200 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -301,7 +329,7 @@ require_once "../includes/header.php";
                                     <th class="px-4 py-3 font-bold text-gray-600">Customer</th>
                                     <th class="px-4 py-3 font-bold text-gray-600">Phone</th>
                                     <th class="px-4 py-3 font-bold text-gray-600">Order</th>
-                                    <th class="px-4 py-3 font-bold text-gray-600">Dormant</th>
+                                    <th class="px-4 py-3 font-bold text-gray-600">Active Days</th>
                                     <th class="px-4 py-3 font-bold text-gray-600">Incentive</th>
                                     <th class="px-4 py-3 font-bold text-gray-600">Last Touch</th>
                                     <th class="px-4 py-3 font-bold text-gray-600 text-right">Action</th>
@@ -451,6 +479,9 @@ require_once "../includes/header.php";
                         <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-bold whitespace-nowrap">${record.lastTouch}</span>
                     </td>
                     <td class="px-4 py-3 text-right">
+                        <button onclick="editRecord(${record.id})" class="text-gray-300 hover:text-blue-500 border-none bg-transparent cursor-pointer mr-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
                         <button onclick="deleteRecord(${record.id}, ${actualIndex})" class="text-gray-300 hover:text-red-500 border-none bg-transparent cursor-pointer">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                         </button>
@@ -548,6 +579,45 @@ require_once "../includes/header.php";
         a.click();
     }
 
+    function editRecord(id) {
+        const record = records.find(r => r.id == id);
+        if (!record) return;
+
+        document.getElementById('custName').value = record.name;
+        document.getElementById('custPhone').value = record.phone;
+        document.getElementById('orderedProduct').value = record.ordered;
+        document.getElementById('interestedProduct').value = record.interested;
+        
+        // Convert dormant days back to date
+        if (record.dormant) {
+            const d = new Date();
+            d.setDate(d.getDate() - parseInt(record.dormant));
+            document.getElementById('joinedDate').value = d.toISOString().split('T')[0];
+        } else {
+            document.getElementById('joinedDate').value = '';
+        }
+
+        document.getElementById('incentive').value = record.incentive;
+        document.getElementById('lastTouch').value = record.lastTouch;
+        
+        document.getElementById('editRecordId').value = id;
+        
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.innerText = 'UPDATE DATA';
+        
+        document.getElementById('cancelEditBtn').classList.remove('hidden');
+        
+        // Scroll to form
+        document.querySelector('.card-gojo').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function resetForm() {
+        document.getElementById('entryForm').reset();
+        document.getElementById('editRecordId').value = '';
+        document.getElementById('submitBtn').innerText = 'REGISTER DATA';
+        document.getElementById('cancelEditBtn').classList.add('hidden');
+    }
+
     document.getElementById('entryForm').addEventListener('submit', (e) => {
         e.preventDefault();
         
@@ -555,12 +625,25 @@ require_once "../includes/header.php";
         const phone = document.getElementById('custPhone').value;
         const ordered = document.getElementById('orderedProduct').value;
         const interested = document.getElementById('interestedProduct').value;
-        const dormant = document.getElementById('dormantDays').value;
+        
+        // Calculate dormant days from date
+        const joinedDateVal = document.getElementById('joinedDate').value;
+        let dormant = 0;
+        if (joinedDateVal) {
+            const joinedDate = new Date(joinedDateVal);
+            const today = new Date();
+            const diffTime = Math.abs(today - joinedDate);
+            dormant = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+        }
+
         const incentive = document.getElementById('incentive').value;
         const lastTouch = document.getElementById('lastTouch').value;
+        const editId = document.getElementById('editRecordId').value;
 
         const formData = new FormData();
-        formData.append('action', 'add');
+        formData.append('action', editId ? 'update' : 'add');
+        if (editId) formData.append('id', editId);
+        
         formData.append('name', name);
         formData.append('phone', phone);
         formData.append('ordered', ordered);
@@ -578,7 +661,7 @@ require_once "../includes/header.php";
             if (data.success) {
                 window.location.reload();
             } else {
-                alert('Failed to register entry');
+                alert('Failed to save entry');
             }
         });
     });
