@@ -5,8 +5,6 @@ require_once "../config/database.php";
 
 $database = new Database();
 $db = $database->getConnection();
-
-// Handle product deletion
 // Handle product deletion
 if (isset($_GET['delete_id'])) {
     Auth::requireRole('manager'); // Only manager/admin can delete
@@ -186,6 +184,9 @@ if (isset($_SESSION['message'])) {
                     <button class="btn btn-outline-secondary start-barcode-scanner" type="button" id="barcode-scan-btn" title="Scan Barcode (Ctrl+B)">
                         <i class="fas fa-barcode"></i>
                     </button>
+                    <button class="btn btn-outline-primary" type="button" id="visual-search-btn" title="Search by Picture" data-bs-toggle="modal" data-bs-target="#visualSearchModal">
+                        <i class="fas fa-camera"></i>
+                    </button>
                 </div>
             </div>
             <div class="col-md-4">
@@ -345,10 +346,14 @@ if (isset($_SESSION['message'])) {
                                 <td><?php echo $offset + $index + 1; ?></td>
                                 <td>
                                     <a href="view_product.php?id=<?php echo $product['id']; ?>">
-                                        <?php if (!empty($product['image']) && file_exists("../" . $product['image'])): ?>
-                                            <img src="../<?php echo $product['image']; ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-image-small">
+                                        <?php if (!empty($product['image'])): ?>
+                                            <?php 
+                                            $is_url = (strpos($product['image'], 'http') === 0);
+                                            $img_src = $is_url ? $product['image'] : "../" . $product['image'];
+                                            ?>
+                                            <img src="<?php echo htmlspecialchars($img_src); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-image-small" onerror="this.src='../assets/img/noproduct.png'">
                                         <?php else: ?>
-                                            <span class="text-muted"><i class="fas fa-image fa-2x"></i></span>
+                                            <img src="../assets/img/noproduct.png" alt="No Image" class="product-image-small">
                                         <?php endif; ?>
                                     </a>
                                 </td>
@@ -371,6 +376,9 @@ if (isset($_SESSION['message'])) {
                                 <td>$<?php echo number_format($product['price'], 2); ?></td>
                                 <td>
                                     <div class="btn-group" role="group">
+                                        <a href="../reports/sales_followup.php?sku=<?php echo urlencode($product['sku']); ?>" class="btn btn-primary btn-sm" title="Sales Follow-up">
+                                            <i class="fas fa-headset"></i>
+                                        </a>
                                         <?php if (Auth::hasRole('manager')): ?>
                                         <a href="update_stock.php?id=<?php echo $product['id']; ?>" class="btn btn-success btn-sm" title="Update Stock">
                                             <i class="fas fa-boxes"></i>
@@ -437,23 +445,53 @@ if (isset($_SESSION['message'])) {
 <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form action="import_products.php" method="post" enctype="multipart/form-data">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="importModalLabel">Import Products</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="csv_file" class="form-label">Select CSV File</label>
-                        <input class="form-control" type="file" id="csv_file" name="csv_file" accept=".csv" required>
-                        <div class="form-text">Download <a href="sample_products.csv">sample CSV template</a></div>
+            <div class="modal-header">
+                <h5 class="modal-title" id="importModalLabel">Import Products</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs mb-3" id="importTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="standard-tab" data-bs-toggle="tab" data-bs-target="#standard" type="button" role="tab">Standard CSV</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="external-tab" data-bs-toggle="tab" data-bs-target="#external" type="button" role="tab">External Platform Export</button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="importTabsContent">
+                    <div class="tab-pane fade show active" id="standard" role="tabpanel">
+                        <form action="import_products.php" method="post" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="csv_file" class="form-label">Select Standard CSV File</label>
+                                <input class="form-control" type="file" id="csv_file" name="csv_file" accept=".csv" required>
+                                <div class="form-text">Download <a href="sample_products.csv">sample CSV template</a></div>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary">Import Standard</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="tab-pane fade" id="external" role="tabpanel">
+                        <form id="externalImportForm" action="import_external.php" method="post" enctype="multipart/form-data">
+                            <div class="alert alert-info py-2 small">
+                                <i class="fas fa-info-circle me-1"></i> Use this for exports from your shopping platform. Both <b>.csv</b> and <b>.xlsx</b> (Excel) files are supported.
+                            </div>
+                            <div class="mb-3">
+                                <label for="external_csv" class="form-label fw-bold small text-muted text-uppercase">Select File (.csv, .xlsx)</label>
+                                <input type="file" class="form-control form-control-sm" id="external_csv" name="external_csv" accept=".csv,.xlsx,.xls" required>
+                                <div id="importLoading" class="mt-2 d-none">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <span class="ms-1 small text-muted">Parsing Excel data...</span>
+                                </div>
+                            </div>
+                            <input type="hidden" name="import_json" id="import_json">
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary" id="externalImportBtn">Import External</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Import</button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
@@ -683,5 +721,423 @@ if (isset($_SESSION['message'])) {
     border-radius: 4px;
 }
 </style>
+
+<!-- Visual Search Modal -->
+<div class="modal fade" id="visualSearchModal" tabindex="-1" aria-labelledby="visualSearchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="visualSearchModalLabel"><i class="fas fa-search-plus me-2"></i>Visual Search</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="upload-zone text-center p-5 border-2 border-dashed rounded-4 mb-4" id="drop-zone" style="border: 2px dashed #007bff; background: #f8f9fa; cursor: pointer; transition: all 0.3s ease;">
+                    <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                    <h4>Click, Drag or Take Photo</h4>
+                    <p class="text-muted">Upload a photo of a product to find it in our database</p>
+                    <div class="d-flex justify-content-center gap-2 mt-3">
+                        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); document.getElementById('visual-search-input').click();">
+                            <i class="fas fa-file-upload me-1"></i> Upload File
+                        </button>
+                        <button class="btn btn-info btn-sm text-white" id="open-camera-btn" onclick="event.stopPropagation();">
+                            <i class="fas fa-camera me-1"></i> Use Camera
+                        </button>
+                    </div>
+                    <input type="file" id="visual-search-input" accept="image/*" style="display: none;">
+                </div>
+
+                <div id="camera-container" class="d-none text-center mb-4">
+                    <video id="camera-video" class="w-100 rounded shadow-sm mb-2" autoplay playsinline style="max-height: 400px; background: #000;"></video>
+                    <div class="d-flex justify-content-center gap-2">
+                        <button class="btn btn-secondary" id="close-camera-btn">Cancel</button>
+                        <button class="btn btn-success" id="capture-photo-btn"><i class="fas fa-circle me-1"></i> Capture</button>
+                    </div>
+                    <canvas id="camera-canvas" style="display: none;"></canvas>
+                </div>
+                
+                <div id="visual-search-preview" class="text-center mb-4 d-none">
+                    <img id="preview-img" src="" class="img-fluid rounded shadow-sm mb-3" style="max-height: 250px;">
+                    <div class="d-flex justify-content-center gap-2">
+                        <button class="btn btn-outline-danger" id="reset-visual-search"><i class="fas fa-times me-1"></i> Clear</button>
+                        <button class="btn btn-primary" id="start-visual-search"><i class="fas fa-search me-1"></i> Search Now</button>
+                    </div>
+                </div>
+
+                <div id="visual-search-loading" class="text-center d-none p-5">
+                    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5>Analyzing Image...</h5>
+                    <p class="text-muted">Comparing with our product database</p>
+                </div>
+
+                <div id="visual-search-results" class="d-none">
+                    <h5 class="mb-3 border-bottom pb-2">Matches Found</h5>
+                    <div class="row g-3" id="results-container">
+                        <!-- Results will be injected here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('visual-search-input');
+        const previewZone = document.getElementById('visual-search-preview');
+        const previewImg = document.getElementById('preview-img');
+        const loadingZone = document.getElementById('visual-search-loading');
+        const resultsZone = document.getElementById('visual-search-results');
+        const resultsContainer = document.getElementById('results-container');
+        const searchBtn = document.getElementById('start-visual-search');
+        const resetBtn = document.getElementById('reset-visual-search');
+        const openCameraBtn = document.getElementById('open-camera-btn');
+        const closeCameraBtn = document.getElementById('close-camera-btn');
+        const capturePhotoBtn = document.getElementById('capture-photo-btn');
+        const cameraContainer = document.getElementById('camera-container');
+        const cameraVideo = document.getElementById('camera-video');
+        const cameraCanvas = document.getElementById('camera-canvas');
+
+        let cameraStream = null;
+
+        if (!dropZone || !openCameraBtn || !cameraVideo) {
+            console.error("Visual search elements missing: ", { dropZone, openCameraBtn, cameraVideo });
+            return;
+        }
+
+        // Camera Logic
+        // Camera Logic
+        const visualSearchBtn = document.getElementById('visual-search-btn');
+        let autoStartVisualCamera = false;
+        
+        if (visualSearchBtn) {
+            visualSearchBtn.addEventListener('click', () => {
+                autoStartVisualCamera = true;
+            });
+        }
+        
+        const visualSearchModalEl = document.getElementById('visualSearchModal');
+        if (visualSearchModalEl) {
+             visualSearchModalEl.addEventListener('shown.bs.modal', function () {
+                if (autoStartVisualCamera) {
+                    console.log("Auto-starting visual search camera...");
+                    openCameraBtn.click();
+                    autoStartVisualCamera = false;
+                }
+            });
+
+             visualSearchModalEl.addEventListener('hidden.bs.modal', function() {
+                stopCamera();
+                // Reset UI for next time
+                if (fileInput) fileInput.value = '';
+                if (previewImg) previewImg.src = '';
+                if (previewZone) previewZone.classList.add('d-none');
+                if (dropZone) dropZone.classList.remove('d-none');
+                if (resultsZone) resultsZone.classList.add('d-none');
+            });
+        }
+
+        openCameraBtn.addEventListener('click', async (e) => {
+            console.log("Visual Search Camera button clicked");
+            
+            const originalBtnContent = openCameraBtn.innerHTML;
+            openCameraBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing...';
+            openCameraBtn.disabled = true;
+
+            // Stop Barcode scanner if it's running to free up camera
+            try {
+                if (typeof BarcodeScanner !== 'undefined' && BarcodeScanner.isScanning) {
+                    console.log("Stopping Barcode scanner to start Visual Search");
+                    await BarcodeScanner.stopScanner();
+                }
+            } catch (err) { console.error("Error stopping barcode scanner:", err); }
+
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                console.error("Camera API not supported");
+                alert("Camera access is not supported in this browser.\n\nPlease use a modern browser (Chrome, Firefox, Safari, Edge) and ensure you're using HTTPS or localhost.");
+                openCameraBtn.innerHTML = originalBtnContent;
+                openCameraBtn.disabled = false;
+                return;
+            }
+
+            try {
+                // Try environment camera first with more relaxed constraints
+                try {
+                    cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            facingMode: { ideal: 'environment' },
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        } 
+                    });
+                } catch (e) {
+                    console.log("Environment camera failed, trying any video:", e.message);
+                    cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: true 
+                    });
+                }
+                
+                if (cameraVideo) {
+                    console.log("Stream acquired, setting to video element");
+                    cameraVideo.srcObject = cameraStream;
+                    
+                    // Listen for canplay
+                    cameraVideo.oncanplay = () => {
+                        console.log("Video can play now");
+                    };
+
+                    // Ensure video plays
+                    await cameraVideo.play();
+                    console.log("Video play started");
+                    
+                    if (dropZone) dropZone.classList.add('d-none');
+                    if (cameraContainer) cameraContainer.classList.remove('d-none');
+                    if (previewZone) previewZone.classList.add('d-none');
+                    if (resultsZone) resultsZone.classList.add('d-none');
+                }
+            } catch (err) {
+                console.error("Error accessing camera: ", err);
+                alert("Could not access camera: " + err.name + " - " + err.message + "\n\nPlease ensure you've given permission and are using HTTPS.");
+            } finally {
+                openCameraBtn.innerHTML = originalBtnContent;
+                openCameraBtn.disabled = false;
+            }
+        });
+
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            cameraContainer.classList.add('d-none');
+        }
+
+        closeCameraBtn.addEventListener('click', () => {
+            stopCamera();
+            dropZone.classList.remove('d-none');
+        });
+
+        capturePhotoBtn.addEventListener('click', () => {
+            const context = cameraCanvas.getContext('2d');
+            cameraCanvas.width = cameraVideo.videoWidth;
+            cameraCanvas.height = cameraVideo.videoHeight;
+            context.drawImage(cameraVideo, 0, 0, cameraCanvas.width, cameraCanvas.height);
+            
+            cameraCanvas.toBlob((blob) => {
+                const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                fileInput.files = dataTransfer.files;
+                
+                previewImg.src = URL.createObjectURL(blob);
+                stopCamera();
+                previewZone.classList.remove('d-none');
+                resultsZone.classList.add('d-none');
+            }, 'image/jpeg');
+        });
+
+        // Click to upload
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        // Drag and drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.background = '#e9ecef';
+            dropZone.style.borderColor = '#0056b3';
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.background = '#f8f9fa';
+            dropZone.style.borderColor = '#007bff';
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.background = '#f8f9fa';
+            dropZone.style.borderColor = '#007bff';
+            if (e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) {
+                handleFile(fileInput.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                dropZone.classList.add('d-none');
+                previewZone.classList.remove('d-none');
+                resultsZone.classList.add('d-none');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        resetBtn.addEventListener('click', () => {
+            fileInput.value = '';
+            previewImg.src = '';
+            previewZone.classList.add('d-none');
+            dropZone.classList.remove('d-none');
+            resultsZone.classList.add('d-none');
+        });
+
+        searchBtn.addEventListener('click', () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            previewZone.classList.add('d-none');
+            loadingZone.classList.remove('d-none');
+
+            fetch('../api/search_by_image.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                return res.json();
+            })
+            .then(data => {
+                loadingZone.classList.add('d-none');
+                if (data.success) {
+                    displayResults(data.matches);
+                } else {
+                    console.error('Search failed:', data.message);
+                    alert('Search failed: ' + (data.message || 'Unknown error'));
+                    previewZone.classList.remove('d-none');
+                }
+            })
+            .catch(err => {
+                console.error('Visual search error:', err);
+                alert('An error occurred during search.\n\nError: ' + err.message + '\n\nPlease check console for details.');
+                loadingZone.classList.add('d-none');
+                previewZone.classList.remove('d-none');
+            });
+        });
+
+        function displayResults(matches) {
+            resultsContainer.innerHTML = '';
+            resultsZone.classList.remove('d-none');
+            
+            if (matches.length === 0) {
+                resultsContainer.innerHTML = '<div class="col-12 text-center py-4 text-muted">No similar products found</div>';
+                return;
+            }
+
+            matches.forEach(m => {
+                const col = document.createElement('div');
+                col.className = 'col-md-6';
+                col.innerHTML = `
+                    <div class="card h-100 border-0 shadow-sm hover-elevate">
+                        <div class="row g-0">
+                            <div class="col-4">
+                                <img src="../${m.image}" class="img-fluid rounded-start h-100 w-100 object-fit-cover" style="min-height: 80px;" onerror="this.src='../assets/img/noproduct.png'">
+                            </div>
+                            <div class="col-8">
+                                <div class="card-body p-2">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <h6 class="card-title mb-1 text-truncate" title="${m.name}" style="max-width: 120px;">${m.name}</h6>
+                                        <span class="badge bg-success small">${m.similarity}% match</span>
+                                    </div>
+                                    <p class="card-text small text-muted mb-1">${m.sku}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="fw-bold text-primary">$${parseFloat(m.price).toFixed(2)}</span>
+                                        <a href="view_product.php?id=${m.id}" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.75rem;">View</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                resultsContainer.appendChild(col);
+            });
+        }
+
+    });
+</script>
+
+<style>
+.hover-elevate:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
+    transition: all 0.3s ease;
+}
+.object-fit-cover {
+    object-fit: cover;
+}
+.upload-zone:hover {
+    background-color: #eef2f7 !important;
+    border-color: #0056b3 !important;
+}
+</style>
+
+
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const externalForm = document.getElementById('externalImportForm');
+    const externalInput = document.getElementById('external_csv');
+    const jsonInput = document.getElementById('import_json');
+    const loadingDiv = document.getElementById('importLoading');
+    const importBtn = document.getElementById('externalImportBtn');
+
+    if (externalForm && externalInput) {
+        externalForm.addEventListener('submit', function(e) {
+            const file = externalInput.files[0];
+            if (!file) return;
+
+            const extension = file.name.split('.').pop().toLowerCase();
+            
+            // If it's an Excel file, we handle it with SheetJS
+            if (extension === 'xlsx' || extension === 'xls') {
+                e.preventDefault();
+                
+                loadingDiv.classList.remove('d-none');
+                importBtn.disabled = true;
+
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    try {
+                        const data = evt.target.result;
+                        const workbook = XLSX.read(data, { type: 'binary' });
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        
+                        // Get headers first to handle case-insensitive mapping if needed
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                        
+                        // Set the JSON string to hidden input and submit
+                        jsonInput.value = JSON.stringify(jsonData);
+                        
+                        // Remove the file input so we don't upload large Excel file twice (we just need the JSON now)
+                        // But wait, the server expects import_json if it exists.
+                        externalForm.submit();
+                    } catch (err) {
+                        console.error("XLSX parsing error:", err);
+                        alert("Error parsing Excel file. Try saving it as CSV instead.");
+                        loadingDiv.classList.add('d-none');
+                        importBtn.disabled = false;
+                    }
+                };
+                reader.readAsBinaryString(file);
+            }
+            // If it's CSV, we let the form submit normally (PHP handles CSV natively)
+        });
+    }
+});
+</script>
 
 <?php require_once "../includes/footer.php"; ?>

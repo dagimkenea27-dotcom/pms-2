@@ -181,11 +181,13 @@ require_once "../includes/header.php";
                             <td><?php echo $offset + $index + 1; ?></td>
                             <td>
                                 <?php if (!empty($product['image'])): ?>
-                                    <img src="../<?php echo htmlspecialchars($product['image']); ?>" alt="Product Image" class="img-thumbnail" style="max-height: 50px;">
+                                    <?php 
+                                    $is_url = (strpos($product['image'], 'http') === 0);
+                                    $img_src = $is_url ? $product['image'] : "../" . $product['image'];
+                                    ?>
+                                    <img src="<?php echo htmlspecialchars($img_src); ?>" alt="Product Image" class="img-thumbnail" style="max-height: 50px;" onerror="this.src='../assets/img/noproduct.png'">
                                 <?php else: ?>
-                                    <div class="bg-light text-center" style="width: 50px; height: 50px; line-height: 50px;">
-                                        <i class="fas fa-image text-muted"></i>
-                                    </div>
+                                    <img src="../assets/img/noproduct.png" alt="No Image" class="img-thumbnail" style="max-height: 50px;">
                                 <?php endif; ?>
                             </td>
                             <td><?php echo htmlspecialchars($product['name']); ?></td>

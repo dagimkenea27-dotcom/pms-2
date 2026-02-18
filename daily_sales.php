@@ -121,7 +121,9 @@ require_once "includes/header.php";
 
                       <!-- Item Section -->
                       <div id="item-input-card">
-                          <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-100 pb-1">Item Details</h4>
+                          <div class="mb-2 border-b border-slate-100 pb-1">
+                              <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0">Item Details</h4>
+                          </div>
                           <div class="grid grid-cols-2 md:grid-cols-8 gap-2 mb-2">
                               <div class="col-span-2 md:col-span-3">
                                   <label class="block text-[10px] font-medium text-slate-700 mb-0.5">Product</label>
@@ -249,6 +251,8 @@ require_once "includes/header.php";
 
   </div>
 </div>
+
+
 
 <!-- Custom Script -->
 <script src="assets/js/daily_sales.js"></script>

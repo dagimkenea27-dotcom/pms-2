@@ -187,12 +187,14 @@ if ($message): ?>
             </div>
             <div class="card-body">
                 <div class="text-center mb-3">
-                    <?php if (!empty($product['image']) && file_exists("../" . $product['image'])): ?>
-                        <img src="../<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="img-fluid rounded mb-2" style="max-height: 150px;">
+                    <?php if (!empty($product['image'])): ?>
+                        <?php 
+                            $is_url = (strpos($product['image'], 'http') === 0);
+                            $img_src = $is_url ? $product['image'] : "../" . $product['image'];
+                        ?>
+                        <img src="<?php echo htmlspecialchars($img_src); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="img-fluid rounded mb-2" style="max-height: 150px;" onerror="this.src='../assets/img/noproduct.png'">
                     <?php else: ?>
-                        <div class="py-4 bg-light rounded text-center mb-2">
-                            <i class="fas fa-image fa-3x text-gray-300"></i>
-                        </div>
+                        <img src="../assets/img/noproduct.png" alt="No Image" class="img-fluid rounded mb-2" style="max-height: 150px;">
                     <?php endif; ?>
                 </div>
                 <table class="table table-sm">
@@ -235,7 +237,7 @@ if ($message): ?>
                                 $is_selected = ($v['id'] == $selected_variant) ? 'selected' : '';
                             ?>
                                 <option value="<?php echo $v['id']; ?>" <?php echo $is_selected; ?>>
-                                    <?php echo htmlspecialchars($v['sku'] . ' (' . $v['size'] . '/' . $v['color'] . ') - Qty: ' . $v['quantity']); ?> 
+                                    <?php echo htmlspecialchars($v['size'] . '/' . $v['color'] . ') - Qty: ' . $v['quantity']); ?> 
                                 </option>
                             <?php endforeach; ?>
                         </select>

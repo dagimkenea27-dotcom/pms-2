@@ -121,8 +121,30 @@ const BarcodeScanner = {
     },
 
     openModal: function () {
-        const modal = new bootstrap.Modal(document.getElementById('barcodeScannerModal'));
-        modal.show();
+        const modalEl = document.getElementById('barcodeScannerModal');
+        if (!modalEl) {
+            console.error('Modal element #barcodeScannerModal not found in DOM');
+            return;
+        }
+
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            try {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                if (modal) {
+                    modal.show();
+                } else {
+                    throw new Error("Could not create modal instance");
+                }
+            } catch (e) {
+                console.error('Bootstrap Modal initialization failed:', e);
+                modalEl.style.display = 'block';
+                modalEl.classList.add('show');
+            }
+        } else {
+            console.error('Bootstrap Modal is not loaded');
+            modalEl.style.display = 'block';
+            modalEl.classList.add('show');
+        }
 
         // Reset UI
         this.updateStatus('Ready to scan', '');
@@ -447,11 +469,18 @@ const BarcodeScanner = {
 
     autoCloseModal: function () {
         const modalEl = document.getElementById('barcodeScannerModal');
-        if (modalEl) {
+        if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
             const modal = bootstrap.Modal.getInstance(modalEl);
             if (modal) {
                 this.stopScanner();
                 modal.hide();
+            } else {
+                // Manual hide fallback
+                this.stopScanner();
+                modalEl.classList.remove('show');
+                modalEl.style.display = 'none';
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) backdrop.remove();
             }
         }
     },

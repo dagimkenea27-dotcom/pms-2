@@ -38,14 +38,14 @@ const AlertSystem = {
         // Run immediately on load, then every hour
         this.checkAlerts();
         setInterval(() => this.checkAlerts(), this.CHECK_INTERVAL);
-        
+
         // Also check on page focus/visibility change to catch updates
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
                 this.checkAlerts();
             }
         });
-        
+
         // Check when window regains focus
         window.addEventListener('focus', () => this.checkAlerts());
 
@@ -75,7 +75,7 @@ const AlertSystem = {
                     }
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
+
                 // Check content type to see if it's JSON
                 const contentType = response.headers.get('content-type');
                 if (!contentType || !contentType.includes('application/json')) {
@@ -83,7 +83,7 @@ const AlertSystem = {
                     window.location.href = (typeof BASE_URL !== 'undefined' ? BASE_URL : '') + 'login.php';
                     return;
                 }
-                
+
                 return response.json();
             })
             .then(data => {
@@ -116,8 +116,13 @@ const AlertSystem = {
 
         // Show Modal
         const modalEl = document.getElementById('stockAlertModal');
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
+        if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        } else if (modalEl) {
+            modalEl.classList.add('show');
+            modalEl.style.display = 'block';
+        }
 
         // Play Sound
         this.playSound();
@@ -158,8 +163,23 @@ const AlertSystem = {
 
         // Hide Modal
         const modalEl = document.getElementById('stockAlertModal');
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        if (modal) modal.hide();
+        if (modalEl) {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+                else {
+                    modalEl.classList.remove('show');
+                    modalEl.style.display = 'none';
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) backdrop.remove();
+                }
+            } else {
+                modalEl.classList.remove('show');
+                modalEl.style.display = 'none';
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) backdrop.remove();
+            }
+        }
     },
 
     // Inject Modal DOM

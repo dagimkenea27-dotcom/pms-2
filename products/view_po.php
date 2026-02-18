@@ -103,7 +103,8 @@ $items_query = "SELECT poi.*, p.name as product_name, p.sku as product_sku, pv.s
                 FROM purchase_order_items poi
                 JOIN products p ON poi.product_id = p.id
                 LEFT JOIN product_variants pv ON poi.variant_id = pv.id
-                WHERE poi.purchase_order_id = ?";
+                WHERE poi.purchase_order_id = ?
+                ORDER BY pv.color ASC, pv.size ASC, p.name ASC";
 $items_stmt = $db->prepare($items_query);
 $items_stmt->execute([$po_id]);
 $items = $items_stmt->fetchAll(PDO::FETCH_ASSOC);

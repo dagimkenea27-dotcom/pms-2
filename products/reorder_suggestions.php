@@ -109,8 +109,14 @@ require_once "../includes/header.php";
                             </td>
                             <td>
                                 <div class="d-flex align-items-center">
-                                    <?php if ($item['image']): ?>
-                                        <img src="../<?php echo htmlspecialchars($item['image']); ?>" class="img-thumbnail me-2" style="width: 40px; height: 40px;">
+                                    <?php if (!empty($item['image'])): ?>
+                                        <?php 
+                                        $is_url = (strpos($item['image'], 'http') === 0);
+                                        $img_src = $is_url ? $item['image'] : "../" . $item['image'];
+                                        ?>
+                                        <img src="<?php echo htmlspecialchars($img_src); ?>" class="img-thumbnail me-2" style="width: 40px; height: 40px;" onerror="this.src='../assets/img/noproduct.png'">
+                                    <?php else: ?>
+                                        <img src="../assets/img/noproduct.png" class="img-thumbnail me-2" style="width: 40px; height: 40px;">
                                     <?php endif; ?>
                                     <div>
                                         <div class="fw-bold"><?php echo htmlspecialchars($item['name']); ?></div>

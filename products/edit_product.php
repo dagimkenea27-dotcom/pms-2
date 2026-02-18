@@ -248,7 +248,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                       location = :location,
                       image = :image,
                       barcode = :barcode,
-                      has_variants = :has_variants
+                      has_variants = :has_variants,
+                      status = :status
                       WHERE id = :id";
             
             $stmt = $db->prepare($query);
@@ -270,6 +271,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bindParam(":barcode", $sku); 
             $has_variants_int = $has_variants ? 1 : 0;
             $stmt->bindParam(":has_variants", $has_variants_int);
+            $status = $_POST['status'] ?? 'Active';
+            $stmt->bindParam(":status", $status);
             $stmt->bindParam(":id", $product['id']);
             
             $stmt->execute();
@@ -478,6 +481,14 @@ require_once "../includes/header.php";
                         <label for="description" class="form-label fw-bold small text-muted text-uppercase">Description</label>
                         <textarea class="form-control form-control-sm" id="description" name="description" rows="3"><?php echo htmlspecialchars($product['description']); ?></textarea>
                     </div>
+                    <div class="mt-3">
+                        <label for="status" class="form-label fw-bold small text-muted text-uppercase">Status</label>
+                        <select class="form-select form-select-sm" id="status" name="status">
+                            <option value="Active" <?php echo ($product['status'] == 'Active') ? 'selected' : ''; ?>>Active</option>
+                            <option value="Inactive" <?php echo ($product['status'] == 'Inactive') ? 'selected' : ''; ?>>Inactive</option>
+                            <option value="Draft" <?php echo ($product['status'] == 'Draft') ? 'selected' : ''; ?>>Draft</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -600,9 +611,12 @@ require_once "../includes/header.php";
             </div>
             <div class="card-body text-center">
                 <?php if (!empty($product['image'])): ?>
-                    <img src="../<?php echo htmlspecialchars($product['image']); ?>" class="img-fluid rounded mb-3 border shadow-sm" style="max-height: 180px;">
+                    <?php 
+                        $img_src = (strpos($product['image'], 'http') === 0) ? $product['image'] : '../' . $product['image'];
+                    ?>
+                    <img src="<?php echo htmlspecialchars($img_src); ?>" class="img-fluid rounded mb-3 border shadow-sm" style="max-height: 180px;" onerror="this.src='../assets/img/noproduct.png'">
                 <?php else: ?>
-                    <div class="bg-light p-4 rounded mb-3 border border-dashed"><i class="fas fa-camera fa-2x text-muted"></i></div>
+                    <img src="../assets/img/noproduct.png" class="img-fluid rounded mb-3 border shadow-sm" style="max-height: 180px;">
                 <?php endif; ?>
                 <input type="file" class="form-control form-control-sm" name="product_image" form="editProductForm" accept="image/*">
             </div>

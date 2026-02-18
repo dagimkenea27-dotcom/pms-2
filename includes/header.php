@@ -11,10 +11,9 @@ Auth::startSession();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventory Management System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="<?php echo BASE_URL; ?>assets/js/theme.js?v=<?php echo filemtime(ROOT_PATH . 'assets/js/theme.js'); ?>"></script>
-    <script src="<?php echo BASE_URL; ?>assets/js/alerts.js?v=<?php echo filemtime(ROOT_PATH . 'assets/js/alerts.js'); ?>"></script>
     <link href="<?php echo BASE_URL; ?>assets/css/custom.css?v=<?php echo filemtime(ROOT_PATH . 'assets/css/custom.css'); ?>" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" type="image/jpeg" href="<?php echo BASE_URL; ?>assets/img/logo.jpg">
@@ -141,6 +140,24 @@ Auth::startSession();
                 </div>
             </li>
 
+            <!-- Nav Item - Branch Operations -->
+            <?php 
+            $isBranchActive = strpos($_SERVER['REQUEST_URI'], 'jimma/') !== false;
+            ?>
+            <li class="nav-item <?php echo $isBranchActive ? 'active' : ''; ?>">
+                <a class="nav-link <?php echo $isBranchActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseBranch"
+                    aria-expanded="<?php echo $isBranchActive ? 'true' : 'false'; ?>" aria-controls="collapseBranch">
+                    <i class="fas fa-fw fa-store"></i>
+                    <span>Branch Operations</span>
+                </a>
+                <div id="collapseBranch" class="collapse <?php echo $isBranchActive ? 'show' : ''; ?>" aria-labelledby="headingBranch" data-parent="#accordionSidebar">
+                    <div class="py-2 collapse-inner rounded">
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'jimma/sales_request.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>jimma/sales_request.php">Jimma Stock Request</a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'jimma/view_requests.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>jimma/view_requests.php">View All Requests</a>
+                    </div>
+                </div>
+            </li>
+
             <!-- Nav Item - Drivers & Fleet -->
             <?php 
             $isFleetActive = strpos($_SERVER['REQUEST_URI'], 'drivers/') !== false || strpos($_SERVER['REQUEST_URI'], 'vehicles/') !== false;
@@ -226,6 +243,13 @@ Auth::startSession();
                 <a class="nav-link" href="<?php echo BASE_URL; ?>reports/gojo_analysis.php">
                     <i class="fas fa-fw fa-chart-bar"></i>
                     <span>Gojo Analysis</span>
+                </a>
+            </li>
+
+            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'reports/sales_followup.php') !== false ? 'active' : ''; ?>">
+                <a class="nav-link" href="<?php echo BASE_URL; ?>reports/sales_followup.php">
+                    <i class="fas fa-fw fa-headset"></i>
+                    <span>Sales Follow-up</span>
                 </a>
             </li>
 

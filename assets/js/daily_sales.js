@@ -131,6 +131,155 @@ function updatePriceDisplay() {
     displayPrice.textContent = (unit * qty) + " Birr";
 }
 
+// SHEIN Screenshot Integration
+const sheinBtn = document.getElementById('shein-screenshot-btn');
+const sheinFile = document.getElementById('shein-file-input');
+
+// Camera Elements
+const cameraModal = document.getElementById('cameraModal');
+const videoElement = document.getElementById('camera-feed');
+const canvasElement = document.getElementById('camera-canvas');
+const captureBtn = document.getElementById('capture-btn');
+const closeCameraBtn = document.getElementById('close-camera-btn');
+let cameraStream = null;
+
+async function performSheinSearch(blob) {
+    if (!blob) return;
+
+    const originalText = sheinBtn.innerHTML;
+    sheinBtn.innerHTML = '<span class="animate-pulse">Searching...</span>';
+    sheinBtn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('screenshot', blob, 'capture.jpg');
+
+    try {
+        const res = await fetch('api/shein_search.php', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await res.json();
+
+        if (result.success) {
+            const data = result.data;
+
+            // Auto-fill form
+            if (data.product_type) productSelect.value = data.product_type;
+            updateSizeOptions();
+
+            // Try to find a matching size from the available ones
+            if (data.available_sizes && data.available_sizes.length > 0) {
+                // Find first match in our dropdown
+                for (let i = 0; i < data.available_sizes.length; i++) {
+                    // logic to match size? for now just set value
+                    // check if option exists
+                    const size = data.available_sizes[i];
+                    if (document.querySelector(`#input-size option[value="${size}"]`)) {
+                        sizeSelect.value = size;
+                        break;
+                    }
+                }
+                // Fallback to first available from API if exact match logic is too strict
+                if (!sizeSelect.value && data.available_sizes[0]) {
+                    // Maybe add it if not exists? Or just ignore
+                }
+            }
+
+            if (data.color) colorSelect.value = data.color;
+
+            // Highlight fields that were changed
+            [productSelect, sizeSelect, colorSelect].forEach(el => {
+                el.classList.add('ring-2', 'ring-indigo-500', 'transition-all');
+                setTimeout(() => el.classList.remove('ring-2', 'ring-indigo-500'), 2000);
+            });
+
+            updatePriceDisplay();
+        } else {
+            alert('Search Error: ' + result.message);
+        }
+    } catch (err) {
+        console.error('SHEIN Search Error:', err);
+        alert('Failed to connect to search service.');
+    } finally {
+        sheinBtn.innerHTML = originalText;
+        sheinBtn.disabled = false;
+        if (sheinFile) sheinFile.value = ''; // Reset file input
+    }
+}
+
+async function startCamera() {
+    try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error("Camera API not available");
+        }
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: 'environment', // Use back camera on mobile
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        });
+        videoElement.srcObject = cameraStream;
+    } catch (err) {
+        console.error("Camera Error:", err);
+        alert("Camera Error: " + err.message);
+        cameraModal.classList.add('hidden');
+    }
+}
+
+function stopCamera() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+        videoElement.srcObject = null;
+    }
+}
+
+if (sheinBtn) {
+    sheinBtn.onclick = (e) => {
+        e.preventDefault();
+        if (cameraModal) {
+            cameraModal.classList.remove('hidden');
+            startCamera();
+        } else {
+            // Fallback if modal missing
+            sheinFile.click();
+        }
+    };
+}
+
+if (closeCameraBtn) {
+    closeCameraBtn.onclick = () => {
+        stopCamera();
+        cameraModal.classList.add('hidden');
+    };
+}
+
+if (captureBtn) {
+    captureBtn.onclick = () => {
+        if (!videoElement.srcObject) return;
+
+        const context = canvasElement.getContext('2d');
+        canvasElement.width = videoElement.videoWidth;
+        canvasElement.height = videoElement.videoHeight;
+        context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+
+        canvasElement.toBlob(blob => {
+            stopCamera();
+            cameraModal.classList.add('hidden');
+            performSheinSearch(blob);
+        }, 'image/jpeg', 0.8);
+    };
+}
+
+if (sheinFile) {
+    sheinFile.onchange = async () => {
+        if (sheinFile.files.length) {
+            performSheinSearch(sheinFile.files[0]);
+        }
+    };
+}
+
 // Cart Logic
 addToCartBtn.onclick = () => {
     if (!sizeSelect.value) { alert('Please select a size'); return; }
@@ -707,8 +856,16 @@ document.getElementById('followup-btn').onclick = () => {
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
             
-            <h1 class="text-3xl font-extrabold text-slate-800 mb-2">Pending Follow-ups</h1>
-            <p class="text-slate-500 mb-8">Items not yet sold from previous days or marked for attention.</p>
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-3xl font-extrabold text-slate-800 mb-2">Pending Follow-ups</h1>
+                    <p class="text-slate-500">Items not yet sold from previous days or marked for attention.</p>
+                </div>
+                <button onclick="window.closeFollowupView(); document.getElementById('shein-screenshot-btn').click();" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-indigo-100 transition-all flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    Add from Screenshot
+                </button>
+            </div>
             
             <div class="space-y-4">
                 ${pendings.length === 0 ?

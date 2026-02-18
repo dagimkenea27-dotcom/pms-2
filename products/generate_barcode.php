@@ -181,7 +181,15 @@ require_once "../includes/header.php";
                 
                 <?php if (!empty($product['image'])): ?>
                     <div class="text-center mt-3">
-                        <img src="../<?php echo htmlspecialchars($product['image']); ?>" alt="Product Image" class="img-fluid rounded">
+                        <?php 
+                        $is_url = (strpos($product['image'], 'http') === 0);
+                        $img_src = $is_url ? $product['image'] : "../" . $product['image'];
+                        ?>
+                        <img src="<?php echo htmlspecialchars($img_src); ?>" alt="Product Image" class="img-fluid rounded" onerror="this.src='../assets/img/noproduct.png'">
+                    </div>
+                <?php else: ?>
+                    <div class="text-center mt-3">
+                        <img src="../assets/img/noproduct.png" alt="No Image" class="img-fluid rounded">
                     </div>
                 <?php endif; ?>
             </div>

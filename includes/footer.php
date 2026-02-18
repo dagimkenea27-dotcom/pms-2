@@ -29,20 +29,21 @@
         <i class="fas fa-angle-up"></i>
     </a>
 
-    <!-- Bootstrap core JavaScript-->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+    <!-- Core JavaScript Scripts -->
+    <!-- Load jQuery first -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Load Bootstrap Bundle (includes Popper.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Page level plugins -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Barcode Scanner Logic -->
+    <!-- Barcode Scanner Logic (Depends on Bootstrap) -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8" type="text/javascript"></script>
     <script src="<?php echo BASE_URL; ?>assets/js/barcode_scanner.js?v=<?php echo time(); ?>"></script>
 
     <!-- Barcode Scanner Modal -->
-    <div class="modal fade" id="barcodeScannerModal" tabindex="-1" aria-labelledby="barcodeScannerModalLabel" aria-hidden="true">
+    <div class="modal fade" id="barcodeScannerModal" tabindex="-1" aria-labelledby="barcodeScannerModalLabel" aria-hidden="true" data-bs-focus="false">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
@@ -139,7 +140,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-secondary" onclick="bootstrap.Modal.getOrCreateInstance(document.getElementById('barcodeScannerModal')).hide();">
                         <i class="fas fa-times"></i> Close
                     </button>
                 </div>
@@ -148,6 +149,7 @@
     </div>
 
     <script src="<?php echo BASE_URL; ?>assets/js/sidebar.js?v=<?php echo time(); ?>"></script>
+    <script src="<?php echo BASE_URL; ?>assets/js/alerts.js?v=<?php echo time(); ?>"></script>
     
     <script>
         // Auto-dismiss alerts
@@ -155,10 +157,14 @@
             setTimeout(function() {
                 const alerts = document.querySelectorAll('.alert:not(#bulkActionsToolbar)');
                 alerts.forEach(alert => {
-                    if (typeof bootstrap !== 'undefined' && bootstrap.Alert) {
-                        const bsAlert = new bootstrap.Alert(alert);
-                        bsAlert.close();
-                    } else {
+                    try {
+                        if (typeof bootstrap !== 'undefined' && bootstrap.Alert && alert) {
+                            const bsAlert = new bootstrap.Alert(alert);
+                            if (bsAlert) bsAlert.close();
+                        } else {
+                            alert.style.display = 'none';
+                        }
+                    } catch (e) {
                         alert.style.display = 'none';
                     }
                 });

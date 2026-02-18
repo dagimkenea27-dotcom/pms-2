@@ -113,7 +113,7 @@ require_once "../includes/header.php";
             <div class="row mb-4">
                 <div class="col-md-6">
                     <label class="form-label">Supplier *</label>
-                    <select name="supplier_id" class="form-select" required>
+                    <select name="supplier_id" id="supplier_id" class="form-select" required>
                         <option value="">Choose Supplier</option>
                         <?php foreach ($suppliers as $s): ?>
                             <option value="<?php echo $s['id']; ?>" <?php echo ($s['id'] == $po['supplier_id']) ? 'selected' : ''; ?>>
@@ -147,37 +147,21 @@ require_once "../includes/header.php";
                                 <select name="products[<?php echo $index; ?>][product_selector]" class="form-select product-selector" required>
                                     <option value="">Search Product...</option>
                                     <?php
-                                    // RE-FETCH PRODUCTS FOR SELECTOR
-                                    // Ideally this should be cached or optimized, but for now we query again for the dropdown options
-                                    $p_query = "SELECT p.id as p_id, p.name as p_name, p.sku as p_sku, 
-                                                       pv.id as v_id, pv.size, pv.color, pv.sku as v_sku, pv.cost_price as v_cost, p.cost_price as p_cost
-                                                FROM products p
-                                                LEFT JOIN product_variants pv ON p.id = pv.product_id
-                                                ORDER BY p.name ASC";
-                                    $p_stmt = $db->query($p_query);
-                                    
                                     // Current Item Value
                                     $current_val = $item['variant_id'] 
                                         ? "v_" . $item['variant_id'] . "_p_" . $item['product_id'] 
                                         : "p_" . $item['product_id'];
-
-                                    while ($row = $p_stmt->fetch(PDO::FETCH_ASSOC)) {
-                                        $label = $row['p_name'];
-                                        $val = "p_" . $row['p_id'];
-                                        $cost = $row['p_cost'];
-                                        
-                                        if ($row['v_id']) {
-                                            $label .= " - " . $row['size'] . "/" . $row['color'] . " (" . $row['v_sku'] . ")";
-                                            $val = "v_" . $row['v_id'] . "_p_" . $row['p_id'];
-                                            $cost = ($row['v_cost'] && $row['v_cost'] > 0) ? $row['v_cost'] : $row['p_cost'];
-                                        } else {
-                                            $label .= " (" . $row['p_sku'] . ")";
-                                        }
-                                        
-                                        $selected = ($val == $current_val) ? 'selected' : '';
-                                        echo "<option value='$val' data-cost='$cost' $selected>$label</option>";
+                                    
+                                    $label = $item['p_name'];
+                                    if ($item['variant_id']) {
+                                        $label .= " - " . $item['size'] . "/" . $item['color'] . " (" . $item['v_sku'] . ")";
+                                    } else {
+                                        $label .= " (" . $item['p_sku'] . ")";
                                     }
                                     ?>
+                                    <option value="<?php echo $current_val; ?>" data-cost="<?php echo $item['unit_cost']; ?>" selected>
+                                        <?php echo htmlspecialchars($label); ?>
+                                    </option>
                                 </select>
                                 <input type="hidden" name="products[<?php echo $index; ?>][product_id]" class="h-product-id" value="<?php echo $item['product_id']; ?>">
                                 <input type="hidden" name="products[<?php echo $index; ?>][variant_id]" class="h-variant-id" value="<?php echo $item['variant_id']; ?>">
@@ -227,6 +211,7 @@ require_once "../includes/header.php";
 <script>
 $(document).ready(function() {
     let rowCount = <?php echo count($existing_items); ?>;
+    let currentSupplierProducts = [];
 
     // Initialize Select2 on existing selectors
     function initSelect2(element) {
@@ -239,55 +224,110 @@ $(document).ready(function() {
 
     initSelect2('.product-selector');
 
-    $('#addRow').on('click', function() {
-        // Clone the FIRST row logic, but we need empty values.
-        // It's safer to fetch the "template" row (the first row if exists)
-        // If NO rows exist (user deleted all), we might have trouble cloning.
-        // Handled by checking generic structure
-        
-        let newRowHtml = `
-            <tr class="item-row">
-                <td>
-                    <select name="products[${rowCount}][product_selector]" class="form-select product-selector" required>
-                        <option value="">Search Product...</option>
-                        <?php
-                        // Re-use logic for options - cleaner way would be AJAX but inline is faster for now
-                        // We will just copy the options from the first select if avaiable or reload
-                        // Simplest: Ajax call or clone existing options
-                        ?>
-                    </select>
-                    <input type="hidden" name="products[${rowCount}][product_id]" class="h-product-id">
-                    <input type="hidden" name="products[${rowCount}][variant_id]" class="h-variant-id">
-                </td>
-                <td><input type="number" name="products[${rowCount}][qty]" class="form-control qty-input" value="1" min="1"></td>
-                <td><input type="number" name="products[${rowCount}][cost]" step="0.01" class="form-control cost-input" value="0.00"></td>
-                <td class="subtotal-text">$0.00</td>
-                <td><button type="button" class="btn btn-danger remove-row"><i class="fas fa-trash"></i></button></td>
-            </tr>
-        `;
-        
-        // Better Strategy: Clone the first row's SELECT options to avoid PHP rendering mess in JS string
-        const firstSelect = $('.product-selector').first();
-        if (firstSelect.length) {
-            const options = firstSelect.html(); // Get all options
-            
-            const tbody = $('#poItemsTable tbody');
-            const newRow = $(newRowHtml);
-            
-            newRow.find('select').html(options).val(''); // Set options and clear value
-            
-            tbody.append(newRow);
-            initSelect2(newRow.find('.product-selector'));
-            rowCount++;
-        } else {
-            alert("Error: Cannot add row because no reference row exists. Please refresh.");
+    // Load initial products if supplier is selected
+    const initialSupplierId = $('#supplier_id').val();
+    if (initialSupplierId) {
+        fetchProducts(initialSupplierId, false);
+    }
+
+    // Handle Supplier Change
+    $('#supplier_id').on('change', function() {
+        const supplierId = $(this).val();
+        if (!supplierId) {
+            currentSupplierProducts = [];
+            updateAllProductSelectors(true);
+            return;
         }
+
+        if (!confirm('Changing the supplier will clear current items. Continue?')) {
+            // Reverting would be nice, but for now we proceed or they refresh
+            return;
+        }
+        
+        fetchProducts(supplierId, true);
+    });
+
+    function fetchProducts(supplierId, clearItems) {
+        $.ajax({
+            url: '../api/get_supplier_products.php',
+            data: { supplier_id: supplierId },
+            success: function(res) {
+                if (res.success) {
+                    currentSupplierProducts = res.data;
+                    updateAllProductSelectors(clearItems);
+                } else {
+                    alert('Error fetching products: ' + res.message);
+                }
+            }
+        });
+    }
+
+    function updateAllProductSelectors(clearItems) {
+        $('.product-selector').each(function() {
+            const selector = $(this);
+            const currentValue = selector.val();
+            
+            selector.empty().append('<option value="">Search Product...</option>');
+            
+            currentSupplierProducts.forEach(p => {
+                const option = new Option(p.text, p.id, false, p.id === currentValue);
+                $(option).attr('data-cost', p.cost);
+                selector.append(option);
+            });
+            
+            if (clearItems) {
+                selector.val('').trigger('change');
+            } else {
+                selector.trigger('change.select2'); // Update display
+            }
+        });
+        
+        if (clearItems) {
+            // Remove extra rows if any
+            $('#poItemsTable tbody tr:not(:first)').remove();
+            calculateTotal();
+        }
+    }
+
+    $('#addRow').on('click', function() {
+        if (!$('#supplier_id').val()) {
+            alert('Please select a supplier first.');
+            return;
+        }
+
+        const tbody = $('#poItemsTable tbody');
+        const firstRow = tbody.find('tr:first');
+        const newRow = firstRow.clone();
+        
+        newRow.find('.select2-container').remove();
+        newRow.find('select').show().removeClass('select2-hidden-accessible').removeAttr('data-select2-id').find('option').removeAttr('data-select2-id');
+        
+        newRow.find('input, select').each(function() {
+            const name = $(this).attr('name');
+            if (name) {
+                $(this).attr('name', name.replace(/\[\d+\]/, `[${rowCount}]`));
+            }
+            if ($(this).is('input')) $(this).val($(this).prop('defaultValue'));
+            if ($(this).is('select')) $(this).val('');
+        });
+        
+        newRow.find('.subtotal-text').text('$0.00');
+        tbody.append(newRow);
+        
+        initSelect2(newRow.find('.product-selector'));
+        rowCount++;
     });
 
     $(document).on('change', '.product-selector', function() {
         const row = $(this).closest('tr');
         const val = $(this).val();
-        if (!val) return;
+        if (!val) {
+            row.find('.h-variant-id').val('');
+            row.find('.h-product-id').val('');
+            row.find('.cost-input').val('0.00');
+            calculateTotal();
+            return;
+        };
         
         const cost = $(this).find('option:selected').data('cost') || 0;
         row.find('.cost-input').val(parseFloat(cost).toFixed(2));

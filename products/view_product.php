@@ -105,6 +105,15 @@ require_once "../includes/header.php";
                             <dt class="col-sm-4">Selling Price:</dt>
                             <dd class="col-sm-8">$<?php echo number_format($product['price'], 2); ?></dd>
                             
+                            <dt class="col-sm-4">Status:</dt>
+                            <dd class="col-sm-8">
+                                <?php 
+                                $status = $product['status'] ?? 'Active';
+                                $badge_class = ($status == 'Active') ? 'bg-success' : 'bg-secondary';
+                                echo "<span class='badge $badge_class'>".htmlspecialchars($status)."</span>";
+                                ?>
+                            </dd>
+
                             <dt class="col-sm-4">Location:</dt>
                             <dd class="col-sm-8"><?php echo htmlspecialchars($product['location']); ?></dd>
                         </dl>
@@ -162,12 +171,12 @@ require_once "../includes/header.php";
             </div>
             <div class="card-body text-center">
                 <?php if (!empty($product['image'])): ?>
-                    <img src="../<?php echo htmlspecialchars($product['image']); ?>" alt="Product Image" class="img-fluid rounded">
+                    <?php 
+                        $img_src = (strpos($product['image'], 'http') === 0) ? $product['image'] : '../' . $product['image'];
+                    ?>
+                    <img src="<?php echo htmlspecialchars($img_src); ?>" alt="Product Image" class="img-fluid rounded" onerror="this.src='../assets/img/noproduct.png'">
                 <?php else: ?>
-                    <div class="bg-light text-center p-5">
-                        <i class="fas fa-image fa-3x text-muted"></i>
-                        <p class="mt-2">No image available</p>
-                    </div>
+                    <img src="../assets/img/noproduct.png" alt="No Image" class="img-fluid rounded">
                 <?php endif; ?>
             </div>
         </div>
@@ -188,6 +197,9 @@ require_once "../includes/header.php";
                 </a>
                 <a href="stock_audit.php?product_id=<?php echo $product['id']; ?>" class="btn btn-outline-info w-100">
                     <i class="fas fa-history"></i> View Audit Log
+                </a>
+                <a href="../reports/sales_followup.php?sku=<?php echo urlencode($product['sku']); ?>" class="btn btn-warning w-100 mb-2">
+                    <i class="fas fa-phone"></i> Follow-up Orders
                 </a>
                 <a href="view_products.php" class="btn btn-secondary w-100 mt-3">
                     <i class="fas fa-arrow-left"></i> Back to Products

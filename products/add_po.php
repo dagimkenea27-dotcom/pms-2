@@ -77,7 +77,7 @@ require_once "../includes/header.php";
             <div class="row mb-4">
                 <div class="col-md-4">
                     <label class="form-label">Supplier *</label>
-                    <select name="supplier_id" class="form-select" required>
+                    <select name="supplier_id" id="supplier_id" class="form-select" required>
                         <option value="">Choose Supplier</option>
                         <?php foreach ($suppliers as $s): ?>
                             <option value="<?php echo $s['id']; ?>"><?php echo htmlspecialchars($s['name']); ?></option>
@@ -109,33 +109,9 @@ require_once "../includes/header.php";
                     <tbody>
                         <tr class="item-row">
                             <td>
-                                <select name="products[0][product_selector]" class="form-select product-selector" required>
-                                    <option value="">Search Product...</option>
-                                    <?php
-                                    // Fetch products with their variants
-                                    $p_query = "SELECT p.id as p_id, p.name as p_name, p.sku as p_sku, 
-                                                       pv.id as v_id, pv.size, pv.color, pv.sku as v_sku, pv.cost_price as v_cost, p.cost_price as p_cost
-                                                FROM products p
-                                                LEFT JOIN product_variants pv ON p.id = pv.product_id
-                                                ORDER BY p.name ASC";
-                                    $p_stmt = $db->query($p_query);
-                                    while ($row = $p_stmt->fetch(PDO::FETCH_ASSOC)) {
-                                        $label = $row['p_name'];
-                                        $val = "p_" . $row['p_id'];
-                                        $cost = $row['p_cost'];
-                                        
-                                        if ($row['v_id']) {
-                                            $label .= " - " . $row['size'] . "/" . $row['color'] . " (" . $row['v_sku'] . ")";
-                                            $val = "v_" . $row['v_id'] . "_p_" . $row['p_id'];
-                                            $cost = ($row['v_cost'] && $row['v_cost'] > 0) ? $row['v_cost'] : $row['p_cost'];
-                                        } else {
-                                            $label .= " (" . $row['p_sku'] . ")";
-                                        }
-                                        
-                                        echo "<option value='$val' data-cost='$cost'>$label</option>";
-                                    }
-                                    ?>
-                                </select>
+                                    <select name="products[0][product_selector]" class="form-select product-selector" required>
+                                        <option value="">Search Product...</option>
+                                    </select>
                                 <input type="hidden" name="products[0][product_id]" class="h-product-id">
                                 <input type="hidden" name="products[0][variant_id]" class="h-variant-id">
                             </td>
@@ -179,6 +155,7 @@ require_once "../includes/header.php";
 <script>
 $(document).ready(function() {
     let rowCount = 1;
+    let currentSupplierProducts = [];
 
     // Initialize Select2 on existing selectors
     function initSelect2(element) {
@@ -191,16 +168,77 @@ $(document).ready(function() {
 
     initSelect2('.product-selector');
 
+    // Handle Supplier Change
+    $('#supplier_id').on('change', function() {
+        const supplierId = $(this).val();
+        if (!supplierId) {
+            currentSupplierProducts = [];
+            updateAllProductSelectors();
+            return;
+        }
+
+        // Optional: Confirm clearing items if rows exist
+        if ($('.item-row').length > 1 || $('.product-selector').first().val()) {
+            if (!confirm('Changing the supplier will clear the current items. Continue?')) {
+                // Revert supplier selection if possible (needs storing previous value)
+                return;
+            }
+            // Clear rows except the first one
+            $('#poItemsTable tbody tr:not(:first)').remove();
+            // Reset first row
+            const firstRow = $('#poItemsTable tbody tr:first');
+            firstRow.find('select').val('').trigger('change');
+            firstRow.find('input').val(function() { return this.defaultValue; });
+            firstRow.find('.subtotal-text').text('$0.00');
+            calculateTotal();
+        }
+
+        $.ajax({
+            url: '../api/get_supplier_products.php',
+            data: { supplier_id: supplierId },
+            success: function(res) {
+                if (res.success) {
+                    currentSupplierProducts = res.data;
+                    updateAllProductSelectors();
+                } else {
+                    alert('Error fetching products: ' + res.message);
+                }
+            },
+            error: function() {
+                alert('Connection error while fetching products.');
+            }
+        });
+    });
+
+    function updateAllProductSelectors() {
+        $('.product-selector').each(function() {
+            const selector = $(this);
+            const currentValue = selector.val();
+            
+            selector.empty().append('<option value="">Search Product...</option>');
+            
+            currentSupplierProducts.forEach(p => {
+                const option = new Option(p.text, p.id, false, p.id === currentValue);
+                $(option).attr('data-cost', p.cost);
+                selector.append(option);
+            });
+            
+            selector.trigger('change');
+        });
+    }
+
     $('#addRow').on('click', function() {
+        if (!$('#supplier_id').val()) {
+            alert('Please select a supplier first.');
+            return;
+        }
+
         const tbody = $('#poItemsTable tbody');
         const firstRow = tbody.find('tr:first');
         
-        // Destroy select2 on the row we're cloning to avoid issues
-        // firstRow.find('.product-selector').select2('destroy');
-        
         const newRow = firstRow.clone();
         
-        // Remove select2 container from the cloned row if it exists
+        // Remove select2 container from the cloned row
         newRow.find('.select2-container').remove();
         newRow.find('select').show().removeClass('select2-hidden-accessible').removeAttr('data-select2-id').find('option').removeAttr('data-select2-id');
         
@@ -226,7 +264,13 @@ $(document).ready(function() {
     $(document).on('change', '.product-selector', function() {
         const row = $(this).closest('tr');
         const val = $(this).val();
-        if (!val) return;
+        if (!val) {
+            row.find('.h-variant-id').val('');
+            row.find('.h-product-id').val('');
+            row.find('.cost-input').val('0.00');
+            calculateTotal();
+            return;
+        }
         
         const cost = $(this).find('option:selected').data('cost') || 0;
         row.find('.cost-input').val(parseFloat(cost).toFixed(2));
