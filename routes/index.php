@@ -99,7 +99,81 @@ function optimizeRoute($warehouse, $points) {
     ];
 }
 
-// --- FUNCTIONS ---
+/**
+ * Group points into spatial clusters (K-means algorithm)
+ */
+function clusterPoints($points, $numClusters) {
+    if ($numClusters <= 1 || count($points) <= $numClusters) {
+        if ($numClusters <= 1) return [$points];
+        $result = [];
+        foreach ($points as $p) $result[] = [$p];
+        return $result;
+    }
+
+    // 1. Initial Centroids (Pick points that are spread out)
+    $centroids = [];
+    $centroids[] = $points[array_rand($points)];
+    
+    for ($i = 1; $i < $numClusters; $i++) {
+        $maxDist = -1;
+        $nextCentroid = null;
+        
+        foreach ($points as $p) {
+            $minDistToCentroid = INF;
+            foreach ($centroids as $c) {
+                $d = haversineDistance($p['lat'], $p['lon'], $c['lat'], $c['lon']);
+                if ($d < $minDistToCentroid) $minDistToCentroid = $d;
+            }
+            if ($minDistToCentroid > $maxDist) {
+                $maxDist = $minDistToCentroid;
+                $nextCentroid = $p;
+            }
+        }
+        $centroids[] = $nextCentroid;
+    }
+
+    // 2. Iterative optimization (K-means)
+    for ($iter = 0; $iter < 12; $iter++) {
+        $clusters = array_fill(0, $numClusters, []);
+        
+        // Assignment phase: Each point to nearest centroid
+        foreach ($points as $p) {
+            $bestDist = INF;
+            $bestIdx = 0;
+            foreach ($centroids as $idx => $c) {
+                $d = haversineDistance($p['lat'], $p['lon'], $c['lat'], $c['lon']);
+                if ($d < $bestDist) {
+                    $bestDist = $d;
+                    $bestIdx = $idx;
+                }
+            }
+            $clusters[$bestIdx][] = $p;
+        }
+        
+        // Update phase: Centroid moves to center of cluster
+        $changed = false;
+        foreach ($clusters as $idx => $clusterPoints) {
+            if (empty($clusterPoints)) {
+                // If a cluster is empty, jump its centroid to a random point to keep it active
+                $newCentroid = $points[array_rand($points)];
+                $centroids[$idx] = ['lat' => $newCentroid['lat'], 'lon' => $newCentroid['lon']];
+                $changed = true;
+                continue;
+            }
+            
+            $meanLat = array_sum(array_column($clusterPoints, 'lat')) / count($clusterPoints);
+            $meanLon = array_sum(array_column($clusterPoints, 'lon')) / count($clusterPoints);
+            
+            if (abs($centroids[$idx]['lat'] - $meanLat) > 0.0001 || abs($centroids[$idx]['lon'] - $meanLon) > 0.0001) {
+                $centroids[$idx] = ['lat' => $meanLat, 'lon' => $meanLon];
+                $changed = true;
+            }
+        }
+        if (!$changed) break;
+    }
+    
+    return $clusters;
+}
 
 function haversine($a, $b) {
     $R = 6371;
@@ -317,31 +391,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 
                 if (count($points) > 0) {
-                    // Simple clustering based on number of drivers
                     $driverRoutes = [];
-                    $pointsPerDriver = ceil(count($points) / $numDrivers);
                     
-                    // Distribute warehouses among drivers
-                    for ($i = 0; $i < $numDrivers; $i++) {
-                        $driverPoints = array_slice($points, $i * $pointsPerDriver, $pointsPerDriver);
+                    if ($numDrivers > 1 && count($points) > $numDrivers) {
+                        // Use Spatial Clustering for multiple drivers
+                        $clusters = clusterPoints($points, $numDrivers);
                         
-                        if (!empty($driverPoints)) {
-                            // Assign warehouse (round-robin for multiple warehouses)
-                            $warehouseIndex = $i % count($warehouses);
-                            $warehouseData = $warehouses[$warehouseIndex];
+                        foreach ($clusters as $i => $driverPoints) {
+                            if (empty($driverPoints)) continue;
                             
-                            // Create warehouse point for this driver
+                            // Assign nearest warehouse to this cluster center
+                            $clusterLat = array_sum(array_column($driverPoints, 'lat')) / count($driverPoints);
+                            $clusterLon = array_sum(array_column($driverPoints, 'lon')) / count($driverPoints);
+                            
+                            $bestWarehouse = $warehouses[0];
+                            $minWhDist = INF;
+                            foreach ($warehouses as $wh) {
+                                $d = haversineDistance($clusterLat, $clusterLon, $wh['lat'], $wh['lon']);
+                                if ($d < $minWhDist) {
+                                    $minWhDist = $d;
+                                    $bestWarehouse = $wh;
+                                }
+                            }
+                            
                             $warehouse = [
-                                'address' => $warehouseData['name'] . " (WAREHOUSE)",
-                                'lat' => $warehouseData['lat'],
-                                'lon' => $warehouseData['lon'],
-                                'display_name' => $warehouseData['name'] . " (WAREHOUSE)",
+                                'address' => $bestWarehouse['name'] . " (WAREHOUSE)",
+                                'lat' => $bestWarehouse['lat'],
+                                'lon' => $bestWarehouse['lon'],
+                                'display_name' => $bestWarehouse['name'] . " (WAREHOUSE)",
                                 'is_warehouse' => true
                             ];
                             
-                            // Optimize route (simplified nearest neighbor)
-                            $result = optimizeRoute($warehouse, $driverPoints);
-                            $driverRoutes[$i] = $result;
+                            $driverRoutes[] = optimizeRoute($warehouse, $driverPoints);
+                        }
+                    } else {
+                        // Single driver or too few points - simple logic
+                        $warehouseData = $warehouses[0];
+                        $warehouse = [
+                            'address' => $warehouseData['name'] . " (WAREHOUSE)",
+                            'lat' => $warehouseData['lat'],
+                            'lon' => $warehouseData['lon'],
+                            'display_name' => $warehouseData['name'] . " (WAREHOUSE)",
+                            'is_warehouse' => true
+                        ];
+                        
+                        if ($numDrivers > 1) {
+                            // Split points sequentially if clustering isn't viable
+                            $pointsPerDriver = ceil(count($points) / $numDrivers);
+                            for ($i = 0; $i < $numDrivers; $i++) {
+                                $driverPoints = array_slice($points, $i * $pointsPerDriver, $pointsPerDriver);
+                                if (!empty($driverPoints)) {
+                                    $driverRoutes[] = optimizeRoute($warehouse, $driverPoints);
+                                }
+                            }
+                        } else {
+                            $driverRoutes[] = optimizeRoute($warehouse, $points);
                         }
                     }
                 } else {
@@ -602,34 +706,60 @@ require_once "../includes/header.php";
         border-radius: 1rem;
         box-shadow: var(--card-shadow);
         margin-bottom: 1.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
     }
 
     .routes-stats {
         display: flex;
-        gap: 2rem;
+        gap: 1.5rem;
+        flex-wrap: wrap;
     }
     
     .stat-item {
+        flex: 1;
+        min-width: 80px;
         text-align: center;
+        padding: 0.5rem;
+        background: #f8f9fc;
+        border-radius: 0.75rem;
+        transition: transform 0.2s;
     }
+
+    .stat-item:hover {
+        transform: translateY(-2px);
+        background: #f1f3f9;
+    }
+
     .stat-value {
-        font-size: 1.2rem;
-        font-weight: 700;
+        font-size: 1.1rem;
+        font-weight: 800;
         color: #4e73df;
+        display: block;
     }
+    
     .stat-label {
-        font-size: 0.8rem;
-        color: #858796;
+        font-size: 0.65rem;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 1px;
+        color: #858796;
+        font-weight: 700;
+        margin-top: 2px;
+    }
+
+    @media (max-width: 576px) {
+        .routes-header { padding: 1rem; }
+        .routes-stats { gap: 0.75rem; }
+        .stat-item { padding: 0.4rem; min-width: 70px; }
+        .stat-value { font-size: 1rem; }
+        .stop-card { padding: 0.6rem; gap: 0.5rem; }
+        .stop-badge { width: 28px; height: 28px; font-size: 0.75rem; }
+        .stop-distance { padding-left: 0.4rem; }
+        .dist-val { font-size: 0.75rem; }
+        .driver-header { padding: 0.75rem 1rem; }
     }
 
     .routes-grid { 
         display: grid; 
-        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); 
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); 
         gap: 1.5rem; 
         margin-top: 1.5rem; 
     }
@@ -640,13 +770,15 @@ require_once "../includes/header.php";
         box-shadow: var(--card-shadow);
         transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
     }
     .driver-card:hover {
         transform: translateY(-5px);
         box-shadow: var(--hover-shadow);
     }
     .driver-header { 
-        padding: 1rem 1.5rem;
+        padding: 1rem 1.25rem;
         background: #fff;
         border-bottom: 1px solid #e3e6f0;
         font-weight: 700; 
@@ -655,7 +787,105 @@ require_once "../includes/header.php";
         align-items: center;
     }
     
-    .badge-wh { background: #2c3e50; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+    .stops-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 1rem;
+        max-height: 400px;
+        overflow-y: auto;
+        background: #fcfcfd;
+    }
+    
+    .stop-card {
+        background: #fff;
+        border: 1px solid #e3e6f0;
+        border-radius: 0.8rem;
+        padding: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        position: relative;
+        text-decoration: none !important;
+    }
+    
+    .stop-card:hover {
+        border-color: #bac8f3;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        transform: translateX(5px);
+        z-index: 1;
+    }
+    
+    .stop-badge {
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.8rem;
+        color: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .stop-content {
+        flex-grow: 1;
+        min-width: 0;
+    }
+    
+    .stop-title {
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: #4e73df;
+        margin-bottom: 0.1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .stop-address {
+        font-size: 0.75rem;
+        color: #858796;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+    
+    .stop-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.25rem;
+        font-size: 0.7rem;
+        color: #b7b9cc;
+    }
+    
+    .stop-distance {
+        text-align: right;
+        flex-shrink: 0;
+        padding-left: 0.5rem;
+        border-left: 1px solid #eaecf4;
+    }
+    
+    .dist-val {
+        font-weight: 800;
+        font-size: 0.85rem;
+        color: #1a1a1a;
+        line-height: 1;
+    }
+    
+    .dist-total {
+        font-size: 0.65rem;
+        color: #858796;
+        margin-top: 2px;
+    }
+
+    .badge-wh { background: #1a1a1a; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
     .badge-stop { background: #6c757d; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; min-width: 24px; text-align: center; }
     
     /* Form enhancements */
@@ -791,6 +1021,7 @@ require_once "../includes/header.php";
                             <div class="search-container">
                                 <div class="search-input-group d-flex">
                                     <input type="text" class="form-control warehouse-location" 
+                                           id="warehouse-location"
                                            name="warehouses[0][name]" 
                                            placeholder="Search warehouse..."
                                            autocomplete="off">
@@ -802,8 +1033,8 @@ require_once "../includes/header.php";
                                     </button>
                                 </div>
                                 <div class="search-results" style="display:none;"></div>
-                                <input type="hidden" name="warehouses[0][lat]" class="warehouse-lat">
-                                <input type="hidden" name="warehouses[0][lon]" class="warehouse-lon">
+                                <input type="hidden" name="warehouses[0][lat]" id="warehouse-lat" class="warehouse-lat">
+                                <input type="hidden" name="warehouses[0][lon]" id="warehouse-lon" class="warehouse-lon">
                             </div>
                         </div>
                     </div>
@@ -832,6 +1063,9 @@ require_once "../includes/header.php";
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <div class="form-group-title mb-0">Destinations</div>
                         <div>
+                            <button type="button" class="btn btn-xs btn-link text-primary text-decoration-none p-0 me-2" id="pick-locations-btn">
+                                <i class="fas fa-list-ul"></i> Pick Locations
+                            </button>
                             <button type="button" class="btn btn-xs btn-link text-decoration-none p-0 me-2" id="sample-addresses">Sample</button>
                             <button type="button" class="btn btn-xs btn-link text-danger text-decoration-none p-0" id="clear-addresses">Clear</button>
                         </div>
@@ -1019,50 +1253,41 @@ require_once "../includes/header.php";
                 </div>
                 
                 <div class="card-body p-0">
-                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
-                        <table class="table table-sm table-hover mb-0">
-                            <thead class="bg-light sticky-top">
-                                <tr>
-                                    <th style="width: 50px;" class="pl-3">#</th>
-                                    <th>Location</th>
-                                    <th class="text-end pr-3">Dist</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php 
-                                $cumulative = 0;
-                                foreach ($data['route'] as $k => $stop): 
-                                    $cumulative += isset($stop['distance']) ? $stop['distance'] : 0;
-                                ?>
-                                <tr onclick="focusOnRoute(<?= $driverIdx ?>); map.setView([<?= $stop['lat'] ?>, <?= $stop['lon'] ?>], 16);" style="cursor: pointer;">
-                                    <td class="pl-3 align-middle">
-                                        <?php if ($k == 0): ?>
-                                            <span class="badge bg-dark">WH</span>
-                                        <?php else: ?>
-                                            <span class="badge rounded-circle" style="background: <?= $color ?>; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"><?= $k ?></span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="align-middle">
-                                        <div class="small fw-bold text-truncate" style="max-width: 200px;"><?= htmlspecialchars($stop['display_name'] ?? $stop['address']) ?></div>
-                                        <?php if ($stop['address'] != ($stop['display_name'] ?? '')): ?>
-                                            <div class="text-muted text-xs text-truncate" style="max-width: 200px;"><?= htmlspecialchars($stop['address']) ?></div>
-                                        <?php endif; ?>
-                                        <div class="text-xs text-muted mt-1">
-                                            <?= ($k == 0) ? '<i class="fas fa-flag-checkered text-success"></i> Start' : '<i class="fas fa-map-marker-alt text-gray-400"></i> Stop ' . $k ?>
-                                        </div>
-                                    </td>
-                                    <td class="text-end pr-3 align-middle">
-                                        <div class="small fw-bold"><?= isset($stop['distance']) ? round($stop['distance'], 1) : '0' ?> km</div>
-                                        <div class="text-xs text-muted"><?= round($cumulative, 1) ?> km total</div>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                    <div class="stops-list">
+                        <?php 
+                        $cumulative = 0;
+                        foreach ($data['route'] as $k => $stop): 
+                            $cumulative += isset($stop['distance']) ? $stop['distance'] : 0;
+                        ?>
+                        <div class="stop-card" onclick="focusOnRoute(<?= $driverIdx ?>); map.setView([<?= $stop['lat'] ?>, <?= $stop['lon'] ?>], 16);">
+                            <div class="stop-badge" style="background: <?= ($k == 0) ? '#1a1a1a' : $color ?>;">
+                                <?= ($k == 0) ? '<i class="fas fa-warehouse"></i>' : $k ?>
+                            </div>
+                            <div class="stop-content">
+                                <div class="stop-title">
+                                    <span><?= ($k == 0) ? 'Origin' : 'Stop ' . $k ?></span>
+                                    <?php if ($k == 0): ?>
+                                        <span class="badge bg-success-soft text-success text-xs fw-normal px-2">Warehouse</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="stop-address" title="<?= htmlspecialchars($stop['display_name'] ?? $stop['address']) ?>">
+                                    <?= htmlspecialchars($stop['display_name'] ?? $stop['address']) ?>
+                                </div>
+                                <div class="stop-meta">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span><?= isset($stop['lat']) ? round($stop['lat'], 3) : '' ?>, <?= isset($stop['lon']) ? round($stop['lon'], 3) : '' ?></span>
+                                </div>
+                            </div>
+                            <div class="stop-distance">
+                                <div class="dist-val"><?= isset($stop['distance']) ? round($stop['distance'], 1) : '0' ?> <span class="text-xs fw-normal">km</span></div>
+                                <div class="dist-total"><?= round($cumulative, 1) ?> km cum.</div>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
                     </div>
-                    <div class="card-footer bg-light p-2 text-center">
-                        <button class="btn btn-sm btn-link text-decoration-none" onclick="focusOnRoute(<?= $driverIdx ?>)">
-                            <i class="fas fa-eye me-1"></i> Focus on Route
+                    <div class="card-footer bg-white border-top p-2 text-center">
+                        <button class="btn btn-sm btn-link text-primary text-decoration-none fw-bold" onclick="focusOnRoute(<?= $driverIdx ?>)">
+                            <i class="fas fa-expand-arrows-alt me-1"></i> View Entire Route
                         </button>
                     </div>
                 </div>
@@ -1155,8 +1380,12 @@ function initMap() {
         console.log('Click event handler added');
         
         // Initialize if we have warehouse coordinates
-        const whLat = document.getElementById('warehouse-lat').value;
-        const whLon = document.getElementById('warehouse-lon').value;
+        const whLatEl = document.getElementById('warehouse-lat') || document.querySelector('.warehouse-lat');
+        const whLonEl = document.getElementById('warehouse-lon') || document.querySelector('.warehouse-lon');
+        
+        const whLat = whLatEl ? whLatEl.value : null;
+        const whLon = whLonEl ? whLonEl.value : null;
+
         if (whLat && whLon) {
             console.log('Setting warehouse location:', whLat, whLon);
             setWarehouseLocation(whLat, whLon);
@@ -1203,11 +1432,13 @@ function setWarehouseLocation(lat, lon, name = null, inputElement = null) {
             console.log('Warehouse marker added to map');
             
             // Update form fields
-            document.getElementById('warehouse-lat').value = lat;
-            document.getElementById('warehouse-lon').value = lon;
-            if (name) {
-                document.getElementById('warehouse-location').value = name;
-            }
+            const latEl = document.getElementById('warehouse-lat') || document.querySelector('.warehouse-lat');
+            const lonEl = document.getElementById('warehouse-lon') || document.querySelector('.warehouse-lon');
+            const locEl = document.getElementById('warehouse-location') || document.querySelector('.warehouse-location');
+            
+            if (latEl) latEl.value = lat;
+            if (lonEl) lonEl.value = lon;
+            if (name && locEl) locEl.value = name;
             
             // Center map
             map.setView([lat, lon], 15);
@@ -1935,6 +2166,190 @@ document.addEventListener('keydown', function(e) {
     }
 });
 <?php endif; ?>
+</script>
+
+<!-- Locations Modal -->
+<div class="modal fade" id="locationsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title"><i class="fas fa-map-marker-alt me-2"></i> Select Delivery Locations</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="p-3 border-bottom bg-light">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" id="modal-location-search" class="form-control border-start-0" placeholder="Search by name or neighborhood...">
+                    </div>
+                </div>
+                <div id="locations-list" style="max-height: 450px; overflow-y: auto;" class="list-group list-group-flush">
+                    <div class="p-5 text-center text-muted">
+                        <i class="fas fa-circle-notch fa-spin fa-2x mb-3 text-primary"></i>
+                        <p>Loading delivery locations...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light justify-content-between">
+                <span id="selected-count" class="badge bg-info text-dark">0 locations selected</span>
+                <div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirm-locations">Add to Route</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Pick Locations Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const pickBtn = document.getElementById('pick-locations-btn');
+    if (pickBtn) {
+        pickBtn.addEventListener('click', function() {
+            const modalEl = document.getElementById('locationsModal');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+            loadDeliveryLocations();
+        });
+    }
+});
+
+let availableLocations = [];
+let selectedLocations = new Set();
+
+function loadDeliveryLocations() {
+    const list = document.getElementById('locations-list');
+    
+    // Check if we already loaded data to avoid re-fetching unnecessarily
+    if (availableLocations.length > 0) {
+        renderLocations(availableLocations);
+        return;
+    }
+    
+    fetch('../api/get_delivery_locations.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                availableLocations = data.data;
+                renderLocations(availableLocations);
+            } else {
+                list.innerHTML = `<div class="p-3 text-danger text-center">Error: ${data.message}</div>`;
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            list.innerHTML = `<div class="p-3 text-danger text-center">Load failed. Please check your connection.</div>`;
+        });
+}
+
+function renderLocations(locations) {
+    const list = document.getElementById('locations-list');
+    list.innerHTML = '';
+    
+    if (locations.length === 0) {
+        list.innerHTML = '<div class="p-4 text-center text-muted italic">No locations found.</div>';
+        return;
+    }
+    
+    let currentParent = '';
+    
+    locations.forEach(loc => {
+        if (loc.parent_name !== currentParent) {
+            currentParent = loc.parent_name || 'Main Locations';
+            const header = document.createElement('div');
+            header.className = 'list-group-item bg-light fw-bold py-2 small text-uppercase text-primary sticky-top';
+            header.style.top = '0';
+            header.style.zIndex = '10';
+            header.style.letterSpacing = '1px';
+            header.textContent = currentParent;
+            list.appendChild(header);
+        }
+        
+        const isSelected = selectedLocations.has(loc.name);
+        const item = document.createElement('div');
+        item.className = `list-group-item list-group-item-action d-flex align-items-center py-3 ${isSelected ? 'bg-light' : ''}`;
+        item.style.cursor = 'pointer';
+        item.innerHTML = `
+            <div class="form-check mb-0">
+                <input class="form-check-input" type="checkbox" ${isSelected ? 'checked' : ''} style="pointer-events: none;">
+            </div>
+            <div class="ms-3 flex-fill">
+                <div class="fw-bold">${loc.name}</div>
+                <div class="small text-muted">${loc.description || ''}</div>
+            </div>
+            ${loc.latitude ? '<span class="badge bg-success opacity-50"><i class="fas fa-map-marker-alt"></i></span>' : ''}
+        `;
+        
+        item.onclick = function() {
+            const cb = this.querySelector('input');
+            cb.checked = !cb.checked;
+            
+            if (cb.checked) {
+                selectedLocations.add(loc.name);
+                this.classList.add('bg-light');
+                this.style.backgroundColor = '#f8f9fc';
+            } else {
+                selectedLocations.delete(loc.name);
+                this.classList.remove('bg-light');
+                this.style.backgroundColor = '';
+            }
+            updateSelectedCount();
+        };
+        
+        list.appendChild(item);
+    });
+}
+
+function updateSelectedCount() {
+    document.getElementById('selected-count').textContent = `${selectedLocations.size} locations selected`;
+}
+
+const modalSearchInput = document.getElementById('modal-location-search');
+if (modalSearchInput) {
+    modalSearchInput.addEventListener('input', function(e) {
+        const term = e.target.value.toLowerCase();
+        const filtered = availableLocations.filter(loc => 
+            loc.name.toLowerCase().includes(term) || 
+            (loc.description && loc.description.toLowerCase().includes(term)) ||
+            (loc.parent_name && loc.parent_name.toLowerCase().includes(term))
+        );
+        renderLocations(filtered);
+    });
+}
+
+const confirmBtn = document.getElementById('confirm-locations');
+if (confirmBtn) {
+    confirmBtn.addEventListener('click', function() {
+        if (selectedLocations.size === 0) {
+            alert('Please select at least one location.');
+            return;
+        }
+        
+        const textarea = document.querySelector('textarea[name="addresses"]');
+        let currentVal = textarea.value.trim();
+        
+        const newItems = Array.from(selectedLocations).join('\n');
+        
+        if (currentVal) {
+            textarea.value = currentVal + '\n' + newItems;
+        } else {
+            textarea.value = newItems;
+        }
+        
+        const modalEl = document.getElementById('locationsModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        modal.hide();
+        
+        // Show success feedback
+        const btn = document.getElementById('pick-locations-btn');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Added!';
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+        }, 2000);
+    });
+}
 </script>
 
 <?php require_once "../includes/footer.php"; ?>

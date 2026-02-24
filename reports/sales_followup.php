@@ -1,1190 +1,832 @@
 <?php
-session_start();
+require_once "../config/auth.php";
+require_once "../config/database.php";
 
-// Define upload directory
-define('GOJO_UPLOAD_DIR', dirname(__DIR__) . '/assets/uploads/gojo_orders/');
-define('GOJO_UPLOAD_URL', '../assets/uploads/gojo_orders/');
+Auth::requireLogin();
 
-// Create upload directory if it doesn't exist
-if (!file_exists(GOJO_UPLOAD_DIR)) {
-    mkdir(GOJO_UPLOAD_DIR, 0755, true);
-}
+$database = new Database();
+$db = $database->getConnection();
 
-// Helper function to save Base64 image to file
-function saveBase64Image($base64String, $orderId) {
-    if (empty($base64String) || strpos($base64String, 'data:image') !== 0) {
-        return null;
-    }
-    
-    // Extract image data
-    preg_match('/data:image\/(\w+);base64,(.+)/', $base64String, $matches);
-    if (count($matches) !== 3) {
-        return null;
-    }
-    
-    $imageType = $matches[1];
-    $imageData = base64_decode($matches[2]);
-    
-    // Generate unique filename
-    $filename = 'order_' . $orderId . '_' . time() . '.' . $imageType;
-    $filepath = GOJO_UPLOAD_DIR . $filename;
-    
-    // Save file
-    if (file_put_contents($filepath, $imageData)) {
-        return $filename;
-    }
-    
-    return null;
-}
-
-// Helper function to delete image file
-function deleteOrderImage($filename) {
-    if (empty($filename)) {
-        return;
-    }
-    
-    $filepath = GOJO_UPLOAD_DIR . $filename;
-    if (file_exists($filepath)) {
-        unlink($filepath);
-    }
-}
-
-// Helper function to get image URL
-function getImageUrl($filename) {
-    if (empty($filename)) {
-        return null;
-    }
-    return GOJO_UPLOAD_URL . $filename;
-}
-
-// Initialize "database" in session if not exists
-if (!isset($_SESSION['gojo_orders'])) {
-    $_SESSION['gojo_orders'] = [];
-}
-
-// --- ACTIONS ---
+// Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-
+    
     if ($action === 'create') {
-        $orderId = substr(uniqid(), -8);
-        
-        // Handle image upload
-        $productImage = null;
-        if (!empty($_POST['productImage'])) {
-            $productImage = saveBase64Image($_POST['productImage'], $orderId);
+        $name = $_POST['name'] ?? '';
+        $phone = $_POST['phone'] ?? '';
+        $product = $_POST['product'] ?? '';
+        $size = $_POST['size'] ?? '';
+        $location = $_POST['location'] ?? '';
+        $call_type = $_POST['call_type'] ?? 'normal';
+        $purchased = ($_POST['purchased'] === 'yes') ? 1 : 0;
+        $telegram = (isset($_POST['telegram']) && $_POST['telegram'] === 'on') ? 1 : 0;
+        $reason = $purchased ? 'N/A' : ($_POST['reason'] ?? '');
+        $notes = $_POST['notes'] ?? '';
+        $date = date('Y-m-d');
+
+        $query = "INSERT INTO call_tracker (name, phone, product, size, location, call_type, purchased, telegram, reason, notes, date) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $db->prepare($query);
+        try {
+            $success = $stmt->execute([$name, $phone, $product, $size, $location, $call_type, $purchased, $telegram, $reason, $notes, $date]);
+            echo json_encode(['success' => $success]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
-        
-        $newOrder = [
-            'id' => $orderId,
-            'customer' => $_POST['customer'],
-            'item' => $_POST['item'],
-            'phone' => $_POST['phone'],
-            'type' => $_POST['type'],
-            'price' => (float)$_POST['price'],
-            'status' => 'Pending',
-            'availability' => 'pending',
-            'customerConfirmed' => false,
-            'createdAt' => date('Y-m-d H:i:s'),
-            'callAttempts' => 0,
-            'inventoryChecked' => false,
-            'prepaymentPaid' => false,
-            'productImage' => $productImage,
-            'smsSent' => null
-        ];
-        $_SESSION['gojo_orders'][] = $newOrder;
+        exit;
     }
 
-    if ($action === 'update_status') {
-        foreach ($_SESSION['gojo_orders'] as &$order) {
-            if ($order['id'] === $_POST['id']) {
-                if (isset($_POST['availability'])) $order['availability'] = $_POST['availability'];
-                if (isset($_POST['customerConfirmed'])) $order['customerConfirmed'] = $_POST['customerConfirmed'] === '1';
-                if (isset($_POST['inventoryChecked'])) $order['inventoryChecked'] = $_POST['inventoryChecked'] === '1';
-                if (isset($_POST['prepaymentPaid'])) $order['prepaymentPaid'] = $_POST['prepaymentPaid'] === '1';
-                if (isset($_POST['final_confirm'])) $order['status'] = 'Confirmed';
-                if (isset($_POST['call'])) $order['callAttempts']++;
-                
-                // Handle image update
-                if (isset($_POST['productImage']) && !empty($_POST['productImage'])) {
-                    // Delete old image if exists
-                    if (!empty($order['productImage'])) {
-                        deleteOrderImage($order['productImage']);
-                    }
-                    // Save new image
-                    $order['productImage'] = saveBase64Image($_POST['productImage'], $order['id']);
-                }
-                
-                if (isset($_POST['smsSent'])) {
-                    $order['smsSent'] = $_POST['smsSent'];
-                    if ($_POST['smsSent'] === 'SMS2') {
-                        $order['status'] = 'Canceled';
-                    }
-                }
-            }
+    if ($action === 'update') {
+        $id = $_POST['id'] ?? 0;
+        $name = $_POST['name'] ?? '';
+        $phone = $_POST['phone'] ?? '';
+        $product = $_POST['product'] ?? '';
+        $size = $_POST['size'] ?? '';
+        $location = $_POST['location'] ?? '';
+        $call_type = $_POST['call_type'] ?? 'normal';
+        $purchased = ($_POST['purchased'] === 'yes') ? 1 : 0;
+        $telegram = (isset($_POST['telegram']) && $_POST['telegram'] === 'on') ? 1 : 0;
+        $reason = $purchased ? 'N/A' : ($_POST['reason'] ?? '');
+        $notes = $_POST['notes'] ?? '';
+        $date = $_POST['date'] ?? date('Y-m-d');
+
+        $query = "UPDATE call_tracker SET name=?, phone=?, product=?, size=?, location=?, call_type=?, purchased=?, telegram=?, reason=?, notes=?, date=? WHERE id=?";
+        $stmt = $db->prepare($query);
+        try {
+            $success = $stmt->execute([$name, $phone, $product, $size, $location, $call_type, $purchased, $telegram, $reason, $notes, $date, $id]);
+            echo json_encode(['success' => $success]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
+        exit;
     }
 
     if ($action === 'delete') {
-        // Find and delete the order's image
-        foreach ($_SESSION['gojo_orders'] as $order) {
-            if ($order['id'] === $_POST['id']) {
-                deleteOrderImage($order['productImage']);
-                break;
-            }
-        }
-        
-        $_SESSION['gojo_orders'] = array_filter($_SESSION['gojo_orders'], function($o) {
-            return $o['id'] !== $_POST['id'];
-        });
-        $_SESSION['gojo_orders'] = array_values($_SESSION['gojo_orders']);
+        $id = $_POST['id'] ?? 0;
+        $query = "DELETE FROM call_tracker WHERE id = ?";
+        $stmt = $db->prepare($query);
+        $success = $stmt->execute([$id]);
+        echo json_encode(['success' => $success]);
+        exit;
     }
-    
-    header("Location: " . $_SERVER['PHP_SELF']);
-    exit;
 }
 
-// --- HELPERS ---
-function calculateTimeLeft($createdAt) {
-    $start = strtotime($createdAt);
-    $deadline = $start + (48 * 60 * 60);
-    $diff = $deadline - time();
-    
-    if ($diff <= 0) return ['text' => 'EXPIRED', 'urgent' => true];
-    
-    $h = floor($diff / 3600);
-    $m = floor(($diff % 3600) / 60);
-    $s = $diff % 60;
-    return ['text' => "{$h}h {$m}m {$s}s", 'urgent' => $h < 12];
+// Fetch records for the initial page load
+$query = "SELECT * FROM call_tracker ORDER BY date DESC, created_at DESC";
+$stmt = $db->prepare($query);
+$stmt->execute();
+$records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Process records for JS
+foreach ($records as &$r) {
+    $r['purchased'] = (bool)$r['purchased'];
+    $r['telegram'] = (bool)$r['telegram'];
 }
 
-function isPrepaymentRequired($price) {
-    return (float)$price >= 3000;
-}
-
-$search = $_GET['search'] ?? '';
-$filtered_orders = array_filter($_SESSION['gojo_orders'], function($o) use ($search) {
-    if (!$search) return true;
-    return stripos($o['customer'], $search) !== false || stripos($o['item'], $search) !== false || strpos($o['phone'], $search) !== false;
-});
-
-// Count stats
-$pending_count = count(array_filter($_SESSION['gojo_orders'], fn($o) => $o['status'] === 'Pending'));
-$confirmed_count = count(array_filter($_SESSION['gojo_orders'], fn($o) => $o['status'] === 'Confirmed'));
-$total_count = count($_SESSION['gojo_orders']);
-
-// Include header
-require_once '../includes/header.php';
+require_once "../includes/header.php";
 ?>
 
+<!-- Scoped Tailwind for conflict prevention -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+        corePlugins: {
+            preflight: false,
+        }
+    }
+</script>
+
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
-    
-    .gojo-container {
-        font-family: 'Inter', sans-serif;
-        max-width: 640px;
-        margin: 0 auto;
-        padding-bottom: 120px;
-    }
-    
-    .gojo-header {
-        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-        color: white;
-        padding: 2rem 1.5rem;
-        border-radius: 0 0 2.5rem 2.5rem;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        margin: -1.5rem -1.5rem 1.5rem -1.5rem;
-    }
-    
-    .gojo-title {
-        font-size: 1.75rem;
-        font-weight: 900;
-        text-transform: uppercase;
-        font-style: italic;
-        letter-spacing: -0.05em;
-        margin: 0;
-    }
-    
-    .gojo-subtitle {
-        font-size: 0.625rem;
-        font-weight: 700;
-        color: #a5b4fc;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        margin-top: 0.25rem;
-    }
-    
-    .gojo-add-btn {
-        background: #10b981;
-        width: 48px;
-        height: 48px;
-        border-radius: 1rem;
-        border: none;
-        color: white;
-        font-size: 1.5rem;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-        transition: all 0.2s;
-    }
-    
-    .gojo-add-btn:hover {
-        transform: scale(1.05);
-        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
-    }
-    
-    .gojo-search {
-        position: relative;
-        margin-bottom: 1.5rem;
-    }
-    
-    .gojo-search input {
-        width: 100%;
-        padding: 1rem 1rem 1rem 3rem;
-        border-radius: 1rem;
-        border: none;
-        background: white;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        font-weight: 500;
-        font-size: 0.875rem;
-    }
-    
-    .gojo-search input:focus {
-        outline: none;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    
-    .gojo-search i {
-        position: absolute;
-        left: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #94a3b8;
-    }
-    
-    .gojo-order-card {
-        background: white;
-        padding: 0.75rem;
-        border-radius: 1.5rem;
-        border: 2px solid transparent;
-        margin-bottom: 0.75rem;
-        display: flex;
-        gap: 0.75rem;
-        cursor: pointer;
-        transition: all 0.2s;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
-    
-    .gojo-order-card:hover {
-        border-color: #4f46e5;
-        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
-    }
-    
-    .gojo-order-card.canceled {
-        opacity: 0.6;
-        filter: grayscale(1);
-    }
-    
-    .gojo-product-img {
-        width: 64px;
-        height: 64px;
-        border-radius: 0.75rem;
-        background: #f1f5f9;
-        flex-shrink: 0;
-        overflow: hidden;
-        border: 1px solid #e2e8f0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-    }
-    
-    .gojo-product-img img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-    
-    .gojo-product-img i {
-        color: #cbd5e1;
-        font-size: 1.5rem;
-    }
-    
-    .gojo-unavailable-overlay {
-        position: absolute;
-        inset: 0;
-        background: rgba(239, 68, 68, 0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .gojo-badge {
-        font-size: 0.5rem;
-        font-weight: 900;
-        text-transform: uppercase;
-        padding: 0.125rem 0.5rem;
-        border-radius: 0.375rem;
-        display: inline-block;
-    }
-    
-    .gojo-badge-urgent {
-        background: #fee2e2;
-        color: #dc2626;
-    }
-    
-    .gojo-badge-normal {
-        background: #f1f5f9;
-        color: #64748b;
-    }
-    
-    .gojo-badge-confirmed {
-        background: #d1fae5;
-        color: #059669;
-    }
-    
-    .gojo-badge-canceled {
-        background: #e2e8f0;
-        color: #64748b;
-    }
-    
-    .gojo-badge-small {
-        font-size: 0.5rem;
-        font-weight: 900;
-        text-transform: uppercase;
-        padding: 0.125rem 0.5rem;
-        border-radius: 9999px;
-    }
-    
-    .gojo-badge-available {
-        background: #dbeafe;
-        color: #1e40af;
-    }
-    
-    .gojo-badge-unavailable {
-        background: #fee2e2;
-        color: #b91c1c;
-    }
-    
-    .gojo-badge-pending {
-        background: #f1f5f9;
-        color: #64748b;
-    }
-    
-    .gojo-badge-verified {
-        background: #d1fae5;
-        color: #059669;
-    }
-    
-    .gojo-stats-bar {
-        position: fixed;
-        bottom: 1.5rem;
-        left: 50%;
-        transform: translateX(-32%);
-        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-        color: white;
-        border-radius: 1.5rem;
-        padding: 1rem 1.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-        z-index: 1000;
-        max-width: 600px;
-        width: calc(100% - 3rem);
-    }
-    
-    .gojo-stat {
-        text-align: center;
-        padding: 0 0.75rem;
-    }
-    
-    .gojo-stat-label {
-        font-size: 0.5rem;
-        font-weight: 900;
-        text-transform: uppercase;
-        opacity: 0.7;
-        margin-bottom: 0.25rem;
-    }
-    
-    .gojo-stat-value {
-        font-size: 1.25rem;
-        font-weight: 900;
-    }
-    
-    .gojo-stat-label.pending {
-        color: #a5b4fc;
-    }
-    
-    .gojo-stat-label.confirmed {
-        color: #6ee7b7;
-    }
-    
-    .gojo-total-badge {
-        background: #312e81;
-        padding: 0.375rem 1rem;
-        border-radius: 0.75rem;
-        font-size: 0.625rem;
-        font-weight: 900;
-        text-transform: uppercase;
-        color: #a5b4fc;
-    }
-    
-    .gojo-modal {
-        position: fixed;
-        inset: 0;
-        background: rgba(30, 27, 75, 0.9);
-        backdrop-filter: blur(4px);
-        z-index: 2000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1.5rem;
-        overflow-y: auto;
-    }
-    
-    .gojo-modal-content {
-        background: white;
-        width: 100%;
-        max-width: 28rem;
-        border-radius: 2.5rem;
-        overflow: hidden;
-        box-shadow: 0 25px 50px rgba(0,0,0,0.3);
-        animation: modalSlideIn 0.3s ease-out;
-        margin: auto;
-    }
-    
-    @keyframes modalSlideIn {
-        from {
-            opacity: 0;
-            transform: scale(0.95);
-        }
-        to {
-            opacity: 1;
-            transform: scale(1);
-        }
-    }
-    
-    .gojo-modal-header {
-        padding: 1.5rem;
-        background: #eef2ff;
-        border-bottom: 1px solid #e0e7ff;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .gojo-modal-title {
-        font-size: 1.25rem;
-        font-weight: 900;
-        text-transform: uppercase;
-        font-style: italic;
-        letter-spacing: -0.05em;
-        color: #1e1b4b;
-    }
-    
-    .gojo-modal-body {
-        padding: 1.5rem;
-    }
-    
-    .gojo-drawer {
-        position: fixed;
-        inset: 0;
-        background: rgba(15, 23, 42, 0.4);
-        backdrop-filter: blur(4px);
-        z-index: 2000;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
-    }
-    
-    .gojo-drawer-content {
-        background: white;
-        border-radius: 2.5rem 2.5rem 0 0;
-        padding: 1.5rem;
-        max-height: 95vh;
-        overflow-y: auto;
-        animation: drawerSlideUp 0.3s ease-out;
-    }
-    
-    @keyframes drawerSlideUp {
-        from {
-            transform: translateY(100%);
-        }
-        to {
-            transform: translateY(0);
-        }
-    }
-    
-    .gojo-drawer-handle {
-        width: 3rem;
-        height: 0.375rem;
-        background: #e2e8f0;
-        border-radius: 9999px;
-        margin: 0 auto 1.5rem;
-        cursor: pointer;
-    }
-    
-    .gojo-image-upload {
-        width: 6rem;
-        height: 6rem;
-        border-radius: 1rem;
-        background: #f1f5f9;
-        border: 1px solid #e2e8f0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        overflow: hidden;
-        position: relative;
-        flex-shrink: 0;
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
-    }
-    
-    .gojo-image-upload:hover .gojo-image-overlay {
-        opacity: 1;
-    }
-    
-    .gojo-image-upload img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-    
-    .gojo-image-overlay {
-        position: absolute;
-        inset: 0;
-        background: rgba(0,0,0,0.4);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0;
-        transition: opacity 0.2s;
-    }
-    
-    .gojo-step-card {
-        padding: 1rem;
-        border-radius: 1rem;
-        border: 1px solid;
-        margin-bottom: 1rem;
-    }
-    
-    .gojo-step-card.indigo {
-        background: #eef2ff;
-        border-color: #e0e7ff;
-    }
-    
-    .gojo-step-card.emerald {
-        background: #ecfdf5;
-        border-color: #d1fae5;
-    }
-    
-    .gojo-step-card.slate {
-        background: #f8fafc;
-        border-color: #f1f5f9;
-    }
-    
-    .gojo-step-card.disabled {
-        opacity: 0.4;
-        pointer-events: none;
-        filter: grayscale(1);
-    }
-    
-    .gojo-step-title {
-        font-size: 0.625rem;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.75rem;
-    }
-    
-    .gojo-btn {
-        padding: 0.75rem 1rem;
-        border-radius: 0.75rem;
-        font-weight: 900;
-        font-size: 0.625rem;
-        text-transform: uppercase;
-        border: none;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-    }
-    
-    .gojo-btn:active {
-        transform: scale(0.95);
-    }
-    
-    .gojo-btn-primary {
-        background: #4f46e5;
-        color: white;
-        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
-    }
-    
-    .gojo-btn-success {
-        background: #10b981;
-        color: white;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-    }
-    
-    .gojo-btn-danger {
-        background: #ef4444;
-        color: white;
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-    }
-    
-    .gojo-btn-outline {
-        background: white;
-        border: 1px solid;
-    }
-    
-    .gojo-btn:disabled {
-        background: #f1f5f9;
-        color: #cbd5e1;
-        box-shadow: none;
-        cursor: not-allowed;
-    }
-    
-    .gojo-checkbox {
-        width: 1.5rem;
-        height: 1.5rem;
-        border-radius: 0.5rem;
-        border: 2px solid #e2e8f0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-    }
-    
-    .gojo-checkbox.checked {
-        background: #4f46e5;
-        border-color: #4f46e5;
-        color: white;
-    }
-    
-    .gojo-image-preview {
-        position: fixed;
-        inset: 0;
-        background: black;
-        z-index: 3000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1rem;
-    }
-    
-    .gojo-image-preview img {
-        max-width: 100%;
-        max-height: 85vh;
-        object-fit: contain;
-        border-radius: 0.5rem;
-    }
-    
-    .gojo-close-preview {
-        position: absolute;
-        top: 2rem;
-        right: 2rem;
-        background: rgba(255,255,255,0.2);
-        backdrop-filter: blur(12px);
-        color: white;
-        width: 3rem;
-        height: 3rem;
-        border-radius: 9999px;
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-    }
-    
-    .gojo-upload-area {
-        width: 8rem;
-        height: 8rem;
-        border-radius: 1.5rem;
-        background: #f1f5f9;
-        border: 2px dashed #cbd5e1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        overflow: hidden;
-        margin: 0 auto 0.5rem;
-    }
-    
-    .gojo-upload-area img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-    
-    .gojo-form-input {
-        width: 100%;
-        padding: 1rem;
-        border-radius: 0.75rem;
-        background: #f1f5f9;
-        border: none;
-        font-weight: 700;
-        font-size: 0.875rem;
-        margin-bottom: 1rem;
-    }
-    
-    .gojo-form-input:focus {
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+    #call-tracker-dashboard {
+        font-family: 'DM Sans', sans-serif;
+    }
+    #call-tracker-dashboard .tab-active { 
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); 
+        color: white; 
+    }
+    #call-tracker-dashboard .stat-card { transition: all 0.3s ease; }
+    #call-tracker-dashboard .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+    #call-tracker-dashboard .toast { animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+    #call-tracker-dashboard .loading-spinner { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    
+    /* Fix Bootstrap z-index issues if any */
+    .modal-backdrop { display: none; }
+    #call-tracker-dashboard button { border: none; cursor: pointer; }
+    #call-tracker-dashboard input, #call-tracker-dashboard select, #call-tracker-dashboard textarea {
+        font-family: 'DM Sans', sans-serif;
     }
 </style>
 
-<div class="gojo-container">
+<div id="call-tracker-dashboard" class="bg-slate-50 min-h-screen pb-20">
+  <div class="h-full w-full flex flex-col">
     <!-- Header -->
-    <div class="gojo-header">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h1 class="gojo-title">Gojo Shop</h1>
-                <p class="gojo-subtitle">SOP Sales Manager</p>
-            </div>
-            <button class="gojo-add-btn" onclick="showAddModal()">
-                <i class="fas fa-plus"></i>
-            </button>
-        </div>
-    </div>
+    <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
+     <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+       <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+      </div>
+      <div>
+       <h1 class="text-xl font-bold text-slate-800 m-0">Call Tracker</h1>
+       <p class="text-xs text-slate-500 m-0">Sales Follow-up Analytics</p>
+      </div>
+     </div>
+     <div class="flex items-center gap-2">
+      <span class="text-sm text-slate-500" id="current-date"></span>
+      <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+     </div>
+    </header>
 
-    <!-- Search -->
-    <div class="gojo-search">
-        <i class="fas fa-search"></i>
-        <form method="GET">
-            <input type="text" name="search" placeholder="Search customer, phone, or item..." value="<?= htmlspecialchars($search) ?>">
+    <!-- Navigation Tabs -->
+    <nav class="bg-white border-b border-slate-200 px-6 py-3">
+     <div class="flex gap-2">
+      <button onclick="setActiveTab('dashboard')" id="tab-dashboard" class="tab-active px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all cursor-pointer">
+       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+       Dashboard
+      </button>
+      <button onclick="setActiveTab('new-call')" id="tab-new-call" class="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 text-slate-600 bg-white hover:bg-slate-100 transition-all cursor-pointer">
+       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+       New Call
+      </button>
+      <button onclick="setActiveTab('history')" id="tab-history" class="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 text-slate-600 bg-white hover:bg-slate-100 transition-all cursor-pointer">
+       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+       History
+      </button>
+     </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6">
+     <!-- Dashboard View -->
+     <div id="view-dashboard" class="space-y-6">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+       <div class="stat-card bg-white rounded-2xl p-5 border border-slate-200">
+        <div class="flex items-center justify-between mb-3 text-sm">
+         <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+          <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+         </div>
+         <span class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">Today</span>
+        </div>
+        <p class="text-2xl font-bold text-slate-800 m-0" id="stat-calls-today">0</p>
+        <p class="text-sm text-slate-500 m-0">Calls Today</p>
+       </div>
+       <div class="stat-card bg-white rounded-2xl p-5 border border-slate-200">
+        <div class="flex items-center justify-between mb-3">
+         <div class="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
+          <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+         </div>
+         <span class="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">Today</span>
+        </div>
+        <p class="text-2xl font-bold text-slate-800 m-0" id="stat-orders-today">0</p>
+        <p class="text-sm text-slate-500 m-0">Orders Today</p>
+       </div>
+       <div class="stat-card bg-white rounded-2xl p-5 border border-slate-200">
+        <div class="flex items-center justify-between mb-3 text-sm">
+         <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+          <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+         </div>
+        </div>
+        <p class="text-2xl font-bold text-slate-800 m-0" id="stat-conversion">0%</p>
+        <p class="text-sm text-slate-500 m-0">Conversion Rate</p>
+       </div>
+       <div class="stat-card bg-white rounded-2xl p-5 border border-slate-200">
+        <div class="flex items-center justify-between mb-3">
+         <div class="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+          <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+         </div>
+         <span class="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded-full">Total</span>
+        </div>
+        <p class="text-2xl font-bold text-slate-800 m-0" id="stat-total-calls">0</p>
+        <p class="text-sm text-slate-500 m-0">All Time Calls</p>
+       </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+       <!-- Performance Chart -->
+       <div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200">
+        <div class="flex items-center justify-between mb-6">
+         <h3 class="text-lg font-semibold text-slate-800 m-0">Performance Overview</h3>
+         <div class="flex gap-2">
+           <button onclick="setReportRange('daily')" id="range-daily" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-500 text-white cursor-pointer">Daily</button> 
+           <button onclick="setReportRange('weekly')" id="range-weekly" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer">Weekly</button> 
+           <button onclick="setReportRange('monthly')" id="range-monthly" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer">Monthly</button>
+         </div>
+        </div>
+        <div class="h-64">
+         <canvas id="performanceChart"></canvas>
+        </div>
+       </div>
+       <!-- Reasons Chart -->
+       <div class="bg-white rounded-2xl p-6 border border-slate-200 text-center">
+        <h3 class="text-lg font-semibold text-slate-800 mb-6 text-left m-0">Rejection Reasons</h3>
+        <div class="h-48 flex items-center justify-center">
+         <canvas id="reasonsChart"></canvas>
+        </div>
+        <div id="reasons-legend" class="mt-4 space-y-2"></div>
+       </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="bg-white rounded-2xl p-6 border border-slate-200">
+       <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-slate-800 m-0">Recent Activity</h3>
+        <button onclick="openShareModal()" class="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all flex items-center gap-2 cursor-pointer">
+         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C9.589 12.861 10.846 12 12 12c1.154 0 2.411.861 3.316 1.342m0 0a9.005 9.005 0 01-8.632 0m0 0a9.005 9.005 0 001.032-4.19m0 0H21m-21 0a9 9 0 0118.364-4.19m0 0H3.525m21-1.745a9 9 0 00-18.364 0m15.75 0a4.5 4.5 0 11-9 0" /></svg>
+         Share Report
+        </button>
+       </div>
+       <div id="recent-activity" class="space-y-3">
+        <p class="text-slate-500 text-center py-8">No recent activity</p>
+       </div>
+      </div>
+     </div>
+
+     <!-- New Call View -->
+     <div id="view-new-call" class="hidden">
+      <div class="max-w-2xl mx-auto">
+       <div class="bg-white rounded-2xl p-8 border border-slate-200">
+        <h2 class="text-2xl font-bold text-slate-800 mb-6">Log New Call</h2>
+        <form id="call-form" class="space-y-6">
+         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div><label class="block text-sm font-medium text-slate-700 mb-2">Customer Name *</label> <input type="text" name="name" required class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" placeholder="Enter customer name"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-2">Phone Number</label> <input type="tel" name="phone" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" placeholder="Enter phone number"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-2">Product *</label> <input type="text" name="product" required class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" placeholder="Enter product name"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-2">Size</label> <input type="text" name="size" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" placeholder="e.g. 42, M, L"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-2">Location</label> <input type="text" name="location" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" placeholder="City or region"></div>
+         </div>
+         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+           <label class="block text-sm font-medium text-slate-700 mb-2">Call Type</label>
+           <div class="flex flex-col gap-3">
+            <label class="flex items-center gap-2 cursor-pointer"> <input type="radio" name="call_type" value="normal" checked class="w-4 h-4 text-blue-600"> <span class="text-sm text-slate-700">Normal Call</span> </label>
+            <label class="flex items-center gap-2 cursor-pointer"> <input type="radio" name="call_type" value="ring_once" class="w-4 h-4 text-blue-600"> <span class="text-sm text-slate-700">Ring Once</span> </label>
+            <label class="flex items-center gap-2 cursor-pointer"> <input type="radio" name="call_type" value="info_request" class="w-4 h-4 text-blue-600"> <span class="text-sm text-slate-700">Information Request</span> </label>
+           </div>
+          </div>
+          <div>
+           <label class="block text-sm font-medium text-slate-700 mb-2">Status</label>
+           <div class="flex gap-4">
+            <label class="flex items-center gap-2 cursor-pointer"> <input type="radio" name="purchased" value="yes" class="w-4 h-4 text-blue-600"> <span class="text-sm text-slate-700">Purchased</span> </label>
+            <label class="flex items-center gap-2 cursor-pointer"> <input type="radio" name="purchased" value="no" checked class="w-4 h-4 text-blue-600"> <span class="text-sm text-slate-700">No Purchase</span> </label>
+           </div>
+          </div>
+         </div>
+         <div><label class="flex items-center gap-3 cursor-pointer"> <input type="checkbox" name="telegram" class="w-5 h-5 rounded text-blue-600"> <span class="text-sm font-medium text-slate-700">Sent to Telegram</span> </label></div>
+         <div id="reason-field" class="hidden">
+          <label class="block text-sm font-medium text-slate-700 mb-2">Reason for not purchasing</label>
+          <select name="reason" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all">
+            <option value="">Select a reason</option>
+            <option value="Price too high">Price too high</option>
+            <option value="Size out of stock">Size out of stock</option>
+            <option value="Changed mind">Changed mind</option>
+            <option value="Will think about it">Will think about it</option>
+            <option value="Found cheaper elsewhere">Found cheaper elsewhere</option>
+            <option value="Other">Other</option>
+          </select>
+         </div>
+         <div><label class="block text-sm font-medium text-slate-700 mb-2">Notes</label> <textarea name="notes" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" rows="4" placeholder="Write down the reason and what the customer said..."></textarea></div>
+         <button type="submit" id="submit-btn" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold py-4 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all flex items-center justify-center gap-2 cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+          Log Call
+         </button>
         </form>
-    </div>
+       </div>
+      </div>
+     </div>
 
-    <!-- Order List -->
-    <div class="gojo-order-list">
-        <?php if (empty($filtered_orders)): ?>
-            <div class="text-center py-5" style="opacity: 0.2;">
-                <i class="fas fa-shopping-bag" style="font-size: 4rem;"></i>
-                <p class="font-weight-bold text-uppercase mt-3" style="font-size: 0.875rem;">No orders found</p>
-            </div>
-        <?php else: ?>
-            <?php foreach (array_reverse($filtered_orders) as $order): 
-                $time = calculateTimeLeft($order['createdAt']);
-                $isPrepay = isPrepaymentRequired($order['price']);
-                $isConfirmed = $order['status'] === 'Confirmed';
-                $isCanceled = $order['status'] === 'Canceled';
-            ?>
-                <div class="gojo-order-card <?= $isCanceled ? 'canceled' : '' ?>" onclick='openDrawer(<?= json_encode($order) ?>)'>
-                    <div class="gojo-product-img">
-                        <?php if ($order['productImage']): 
-                            $imageUrl = getImageUrl($order['productImage']);
-                        ?>
-                            <img src="<?= htmlspecialchars($imageUrl) ?>" alt="Product">
-                        <?php else: ?>
-                            <i class="fas fa-box"></i>
-                        <?php endif; ?>
-                        <?php if ($order['availability'] === 'no'): ?>
-                            <div class="gojo-unavailable-overlay">
-                                <i class="fas fa-ban text-danger"></i>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                    <div class="flex-grow-1 d-flex flex-column justify-content-between py-1">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div style="min-width: 0;">
-                                <h3 class="font-weight-black mb-0" style="font-size: 0.875rem; line-height: 1.2;"><?= htmlspecialchars($order['customer']) ?></h3>
-                                <p class="mb-0 d-flex align-items-center gap-1" style="font-size: 0.625rem; font-weight: 700; color: #64748b;">
-                                    <i class="fas fa-tag" style="font-size: 0.625rem;"></i>
-                                    <?= htmlspecialchars($order['item']) ?>
-                                </p>
-                            </div>
-                            <div class="text-right" style="flex-shrink: 0;">
-                                <p class="mb-1 font-weight-black" style="font-size: 0.75rem; color: #4f46e5;"><?= number_format($order['price']) ?> ETB</p>
-                                <span class="gojo-badge <?= $isConfirmed ? 'gojo-badge-confirmed' : ($isCanceled ? 'gojo-badge-canceled' : ($time['urgent'] ? 'gojo-badge-urgent' : 'gojo-badge-normal')) ?>">
-                                    <?= $isConfirmed ? 'FINALIZED' : ($isCanceled ? 'CANCELED' : $time['text']) ?>
-                                </span>
-                            </div>
-                        </div>
-                        <div class="d-flex align-items-center gap-2 mt-2">
-                            <span class="gojo-badge-small <?= $order['availability'] === 'yes' ? 'gojo-badge-available' : ($order['availability'] === 'no' ? 'gojo-badge-unavailable' : 'gojo-badge-pending') ?>">
-                                <?= $order['availability'] === 'yes' ? 'Available' : ($order['availability'] === 'no' ? 'Out of Stock' : 'Checking...') ?>
-                            </span>
-                            <?php if ($order['customerConfirmed'] && !$isCanceled): ?>
-                                <span class="gojo-badge-small gojo-badge-verified d-flex align-items-center gap-1">
-                                    <i class="fas fa-phone" style="font-size: 0.5rem;"></i> Verified
-                                </span>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
+     <!-- History View -->
+     <div id="view-history" class="hidden">
+      <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+       <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+        <h2 class="text-xl font-bold text-slate-800 m-0">Call History</h2>
+        <div class="flex gap-2"><input type="text" id="search-input" placeholder="Search..." class="px-4 py-2 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"></div>
+       </div>
+       <div class="overflow-x-auto">
+        <table class="w-full text-left">
+         <thead class="bg-slate-50">
+          <tr>
+           <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+           <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
+           <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Phone</th>
+           <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Product</th>
+           <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Size</th>
+           <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
+           <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+           <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+          </tr>
+         </thead>
+         <tbody id="history-table" class="divide-y divide-slate-200">
+          <tr><td colspan="8" class="px-6 py-12 text-center text-slate-500">Loading records...</td></tr>
+         </tbody>
+        </table>
+       </div>
+      </div>
+     </div>
+    </main>
+    
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+
+  </div>
 </div>
 
-<!-- Stats Bar -->
-<div class="gojo-stats-bar">
-    <div class="d-flex gap-4 px-2">
-        <div class="gojo-stat">
-            <p class="gojo-stat-label pending">Pending</p>
-            <p class="gojo-stat-value"><?= $pending_count ?></p>
-        </div>
-        <div class="gojo-stat">
-            <p class="gojo-stat-label confirmed">Finalized</p>
-            <p class="gojo-stat-value"><?= $confirmed_count ?></p>
-        </div>
-    </div>
-    <div class="gojo-total-badge">
-        <?= $total_count ?> TOTAL
-    </div>
+<!-- Consolidated Modals -->
+<!-- Delete Modal -->
+<div id="delete-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[99999]">
+ <div class="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl text-center">
+  <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+   <svg class="w-8 h-8" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+  </div>
+  <h3 class="text-xl font-bold text-slate-800 mb-2">Delete Record?</h3>
+  <p class="text-slate-500 mb-8 font-sans">This action cannot be undone. This call log will be permanently removed.</p>
+  <div class="flex gap-3">
+   <button onclick="closeDeleteModal()" class="flex-1 px-4 py-3 bg-slate-100 text-slate-600 font-medium rounded-xl hover:bg-slate-200 cursor-pointer font-sans">Cancel</button> 
+   <button id="confirm-delete-btn" class="flex-1 px-4 py-3 bg-red-500 text-white font-medium rounded-xl hover:bg-red-600 cursor-pointer font-sans">Delete</button>
+  </div>
+ </div>
 </div>
 
-<!-- Add Modal -->
-<div id="addModal" class="gojo-modal" style="display: none;">
-    <div class="gojo-modal-content">
-        <div class="gojo-modal-header">
-            <h2 class="gojo-modal-title">New Entry</h2>
-            <button onclick="hideAddModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">
-                <i class="fas fa-times-circle"></i>
-            </button>
-        </div>
-        <form action="" method="POST" class="gojo-modal-body">
-            <input type="hidden" name="action" value="create">
-            <input type="hidden" name="productImage" id="modalImageData">
-            
-            <div class="gojo-upload-area" onclick="document.getElementById('modalImageInput').click()">
-                <img id="modalImagePreview" style="display: none;">
-                <div id="modalImagePlaceholder">
-                    <i class="fas fa-camera text-muted mb-1"></i>
-                    <span style="font-size: 0.625rem; font-weight: 900; text-transform: uppercase; color: #94a3b8;">Add Photo</span>
-                </div>
-                <input type="file" id="modalImageInput" accept="image/*" style="display: none;" onchange="handleModalImageUpload(this)">
-            </div>
-            
-            <input required name="customer" placeholder="Customer Name" class="gojo-form-input">
-            <input required name="item" placeholder="Product" class="gojo-form-input">
-            <input required name="phone" placeholder="Phone" class="gojo-form-input">
-            <input required name="price" type="number" placeholder="Price (ETB)" class="gojo-form-input">
-            <select name="type" class="gojo-form-input">
-                <option value="In-Stock">In-Stock</option>
-                <option value="Pre-Order">Pre-Order</option>
-            </select>
-            <button type="submit" class="gojo-btn gojo-btn-primary w-100 py-3 mt-2">Create & Start Clock</button>
-        </form>
+<!-- Edit Modal -->
+<div id="edit-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[99999] overflow-y-auto">
+ <div class="bg-white rounded-xl p-5 max-w-xl w-full mx-4 my-4 shadow-2xl relative">
+  <button onclick="closeEditModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer p-1">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+  </button>
+  <h2 class="text-lg font-bold text-slate-800 mb-4 font-sans">Edit Call Record</h2>
+  <form id="edit-form" class="space-y-3">
+   <div class="grid grid-cols-2 gap-3 font-sans">
+    <div><label class="block text-xs font-medium text-slate-600 mb-1">Customer Name *</label> <input type="text" name="name" required class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all" placeholder="Customer name"></div>
+    <div><label class="block text-xs font-medium text-slate-600 mb-1">Phone Number</label> <input type="tel" name="phone" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all" placeholder="Phone number"></div>
+    <div><label class="block text-xs font-medium text-slate-600 mb-1">Product *</label> <input type="text" name="product" required class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all" placeholder="Product name"></div>
+    <div><label class="block text-xs font-medium text-slate-600 mb-1">Size</label> <input type="text" name="size" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all" placeholder="42, M, L"></div>
+    <div><label class="block text-xs font-medium text-slate-600 mb-1">Location</label> <input type="text" name="location" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all" placeholder="City or region"></div>
+    <div><label class="block text-xs font-medium text-slate-600 mb-1">Date</label> <input type="date" name="date" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all"></div>
+   </div>
+   <div class="grid grid-cols-2 gap-3 font-sans">
+    <div>
+      <label class="block text-xs font-medium text-slate-600 mb-1">Call Type</label>
+      <div class="flex flex-col gap-1.5">
+        <label class="flex items-center gap-2 cursor-pointer"> <input type="radio" name="call_type" value="normal" class="w-3.5 h-3.5 text-blue-600"> <span class="text-xs text-slate-700">Normal Call</span> </label>
+        <label class="flex items-center gap-2 cursor-pointer"> <input type="radio" name="call_type" value="ring_once" class="w-3.5 h-3.5 text-blue-600"> <span class="text-xs text-slate-700">Ring Once</span> </label>
+        <label class="flex items-center gap-2 cursor-pointer"> <input type="radio" name="call_type" value="info_request" class="w-3.5 h-3.5 text-blue-600"> <span class="text-xs text-slate-700">Info Request</span> </label>
+      </div>
     </div>
-</div>
-
-<!-- Drawer (will be populated by JS) -->
-<div id="drawer" class="gojo-drawer" style="display: none;">
-    <div class="gojo-drawer-content">
-        <div class="gojo-drawer-handle" onclick="closeDrawer()"></div>
-        <div id="drawerContent"></div>
+    <div>
+      <label class="block text-xs font-medium text-slate-600 mb-1">Status</label>
+      <div class="flex flex-col gap-1.5">
+       <label class="flex items-center gap-2 cursor-pointer"> <input type="radio" name="purchased" value="yes" class="w-3.5 h-3.5 text-blue-600"> <span class="text-xs text-slate-700">Purchased</span> </label>
+       <label class="flex items-center gap-2 cursor-pointer"> <input type="radio" name="purchased" value="no" class="w-3.5 h-3.5 text-blue-600"> <span class="text-xs text-slate-700">No Purchase</span> </label>
+      </div>
+      <div class="mt-2 font-sans">
+        <label class="flex items-center gap-2 cursor-pointer"> 
+            <input type="checkbox" name="telegram" class="w-3.5 h-3.5 rounded text-blue-600"> 
+            <span class="text-xs font-medium text-slate-700">Sent to Telegram</span> 
+        </label>
+      </div>
     </div>
+   </div>
+   <div id="edit-reason-field" class="hidden font-sans">
+    <label class="block text-xs font-medium text-slate-600 mb-1">Reason for not purchasing</label>
+    <select name="reason" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all font-sans">
+      <option value="">Select a reason</option>
+      <option value="Price too high">Price too high</option>
+      <option value="Size out of stock">Size out of stock</option>
+      <option value="Changed mind">Changed mind</option>
+      <option value="Will think about it">Will think about it</option>
+      <option value="Found cheaper elsewhere">Found cheaper elsewhere</option>
+      <option value="Other">Other</option>
+    </select>
+   </div>
+   <div class="font-sans"><label class="block text-xs font-medium text-slate-600 mb-1">Notes</label> <textarea name="notes" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all font-sans" rows="2"></textarea></div>
+   <input type="hidden" name="id" id="edit-id-input">
+   <div class="flex gap-2 pt-1">
+    <button type="button" onclick="closeEditModal()" class="flex-1 px-3 py-2 text-sm border border-slate-300 bg-white rounded-lg text-slate-700 font-medium hover:bg-slate-50 transition-all cursor-pointer font-sans">Cancel</button> 
+    <button type="submit" id="save-edit-btn" class="flex-1 px-3 py-2 text-sm bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-all cursor-pointer font-sans">Save Changes</button>
+   </div>
+  </form>
+ </div>
 </div>
 
-<!-- Image Preview -->
-<div id="imagePreview" class="gojo-image-preview" style="display: none;" onclick="closeImagePreview()">
-    <button class="gojo-close-preview" onclick="closeImagePreview()">
-        <i class="fas fa-times"></i>
-    </button>
-    <img id="previewImage" src="">
+<!-- Share Report Modal -->
+<div id="share-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[99999] overflow-y-auto">
+ <div class="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 my-6 shadow-2xl relative">
+  <h2 class="text-2xl font-bold text-slate-800 mb-6 font-sans">Share Report</h2>
+  <div id="share-preview" class="bg-slate-50 rounded-xl p-6 border border-slate-200 max-h-96 overflow-y-auto mb-6 text-sm text-slate-700 whitespace-pre-wrap font-mono"></div>
+  <div class="flex gap-3">
+   <button onclick="copyReportToClipboard()" class="flex-1 px-4 py-3 bg-blue-500 text-white font-medium rounded-xl hover:bg-blue-600 transition-all flex items-center justify-center gap-2 cursor-pointer font-sans">Copy to Clipboard</button> 
+   <button onclick="downloadReportCSV()" class="flex-1 px-4 py-3 bg-green-500 text-white font-medium rounded-xl hover:bg-green-600 transition-all flex items-center justify-center gap-2 cursor-pointer font-sans">Download CSV</button> 
+   <button onclick="closeShareModal()" class="flex-1 px-4 py-3 border border-slate-300 bg-white rounded-xl text-slate-700 font-medium hover:bg-slate-50 cursor-pointer font-sans">Close</button>
+  </div>
+ </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-// Global state
-let currentOrder = null;
-let countdownInterval = null;
+    // App State Hydrated from PHP
+    let records = <?php echo json_encode($records); ?>;
+    let activeTab = 'dashboard';
+    let reportRange = 'daily';
+    let performanceChart = null;
+    let reasonsChart = null;
+    let deleteRecordId = null;
 
-// Modal functions
-function showAddModal() {
-    document.getElementById('addModal').style.display = 'flex';
-    document.getElementById('modalImageData').value = '';
-    document.getElementById('modalImagePreview').style.display = 'none';
-    document.getElementById('modalImagePlaceholder').style.display = 'block';
-}
-
-function hideAddModal() {
-    document.getElementById('addModal').style.display = 'none';
-}
-
-function handleModalImageUpload(input) {
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('modalImagePreview').src = e.target.result;
-            document.getElementById('modalImagePreview').style.display = 'block';
-            document.getElementById('modalImagePlaceholder').style.display = 'none';
-            document.getElementById('modalImageData').value = e.target.result;
-        };
-        reader.readAsDataURL(input.files[0]);
+    // Toast Utility
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`;
+      toast.innerHTML = `<span class="font-medium">${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
     }
-}
 
-// Drawer functions
-function openDrawer(order) {
-    currentOrder = order;
-    const isPrepay = parseFloat(order.price) >= 3000;
-    const deposit = Math.ceil(order.price * 0.3);
-    
-    // Get proper image URL
-    const imageUrl = order.productImage ? '<?= GOJO_UPLOAD_URL ?>' + order.productImage : null;
-    
-    const content = `
-        <div class="d-flex justify-content-between align-items-start mb-4">
-            <div class="d-flex gap-3">
-                <div class="gojo-image-upload" onclick="handleDrawerImageClick('${order.id}', ${imageUrl ? `'${imageUrl}'` : 'null'})">
-                    ${imageUrl ? 
-                        `<img src="${imageUrl}">
-                         <div class="gojo-image-overlay"><i class="fas fa-camera text-white"></i></div>` :
-                        `<i class="fas fa-camera text-muted"></i>
-                         <span style="font-size: 0.5rem; font-weight: 900; text-transform: uppercase; color: #94a3b8; margin-top: 0.25rem;">Add Pic</span>`
-                    }
-                    <input type="file" id="drawerImageInput_${order.id}" accept="image/*" style="display: none;" onchange="handleDrawerImageUpload(this, '${order.id}')">
-                </div>
-                <div class="flex-grow-1">
-                    <h2 class="font-weight-black mb-1" style="font-size: 1.25rem; line-height: 1.2;">${order.customer}</h2>
-                    <p class="font-weight-black mb-0" style="font-size: 1rem; color: #4f46e5;">${order.item}</p>
-                    <p class="font-weight-bold mb-0" style="font-size: 0.875rem; color: #64748b;">${order.phone}</p>
-                </div>
+    // Navigation
+    function setActiveTab(tab) {
+      activeTab = tab;
+      ['dashboard', 'new-call', 'history'].forEach(t => {
+        document.getElementById(`view-${t}`).classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById(`tab-${t}`);
+        if (t === tab) {
+            btn.classList.add('tab-active');
+            btn.classList.remove('text-slate-600', 'hover:bg-slate-100');
+        } else {
+            btn.classList.remove('tab-active');
+            btn.classList.add('text-slate-600', 'hover:bg-slate-100');
+        }
+      });
+      if (tab === 'dashboard') updateCharts();
+    }
+
+    function setReportRange(range) {
+      reportRange = range;
+      ['daily', 'weekly', 'monthly'].forEach(r => {
+        const btn = document.getElementById(`range-${r}`);
+        if (r === range) {
+            btn.classList.add('bg-blue-500', 'text-white');
+            btn.classList.remove('bg-slate-100', 'text-slate-600', 'hover:bg-slate-200');
+        } else {
+            btn.classList.remove('bg-blue-500', 'text-white');
+            btn.classList.add('bg-slate-100', 'text-slate-600', 'hover:bg-slate-200');
+        }
+      });
+      updateCharts();
+    }
+
+    // Calculations
+    function getStats() {
+      const today = new Date().toISOString().split('T')[0];
+      const todayRecords = records.filter(r => r.date === today);
+      const callsToday = todayRecords.length;
+      const ordersToday = todayRecords.filter(r => r.purchased).length;
+      const totalCalls = records.length;
+      const totalSales = records.filter(r => r.purchased).length;
+      const conversionRate = totalCalls > 0 ? ((totalSales / totalCalls) * 100).toFixed(1) : 0;
+
+      return { callsToday, ordersToday, totalCalls, totalSales, conversionRate };
+    }
+
+    function updateStats() {
+      const stats = getStats();
+      document.getElementById('stat-calls-today').textContent = stats.callsToday;
+      document.getElementById('stat-orders-today').textContent = stats.ordersToday;
+      document.getElementById('stat-conversion').textContent = stats.conversionRate + '%';
+      document.getElementById('stat-total-calls').textContent = stats.totalCalls;
+    }
+
+    // Charts
+    function updateCharts() {
+      const stats = getStats();
+      updateStats();
+      
+      const chartData = [];
+      if (reportRange === 'daily') {
+          // Last 7 days
+          for (let i = 6; i >= 0; i--) {
+              const d = new Date();
+              d.setDate(d.getDate() - i);
+              const dateStr = d.toISOString().split('T')[0];
+              const dayRecs = records.filter(r => r.date === dateStr);
+              chartData.push({
+                  label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                  calls: dayRecs.length,
+                  sales: dayRecs.filter(r => r.purchased).length
+              });
+          }
+      } else if (reportRange === 'weekly') {
+          // Last 4 weeks (7-day blocks)
+          for (let i = 3; i >= 0; i--) {
+              const start = new Date();
+              start.setDate(start.getDate() - (i * 7) - 6);
+              const end = new Date();
+              end.setDate(end.getDate() - (i * 7));
+              
+              const weekRecs = records.filter(r => {
+                  const rd = new Date(r.date);
+                  return rd >= start && rd <= end;
+              });
+              chartData.push({
+                  label: `W${4-i}`,
+                  calls: weekRecs.length,
+                  sales: weekRecs.filter(r => r.purchased).length
+              });
+          }
+      } else {
+          // Last 6 months
+          for (let i = 5; i >= 0; i--) {
+              const d = new Date();
+              d.setMonth(d.getMonth() - i);
+              const month = d.getMonth();
+              const year = d.getFullYear();
+              
+              const monthRecs = records.filter(r => {
+                  const rd = new Date(r.date);
+                  return rd.getMonth() === month && rd.getFullYear() === year;
+              });
+              chartData.push({
+                  label: d.toLocaleDateString('en-US', { month: 'short' }),
+                  calls: monthRecs.length,
+                  sales: monthRecs.filter(r => r.purchased).length
+              });
+          }
+      }
+
+      const perfCtx = document.getElementById('performanceChart').getContext('2d');
+      if (performanceChart) performanceChart.destroy();
+      performanceChart = new Chart(perfCtx, {
+        type: 'bar',
+        data: {
+          labels: chartData.map(d => d.label),
+          datasets: [
+            { label: 'Calls', data: chartData.map(d => d.calls), backgroundColor: '#3b82f6', borderRadius: 4 },
+            { label: 'Sales', data: chartData.map(d => d.sales), backgroundColor: '#10b981', borderRadius: 4 }
+          ]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+      });
+
+      // Reasons Chart
+      const rejectionReasons = {};
+      records.filter(r => !r.purchased && r.reason && r.reason !== 'N/A').forEach(r => {
+          rejectionReasons[r.reason] = (rejectionReasons[r.reason] || 0) + 1;
+      });
+      const reasonEntries = Object.entries(rejectionReasons);
+      
+      const reasonsCtx = document.getElementById('reasonsChart').getContext('2d');
+      if (reasonsChart) reasonsChart.destroy();
+      
+      if (reasonEntries.length > 0) {
+          reasonsChart = new Chart(reasonsCtx, {
+              type: 'doughnut',
+              data: {
+                  labels: reasonEntries.map(e => e[0]),
+                  datasets: [{
+                      data: reasonEntries.map(e => e[1]),
+                      backgroundColor: ['#ef4444', '#f59e0b', '#6366f1', '#ec4899', '#8b5cf6'],
+                      borderWidth: 0
+                  }]
+              },
+              options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+          });
+          
+          document.getElementById('reasons-legend').innerHTML = reasonEntries.map((e, i) => `
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-slate-600">${e[0]}</span>
+                <span class="font-bold">${e[1]}</span>
+              </div>
+          `).join('');
+      } else {
+          document.getElementById('reasons-legend').innerHTML = '<p class="text-slate-400 text-xs text-center m-0">No rejection data</p>';
+      }
+    }
+
+    // CRUD Handlers
+    async function apiRequest(formData) {
+        try {
+            const resp = await fetch(window.location.href, { method: 'POST', body: formData });
+            return await resp.json();
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+    function renderHistoryTable() {
+        const tbody = document.getElementById('history-table');
+        const search = document.getElementById('search-input').value.toLowerCase();
+        
+        const filtered = records.filter(r => 
+            r.name.toLowerCase().includes(search) || 
+            r.product.toLowerCase().includes(search) || 
+            (r.phone && r.phone.includes(search))
+        );
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-12 text-center text-slate-500 font-sans">No matching records found</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = filtered.map(r => `
+          <tr class="hover:bg-slate-50">
+            <td class="px-6 py-4 text-sm text-slate-600 font-sans">${r.date}</td>
+            <td class="px-6 py-4 text-sm font-medium text-slate-800 font-sans">${r.name}</td>
+            <td class="px-6 py-4 text-sm text-slate-600 font-sans">${r.phone || '-'}</td>
+            <td class="px-6 py-4 text-sm text-slate-600 font-sans">${r.product}</td>
+            <td class="px-6 py-4 text-sm text-slate-600 font-sans">${r.size || '-'}</td>
+            <td class="px-6 py-4">
+                <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 uppercase font-sans">${r.call_type}</span>
+            </td>
+            <td class="px-6 py-4">
+                <span class="px-2 py-0.5 rounded-full text-xs font-bold ${r.purchased ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} font-sans">${r.purchased ? 'Success' : 'No Sale'}</span>
+            </td>
+            <td class="px-6 py-4 text-right">
+                <button onclick="openEditModal(${r.id})" class="text-blue-500 bg-transparent border-0 cursor-pointer mr-2 hover:text-blue-700 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.364 3.636a2 2 0 112.828 2.828L11.828 15l-3 1 1-3 9.364-9.364z" /></svg></button>
+                <button onclick="openDeleteModal(${r.id})" class="text-red-500 bg-transparent border-0 cursor-pointer hover:text-red-700 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+            </td>
+          </tr>
+        `).join('');
+    }
+
+    function renderRecentActivity() {
+        const container = document.getElementById('recent-activity');
+        const recent = records.slice(0, 5);
+        
+        if (recent.length === 0) {
+            container.innerHTML = '<p class="text-slate-500 text-center py-8">No recent activity</p>';
+            return;
+        }
+
+        container.innerHTML = recent.map(r => `
+          <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-all border border-slate-100 mb-2">
+            <div class="w-9 h-9 flex-shrink-0 rounded-full ${r.purchased ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'} flex items-center justify-center">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">${r.purchased ? '<path d="M5 13l4 4L19 7" stroke-width="2" />' : '<path d="M6 18L18 6M6 6l12 12" stroke-width="2" />'}</svg>
             </div>
-            <button onclick="deleteOrder('${order.id}')" style="background: none; border: none; color: #cbd5e1; padding: 0.5rem; cursor: pointer;">
-                <i class="fas fa-trash"></i>
-            </button>
-        </div>
-
-        <form method="POST" action="">
-            <input type="hidden" name="action" value="update_status">
-            <input type="hidden" name="id" value="${order.id}">
-            <input type="hidden" name="productImage" id="drawerImageData_${order.id}">
-
-            <!-- Step 1: Availability -->
-            <div class="gojo-step-card indigo">
-                <h3 class="gojo-step-title" style="color: #a5b4fc;">1. Product Check</h3>
-                <div class="d-flex gap-2">
-                    <button type="button" onclick="setAvailability('${order.id}', 'yes')" class="gojo-btn flex-grow-1 ${order.availability === 'yes' ? 'gojo-btn-primary' : 'gojo-btn-outline'}" style="${order.availability === 'yes' ? '' : 'border-color: #e0e7ff; color: #1e1b4b;'}">
-                        <i class="fas fa-check-circle"></i> Available
-                    </button>
-                    <button type="button" onclick="setAvailability('${order.id}', 'no')" class="gojo-btn flex-grow-1 ${order.availability === 'no' ? 'gojo-btn-danger' : 'gojo-btn-outline'}" style="${order.availability === 'no' ? '' : 'border-color: #fecaca; color: #7f1d1d;'}">
-                        <i class="fas fa-ban"></i> Not Available
-                    </button>
-                </div>
-                ${order.availability === 'no' ? `
-                    <button type="button" onclick="sendAvailabilitySMS('${order.phone}', '${order.customer}', '${order.item}')" class="gojo-btn w-100 mt-3" style="background: #fee2e2; color: #b91c1c;">
-                        <i class="fas fa-comment"></i> Contact Customer (Not Available)
-                    </button>
-                ` : ''}
+            <div class="flex-1 min-w-0">
+                <p class="font-bold text-slate-800 m-0 text-sm font-sans truncate">${r.name}${r.phone ? ' • ' + r.phone : ''}</p>
+                <p class="text-xs text-slate-500 m-0 font-sans">${r.product} — <span class="${r.purchased ? 'text-green-600' : 'text-amber-600'} font-medium">${r.purchased ? 'Success' : 'No Purchase'}</span></p>
             </div>
-
-            <!-- Step 2: Confirmation -->
-            <div class="gojo-step-card emerald ${order.availability !== 'yes' ? 'disabled' : ''}">
-                <h3 class="gojo-step-title" style="color: #059669;">2. Verbal Confirmation</h3>
-                <div class="d-flex gap-2 mb-3">
-                    <a href="tel:${order.phone}" onclick="incrementCallAttempts('${order.id}')" class="gojo-btn flex-grow-1 gojo-btn-outline" style="border-color: #d1fae5; color: #059669; text-decoration: none;">
-                        <i class="fas fa-phone"></i> Call Now (${order.callAttempts || 0})
-                    </a>
-                    <button type="button" onclick="toggleConfirmation('${order.id}')" class="gojo-btn flex-grow-1 ${order.customerConfirmed ? 'gojo-btn-success' : 'gojo-btn-outline'}" style="${order.customerConfirmed ? '' : 'border-color: #d1fae5; color: #047857;'}">
-                        <i class="fas fa-check-circle"></i> ${order.customerConfirmed ? 'Confirmed' : 'Set Confirmed'}
-                    </button>
-                </div>
+            <span class="text-xs text-slate-400 font-sans flex-shrink-0">${r.date}</span>
+            <div class="flex items-center gap-1 flex-shrink-0">
+                <button onclick="openEditModal(${r.id})" title="Edit" class="w-7 h-7 flex items-center justify-center rounded-lg text-blue-500 hover:bg-blue-50 bg-transparent border-0 cursor-pointer transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.364 3.636a2 2 0 112.828 2.828L11.828 15l-3 1 1-3 9.364-9.364z" /></svg>
+                </button>
+                <button onclick="openDeleteModal(${r.id})" title="Delete" class="w-7 h-7 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-50 bg-transparent border-0 cursor-pointer transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
             </div>
-
-            <!-- Step 3: Checklist -->
-            <div class="gojo-step-card slate">
-                <h3 class="gojo-step-title" style="color: #94a3b8;">3. Confirmation Checklist</h3>
-                <div class="mb-3">
-                    <button type="button" onclick="toggleInventory('${order.id}')" class="d-flex align-items-center gap-3 w-100 p-2" style="background: none; border: none; cursor: pointer;">
-                        <div class="gojo-checkbox ${order.inventoryChecked ? 'checked' : ''}">
-                            ${order.inventoryChecked ? '<i class="fas fa-check-circle"></i>' : ''}
-                        </div>
-                        <span class="font-weight-bold" style="font-size: 0.875rem; color: ${order.inventoryChecked ? '#0f172a' : '#94a3b8'};">Inventory Verified</span>
-                    </button>
-                </div>
-
-                ${isPrepay ? `
-                    <div class="p-3 rounded-xl" style="background: white; border: 1px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="gojo-checkbox ${order.prepaymentPaid ? 'checked' : ''}" style="${order.prepaymentPaid ? 'background: #10b981; border-color: #10b981;' : ''}">
-                                    ${order.prepaymentPaid ? '<i class="fas fa-wallet"></i>' : ''}
-                                </div>
-                                <div>
-                                    <span class="font-weight-bold d-block" style="font-size: 0.875rem; color: ${order.prepaymentPaid ? '#0f172a' : '#94a3b8'};">30% Deposit Required</span>
-                                    <span style="font-size: 0.625rem; font-weight: 900; text-transform: uppercase; color: #dc2626;">Amount: ${deposit} ETB</span>
-                                </div>
-                            </div>
-                            <input type="checkbox" name="prepaymentPaid" value="1" ${order.prepaymentPaid ? 'checked' : ''} style="width: 1.25rem; height: 1.25rem; accent-color: #10b981;">
-                        </div>
-                    </div>
-                ` : ''}
-            </div>
-
-            <!-- Final Action -->
-            <button type="submit" name="final_confirm" value="1" 
-                    ${!order.inventoryChecked || !order.customerConfirmed || order.availability !== 'yes' || (isPrepay && !order.prepaymentPaid) || order.status === 'Confirmed' ? 'disabled' : ''}
-                    class="gojo-btn gojo-btn-success w-100 py-4 d-flex flex-column align-items-center justify-content-center">
-                <i class="fas fa-check-circle" style="font-size: 1.5rem; margin-bottom: 0.25rem;"></i>
-                <span>${order.status === 'Confirmed' ? 'Finalized' : 'Confirm Order'}</span>
-            </button>
-
-            <div class="pt-2 pb-4">
-                <h3 class="gojo-step-title text-center" style="color: #94a3b8;">No Response Flow</h3>
-                <div class="row g-3">
-                    <div class="col-6">
-                        <button type="button" onclick="sendSOPMessage('${order.phone}', '${order.customer}', '${order.item}', ${order.price}, 'SMS1', '${order.id}')" class="gojo-btn w-100" style="background: #f1f5f9; color: #0f172a;">
-                            <i class="fas fa-paper-plane"></i> SMS 1: 48h
-                        </button>
-                    </div>
-                    <div class="col-6">
-                        <button type="button" onclick="sendSOPMessage('${order.phone}', '${order.customer}', '${order.item}', ${order.price}, 'SMS2', '${order.id}')" class="gojo-btn w-100" style="background: #fee2e2; color: #dc2626; border: 1px solid #fecaca;">
-                            <i class="fas fa-times-circle"></i> Cancel
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <input type="hidden" name="customerConfirmed" id="customerConfirmed_${order.id}" value="${order.customerConfirmed ? '1' : '0'}">
-            <input type="hidden" name="inventoryChecked" id="inventoryChecked_${order.id}" value="${order.inventoryChecked ? '1' : '0'}">
-            <input type="hidden" name="availability" id="availability_${order.id}" value="${order.availability}">
-        </form>
-    `;
-    
-    document.getElementById('drawerContent').innerHTML = content;
-    document.getElementById('drawer').style.display = 'flex';
-    
-    // Start countdown update
-    startCountdownUpdate();
-}
-
-function closeDrawer() {
-    document.getElementById('drawer').style.display = 'none';
-    if (countdownInterval) {
-        clearInterval(countdownInterval);
+          </div>
+        `).join('');
     }
-}
 
-function deleteOrder(id) {
-    if (confirm('Delete this order record?')) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = `
-            <input type="hidden" name="action" value="delete">
-            <input type="hidden" name="id" value="${id}">
-        `;
-        document.body.appendChild(form);
-        form.submit();
-    }
-}
-
-function setAvailability(id, value) {
-    document.getElementById(`availability_${id}`).value = value;
-    // Submit form to update
-    const form = document.querySelector(`input[name="id"][value="${id}"]`).closest('form');
-    form.submit();
-}
-
-function toggleConfirmation(id) {
-    const input = document.getElementById(`customerConfirmed_${id}`);
-    input.value = input.value === '1' ? '0' : '1';
-    const form = input.closest('form');
-    form.submit();
-}
-
-function toggleInventory(id) {
-    const input = document.getElementById(`inventoryChecked_${id}`);
-    input.value = input.value === '1' ? '0' : '1';
-    const form = input.closest('form');
-    form.submit();
-}
-
-function incrementCallAttempts(id) {
-    const form = document.querySelector(`input[name="id"][value="${id}"]`).closest('form');
-    const callInput = document.createElement('input');
-    callInput.type = 'hidden';
-    callInput.name = 'call';
-    callInput.value = '1';
-    form.appendChild(callInput);
-    form.submit();
-}
-
-function handleDrawerImageClick(id, currentImage) {
-    if (currentImage && currentImage !== 'null') {
-        showImagePreview(currentImage);
-    } else {
-        document.getElementById(`drawerImageInput_${id}`).click();
-    }
-}
-
-function handleDrawerImageUpload(input, id) {
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById(`drawerImageData_${id}`).value = e.target.result;
-            const form = input.closest('form');
-            form.submit();
-        };
-        reader.readAsDataURL(input.files[0]);
-    }
-}
-
-function showImagePreview(src) {
-    document.getElementById('previewImage').src = src;
-    document.getElementById('imagePreview').style.display = 'flex';
-}
-
-function closeImagePreview() {
-    document.getElementById('imagePreview').style.display = 'none';
-}
-
-function sendAvailabilitySMS(phone, customer, item) {
-    const message = `Gojo Shop: Hello ${customer}, unfortunately the ${item} you ordered is currently not available. Would you like to check a different size or item? 0988554488`;
-    const sep = /iPhone/i.test(navigator.userAgent) ? '&' : '?';
-    window.location.href = `sms:${phone}${sep}body=${encodeURIComponent(message)}`;
-}
-
-function sendSOPMessage(phone, customer, item, price, type, id) {
-    const deposit = Math.ceil(price * 0.3);
-    const requiresDeposit = price >= 3000;
+    // Modal Control
+    function closeDeleteModal() { document.getElementById('delete-modal').classList.add('hidden'); deleteRecordId = null; }
+    function openDeleteModal(id) { deleteRecordId = id; document.getElementById('delete-modal').classList.remove('hidden'); }
     
-    let message = "";
-    if (type === 'SMS1') {
-        message = `Gojo Shop: We tried calling to confirm your order (${item}). ${requiresDeposit ? `Note: 30% deposit (${deposit} ETB) required.` : ''} Please call us back within 48h or it will be canceled. 0988554488`;
-    } else {
-        message = `Gojo Shop: Order for ${item} canceled due to no confirmation. Re-order anytime! 0988554488`;
+    function closeEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
+    function openEditModal(id) {
+        const r = records.find(item => item.id == id);
+        if (!r) return;
+        
+        const form = document.getElementById('edit-form');
+        form.name.value = r.name || '';
+        form.phone.value = r.phone || '';
+        form.product.value = r.product || '';
+        form.size.value = r.size || '';
+        form.location.value = r.location || '';
+        form.call_type.value = r.call_type || 'normal';
+        form.purchased.value = r.purchased ? 'yes' : 'no';
+        form.telegram.checked = r.telegram;
+        form.reason.value = r.reason || '';
+        form.notes.value = r.notes || '';
+        form.date.value = r.date || '';
+        document.getElementById('edit-id-input').value = r.id;
+        
+        document.getElementById('edit-reason-field').classList.toggle('hidden', r.purchased);
+        document.getElementById('edit-modal').classList.remove('hidden');
     }
-    
-    // Update SMS sent status
-    const form = document.querySelector(`input[name="id"][value="${id}"]`).closest('form');
-    const smsInput = document.createElement('input');
-    smsInput.type = 'hidden';
-    smsInput.name = 'smsSent';
-    smsInput.value = type;
-    form.appendChild(smsInput);
-    
-    const sep = /iPhone/i.test(navigator.userAgent) ? '&' : '?';
-    window.location.href = `sms:${phone}${sep}body=${encodeURIComponent(message)}`;
-    
-    // Submit form after a delay to allow SMS app to open
-    setTimeout(() => form.submit(), 1000);
-}
 
-function startCountdownUpdate() {
-    if (countdownInterval) {
-        clearInterval(countdownInterval);
+    function openShareModal() {
+        const stats = getStats();
+        const preview = `CALL TRACKER REPORT - ${new Date().toLocaleDateString()}\n` +
+            `Total Calls: ${stats.totalCalls}\n` +
+            `Total Sales: ${stats.totalSales}\n` +
+            `Conversion: ${stats.conversionRate}%\n\n` +
+            `Recent Details:\n` +
+            records.slice(0, 10).map(r => `- ${r.date}: ${r.name} (${r.product}) -> ${r.purchased ? 'WON' : 'LOSS'}`).join('\n');
+            
+        document.getElementById('share-preview').textContent = preview;
+        document.getElementById('share-modal').classList.remove('hidden');
     }
-    
-    countdownInterval = setInterval(() => {
-        // Update all countdown badges on the page
-        const badges = document.querySelectorAll('.gojo-badge:not(.gojo-badge-confirmed):not(.gojo-badge-canceled)');
-        // This would require server-side rendering or storing order data in JS
-        // For now, we'll just reload the page periodically
-    }, 1000);
-}
+    function closeShareModal() { document.getElementById('share-modal').classList.add('hidden'); }
 
-// Auto-update countdowns every second
-setInterval(() => {
-    const badges = document.querySelectorAll('.gojo-badge');
-    // Would need to store order data in JS to update in real-time
-    // For simplicity, we'll reload every minute
-}, 60000);
+    // CSV Download
+    function downloadReportCSV() {
+        let csv = "Date,Customer,Phone,Product,Size,Location,Type,Status,Reason,Notes\n";
+        records.forEach(r => {
+            csv += `"${r.date}","${r.name}","${r.phone}","${r.product}","${r.size}","${r.location}","${r.call_type}","${r.purchased ? 'WON' : 'LOSS'}","${r.reason}","${r.notes}"\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `call_report_${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+        showToast('CSV generated successfully');
+    }
+
+    function copyReportToClipboard() {
+        const text = document.getElementById('share-preview').textContent;
+        navigator.clipboard.writeText(text);
+        showToast('Copied to clipboard');
+    }
+
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        
+        // Form Logic
+        const newCallForm = document.getElementById('call-form');
+        newCallForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fd = new FormData(newCallForm);
+            fd.append('action', 'create');
+            
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            
+            const res = await apiRequest(fd);
+            if (res.success) {
+                showToast('Call logged successfully!');
+                window.location.reload();
+            } else {
+                showToast(res.error || 'Failed to save call', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Log Call';
+            }
+        });
+
+        const editForm = document.getElementById('edit-form');
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fd = new FormData(editForm);
+            fd.append('action', 'update');
+            const res = await apiRequest(fd);
+            if (res.success) {
+                showToast('Record updated!');
+                window.location.reload();
+            } else {
+                showToast('Update failed', 'error');
+            }
+        });
+
+        document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+            const fd = new FormData();
+            fd.append('action', 'delete');
+            fd.append('id', deleteRecordId);
+            const res = await apiRequest(fd);
+            if (res.success) {
+                showToast('Record deleted');
+                window.location.reload();
+            } else {
+                showToast('Delete failed', 'error');
+            }
+        });
+
+        // Toggle reason fields
+        document.querySelectorAll('input[name="purchased"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                document.getElementById('reason-field').classList.toggle('hidden', e.target.value === 'yes');
+                // The edit field needs its own toggle
+            });
+        });
+        
+        // Setup toggle for edit form purchased radio
+        const editPurchasedRadios = document.querySelectorAll('#edit-form input[name="purchased"]');
+        editPurchasedRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                document.getElementById('edit-reason-field').classList.toggle('hidden', e.target.value === 'yes');
+            });
+        });
+
+        document.getElementById('search-input').addEventListener('input', renderHistoryTable);
+
+        // Initial Renders
+        updateCharts();
+        renderRecentActivity();
+        renderHistoryTable();
+    });
 </script>
 
-<?php require_once '../includes/footer.php'; ?>
+<?php require_once "../includes/footer.php"; ?>
