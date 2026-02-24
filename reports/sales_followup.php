@@ -71,16 +71,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Ensure call_tracker table exists (auto-create on live server if missing)
+try {
+    $db->exec("CREATE TABLE IF NOT EXISTS call_tracker (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        name        VARCHAR(255) NOT NULL,
+        phone       VARCHAR(50)  DEFAULT '',
+        product     VARCHAR(255) NOT NULL,
+        size        VARCHAR(50)  DEFAULT '',
+        location    VARCHAR(255) DEFAULT '',
+        call_type   VARCHAR(50)  DEFAULT 'normal',
+        purchased   TINYINT(1)   DEFAULT 0,
+        telegram    TINYINT(1)   DEFAULT 0,
+        reason      VARCHAR(255) DEFAULT '',
+        notes       TEXT,
+        date        DATE         NOT NULL,
+        created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+} catch (Exception $e) {
+    // Log silently — table likely already exists
+}
+
 // Fetch records for the initial page load
-$query = "SELECT * FROM call_tracker ORDER BY date DESC, created_at DESC";
-$stmt = $db->prepare($query);
-$stmt->execute();
-$records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$records = [];
+try {
+    $query = "SELECT * FROM call_tracker ORDER BY date DESC, created_at DESC";
+    $stmt = $db->prepare($query);
+    $stmt->execute();
+    $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $records = []; // Graceful fallback — page still renders
+}
 
 // Process records for JS
 foreach ($records as &$r) {
     $r['purchased'] = (bool)$r['purchased'];
-    $r['telegram'] = (bool)$r['telegram'];
+    $r['telegram']  = (bool)$r['telegram'];
 }
 
 require_once "../includes/header.php";
