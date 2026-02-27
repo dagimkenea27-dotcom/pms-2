@@ -26,7 +26,7 @@ require_once "../includes/functions.php";
 // Handle AJAX request
 if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
     header('Content-Type: application/json');
-    
+
     if ($_POST) {
         // CSRF Check
         if (!isset($_POST['csrf_token']) || !Auth::validateCSRF($_POST['csrf_token'])) {
@@ -43,32 +43,33 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
         $min_stock = intval($_POST['min_stock'] ?? 0);
         $has_variants = isset($_POST['has_variants']) && $_POST['has_variants'] == '1';
         $location = trim($_POST['location'] ?? '');
-        
+
         $response = ['success' => false, 'message' => '', 'errors' => []];
-        
+
         // Validation checks
         if (empty($name)) {
             $response['errors'][] = "Product name is required.";
         }
-        
+
         $used_skus = [];
         if (empty($sku)) {
             $sku = generateSKU($db);
             $used_skus[] = $sku;
-        } else {
+        }
+        else {
             $used_skus[] = $sku;
             // Check if SKU already exists in products table
             $check_query = "SELECT id FROM products WHERE sku = :sku";
             $check_stmt = $db->prepare($check_query);
             $check_stmt->bindParam(":sku", $sku);
             $check_stmt->execute();
-            
+
             // Check if SKU exists in product_variants table
             $check_v_query = "SELECT id FROM product_variants WHERE sku = :sku";
             $check_v_stmt = $db->prepare($check_v_query);
             $check_v_stmt->bindParam(":sku", $sku);
             $check_v_stmt->execute();
-            
+
             if ($check_stmt->rowCount() > 0 || $check_v_stmt->rowCount() > 0) {
                 $response['errors'][] = "SKU '$sku' already exists (in products or variants). Please use a unique SKU.";
             }
@@ -90,28 +91,28 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                     if (empty($v_size) && empty($v_color)) {
                         continue; // Skip empty rows
                     }
-                    
+
                     if (empty($v_sku)) {
-                         $v_sku = generateSKU($db, $used_skus);
+                        $v_sku = generateSKU($db, $used_skus);
                     }
                     $used_skus[] = $v_sku;
 
                     // Check duplicate SKU among variants in this submit
                     foreach ($variants as $existing_v) {
-                         if ($existing_v['sku'] == $v_sku || ($existing_v['size'] == $v_size && $existing_v['color'] == $v_color)) {
-                             $response['errors'][] = "Duplicate variant (Option/Color or SKU) within this product: " . $v_sku;
-                             break;
-                         }
+                        if ($existing_v['sku'] == $v_sku || ($existing_v['size'] == $v_size && $existing_v['color'] == $v_color)) {
+                            $response['errors'][] = "Duplicate variant (Option/Color or SKU) within this product: " . $v_sku;
+                            break;
+                        }
                     }
 
                     // Check duplicate SKU in DB (variants table)
                     $v_check = $db->prepare("SELECT id FROM product_variants WHERE sku = ?");
                     $v_check->execute([$v_sku]);
-                    
+
                     // Check duplicate SKU in DB (products table)
                     $p_check = $db->prepare("SELECT id FROM products WHERE sku = ?");
                     $p_check->execute([$v_sku]);
-                    
+
                     if ($v_check->rowCount() > 0 || $p_check->rowCount() > 0) {
                         $response['errors'][] = "Variant SKU '$v_sku' already exists (in products or variants).";
                     }
@@ -128,7 +129,7 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                 }
             }
             if (empty($variants)) {
-                 $response['errors'][] = "Please add at least one variant.";
+                $response['errors'][] = "Please add at least one variant.";
             }
 
             // For products with variants, master quantity is sum of variants
@@ -137,64 +138,72 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                 $quantity += $v['qty'];
             }
         }
-        
+
         if ($quantity < 0) {
             $response['errors'][] = "Quantity cannot be negative.";
         }
-        
+
         if ($price < 0) {
             $response['errors'][] = "Selling price cannot be negative.";
         }
-        
+
         if ($cost_price < 0) {
             $response['errors'][] = "Cost price cannot be negative.";
         }
-        
+
         if ($min_stock < 0) {
             $response['errors'][] = "Minimum stock level cannot be negative.";
         }
-        
+
         // Handle image upload
         $image_path = null;
         if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
             $upload_dir = '../uploads/products/';
             if (!file_exists($upload_dir)) {
-                mkdir($upload_dir, 0777, true);
+                mkdir($upload_dir, 0755, true);
             }
-            $allowed_types = ['jpg', 'jpeg', 'png', 'gif'];
+            $allowed_exts = ['jpg', 'jpeg', 'png', 'gif'];
+            $allowed_mimes = ['image/jpeg', 'image/png', 'image/gif'];
             $max_size = 5 * 1024 * 1024; // 5MB
-            
+
             $file_name = $_FILES['product_image']['name'];
             $file_size = $_FILES['product_image']['size'];
             $file_tmp = $_FILES['product_image']['tmp_name'];
-            
+
             // Get file extension
             $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-            
-            // Validate file
-            if (!in_array($file_ext, $allowed_types)) {
+
+            // Validate extension
+            if (!in_array($file_ext, $allowed_exts)) {
                 $response['errors'][] = "Invalid file type. Only JPG, JPEG, PNG, and GIF files are allowed.";
             }
-            
+
+            // Validate MIME type and image integrity
+            $image_info = @getimagesize($file_tmp);
+            if (!$image_info || !in_array($image_info['mime'], $allowed_mimes)) {
+                $response['errors'][] = "Invalid image file or MIME type.";
+            }
+
             if ($file_size > $max_size) {
                 $response['errors'][] = "File size too large. Maximum file size is 5MB.";
             }
-            
+
             // If no errors, process the file
             if (empty($response['errors'])) {
                 // Generate unique filename
                 $new_filename = uniqid() . '_' . time() . '.' . $file_ext;
                 $target_file = $upload_dir . $new_filename;
-                
+
                 // Move uploaded file
                 if (move_uploaded_file($file_tmp, $target_file)) {
                     $image_path = 'uploads/products/' . $new_filename;
-                } else {
+                }
+                else {
                     $response['errors'][] = "Error uploading image file.";
                 }
             }
         }
-        
+
         // If no errors, proceed with insertion
         if (empty($response['errors'])) {
             try {
@@ -204,7 +213,7 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                 $category_id = !empty($_POST['category_id']) ? intval($_POST['category_id']) : null;
                 $brand_id = !empty($_POST['brand_id']) ? intval($_POST['brand_id']) : null;
                 $supplier_id = !empty($_POST['supplier_id']) ? intval($_POST['supplier_id']) : null;
-                
+
                 $category_name = getName($db, 'categories', $category_id);
                 $supplier_name = getName($db, 'suppliers', $supplier_id);
 
@@ -212,9 +221,9 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                           (sku, name, description, category, category_id, brand_id, quantity, price, cost_price, min_stock, supplier, supplier_id, location, image, barcode, has_variants) 
                           VALUES 
                           (:sku, :name, :description, :category, :category_id, :brand_id, :quantity, :price, :cost_price, :min_stock, :supplier, :supplier_id, :location, :image, :barcode, :has_variants)";
-                
+
                 $stmt = $db->prepare($query);
-                
+
                 $stmt->bindParam(":sku", $sku);
                 $stmt->bindParam(":name", $name);
                 $stmt->bindParam(":description", $_POST['description']);
@@ -232,7 +241,7 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                 $stmt->bindParam(":barcode", $sku); // Use SKU as barcode by default
                 $has_variants_int = $has_variants ? 1 : 0;
                 $stmt->bindParam(":has_variants", $has_variants_int);
-                
+
                 if ($stmt->execute()) {
                     $product_id = $db->lastInsertId();
 
@@ -255,7 +264,8 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                             // Log Audit Trail & Movement
                             logStockChange($db, $product_id, $variant_id, Auth::getCurrentUser()['id'], 'in', 0, $v['qty'], 'Initial stock', null, null, $supplier_id);
                         }
-                    } else {
+                    }
+                    else {
                         // Log Audit Trail & Movement
                         logStockChange($db, $product_id, null, Auth::getCurrentUser()['id'], 'in', 0, $quantity, 'Initial stock', null, null, $supplier_id);
                     }
@@ -264,24 +274,26 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
 
                     $response['success'] = true;
                     $response['message'] = "Product added successfully!";
-                    
+
                     // Log to AuditLog
                     if (Auth::isLoggedIn()) {
                         $user = Auth::getCurrentUser();
                         $audit->log($user['id'], "PRODUCT_ADD", "Added product: " . $name . " (SKU: " . $sku . ")");
                     }
-                } else {
+                }
+                else {
                     $db->rollBack();
                     $response['errors'][] = "Error adding product.";
                 }
-            } catch (PDOException $exception) {
+            }
+            catch (PDOException $exception) {
                 if ($db->inTransaction()) {
                     $db->rollBack();
                 }
                 $response['errors'][] = "Error: " . $exception->getMessage();
             }
         }
-        
+
         echo json_encode($response);
         exit();
     }
@@ -350,12 +362,13 @@ require_once "../includes/header.php";
                             <div class="input-group input-group-sm">
                                 <select class="form-select form-select-sm" id="category_id" name="category_id">
                                     <option value="">Select Category</option>
-                                    <?php 
-                                    $categories = $db->query("SELECT id, name FROM categories ORDER BY name ASC");
-                                    while ($row = $categories->fetch(PDO::FETCH_ASSOC)): 
-                                    ?>
+                                    <?php
+$categories = $db->query("SELECT id, name FROM categories ORDER BY name ASC");
+while ($row = $categories->fetch(PDO::FETCH_ASSOC)):
+?>
                                         <option value="<?php echo $row['id']; ?>"><?php echo htmlspecialchars($row['name']); ?></option>
-                                    <?php endwhile; ?>
+                                    <?php
+endwhile; ?>
                                 </select>
                                 <a href="../categories/add.php" class="btn btn-outline-secondary"><i class="fas fa-plus"></i></a>
                             </div>
@@ -365,12 +378,13 @@ require_once "../includes/header.php";
                             <div class="input-group input-group-sm">
                                 <select class="form-select form-select-sm" id="brand_id" name="brand_id">
                                     <option value="">Select Brand</option>
-                                    <?php 
-                                    $brands = $db->query("SELECT id, name FROM brands ORDER BY name ASC");
-                                    while ($row = $brands->fetch(PDO::FETCH_ASSOC)): 
-                                    ?>
+                                    <?php
+$brands = $db->query("SELECT id, name FROM brands ORDER BY name ASC");
+while ($row = $brands->fetch(PDO::FETCH_ASSOC)):
+?>
                                         <option value="<?php echo $row['id']; ?>"><?php echo htmlspecialchars($row['name']); ?></option>
-                                    <?php endwhile; ?>
+                                    <?php
+endwhile; ?>
                                 </select>
                                 <a href="../brands/add.php" class="btn btn-outline-secondary"><i class="fas fa-plus"></i></a>
                             </div>
@@ -470,12 +484,13 @@ require_once "../includes/header.php";
                     <div class="input-group input-group-sm">
                         <select class="form-select" id="supplier_id" name="supplier_id" form="addProductForm">
                             <option value="">Select Supplier</option>
-                            <?php 
-                            $suppliers = $db->query("SELECT id, name FROM suppliers WHERE is_active = 1 ORDER BY name ASC");
-                            while ($row = $suppliers->fetch(PDO::FETCH_ASSOC)): 
-                            ?>
+                            <?php
+$suppliers = $db->query("SELECT id, name FROM suppliers WHERE is_active = 1 ORDER BY name ASC");
+while ($row = $suppliers->fetch(PDO::FETCH_ASSOC)):
+?>
                                 <option value="<?php echo $row['id']; ?>"><?php echo htmlspecialchars($row['name']); ?></option>
-                            <?php endwhile; ?>
+                            <?php
+endwhile; ?>
                         </select>
                         <a href="../suppliers/add_supplier.php" class="btn btn-outline-secondary"><i class="fas fa-plus"></i></a>
                     </div>

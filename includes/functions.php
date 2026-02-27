@@ -9,8 +9,17 @@
  */
 // Helper function to get name from ID from a specified table.
 // ... existing code ...
-function getName($db, $table, $id) {
-    if (!$id || $id === '') return null;
+function getName($db, $table, $id)
+{
+    if (!$id || $id === '')
+        return null;
+
+    // Whitelist allowed tables to prevent SQL injection
+    $allowed_tables = ['categories', 'brands', 'suppliers', 'products', 'users'];
+    if (!in_array($table, $allowed_tables)) {
+        return null;
+    }
+
     $stmt = $db->prepare("SELECT name FROM $table WHERE id = ?");
     $stmt->execute([$id]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -18,9 +27,18 @@ function getName($db, $table, $id) {
 }
 
 /**
+ * Shorthand for htmlspecialchars to prevent XSS
+ */
+function e($str)
+{
+    return htmlspecialchars($str, ENT_QUOTES, 'UTF-8');
+}
+
+/**
  * Get current language
  */
-function get_current_lang() {
+function get_current_lang()
+{
     if (session_status() === PHP_SESSION_NONE) {
         // Avoid starting if headers already sent? 
         // Best to assume session is handled by Auth::startSession() mainly, 
@@ -33,16 +51,18 @@ function get_current_lang() {
 /**
  * Translate a key
  */
-function __($key) {
+function __($key)
+{
     global $lang_strings;
-    
+
     // Load strings if not loaded
     if (!isset($lang_strings)) {
         $lang = get_current_lang();
         $lang_file = dirname(__DIR__) . "/lang/{$lang}.php";
         if (file_exists($lang_file)) {
             $lang_strings = require $lang_file;
-        } else {
+        }
+        else {
             $lang_strings = [];
         }
     }
@@ -58,27 +78,29 @@ function __($key) {
  * @param array $extra_excludes Additional SKUs to exclude (e.g., from current batch)
  * @return string The generated SKU
  */
-function generateSKU($db, $extra_excludes = []) {
+function generateSKU($db, $extra_excludes = [])
+{
     // Increase entropy: Use last 5 digits of timestamp + 6 random digits
     // This provides 1,000,000 possible SKUs per 100,000 seconds (approx 27.7 hours)
-    $timestamp_part = substr(time(), -5); 
+    $timestamp_part = substr(time(), -5);
     $random_part = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
     $code11 = $timestamp_part . $random_part;
-    
+
     // Calculate UPC/EAN-13 Check Digit
     $sum = 0;
     for ($i = 0; $i < 11; $i++) {
         if (($i + 1) % 2 != 0) { // Odd position (1-based index)
             $sum += (int)$code11[$i] * 3;
-        } else {
+        }
+        else {
             $sum += (int)$code11[$i];
         }
     }
     $mod = $sum % 10;
     $checkDigit = ($mod == 0) ? 0 : (10 - $mod);
-    
+
     $sku = $code11 . $checkDigit;
-    
+
     // Check if in current batch list
     if (in_array($sku, $extra_excludes)) {
         return generateSKU($db, $extra_excludes);
@@ -87,36 +109,39 @@ function generateSKU($db, $extra_excludes = []) {
     // Check uniqueness in products table
     $stmt = $db->prepare("SELECT id FROM products WHERE sku = ?");
     $stmt->execute([$sku]);
-    if ($stmt->fetch()) return generateSKU($db, $extra_excludes);
-    
+    if ($stmt->fetch())
+        return generateSKU($db, $extra_excludes);
+
     // Check uniqueness in variants table
     $stmt_v = $db->prepare("SELECT id FROM product_variants WHERE sku = ?");
     $stmt_v->execute([$sku]);
-    if ($stmt_v->fetch()) return generateSKU($db, $extra_excludes);
-    
+    if ($stmt_v->fetch())
+        return generateSKU($db, $extra_excludes);
+
     return $sku;
 }
 /**
  * Log a stock change event for audit trail
  */
-function logStockChange($db, $product_id, $variant_id, $user_id, $change_type, $qty_before, $qty_after, $notes = '', $reference = null, $driver_id = null, $supplier_id = null) {
+function logStockChange($db, $product_id, $variant_id, $user_id, $change_type, $qty_before, $qty_after, $notes = '', $reference = null, $driver_id = null, $supplier_id = null)
+{
     // Quantity is stored as positive, type (IN/OUT) determines direction
     $quantity = abs($qty_after - $qty_before);
     $movement_type = strtoupper($change_type);
-    
+
     $query = "INSERT INTO stock_movements (product_id, variant_id, user_id, movement_type, quantity, reason, reference, driver_id, supplier_id) 
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    
+
     $stmt = $db->prepare($query);
     return $stmt->execute([
-        $product_id, 
-        $variant_id, 
-        $user_id, 
-        $movement_type, 
-        $quantity, 
-        $notes, 
-        $reference, 
-        $driver_id, 
+        $product_id,
+        $variant_id,
+        $user_id,
+        $movement_type,
+        $quantity,
+        $notes,
+        $reference,
+        $driver_id,
         $supplier_id
     ]);
 }

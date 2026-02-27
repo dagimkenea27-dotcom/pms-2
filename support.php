@@ -1,4 +1,6 @@
 <?php
+require_once 'config/auth.php';
+Auth::checkAuthAndPreventCache();
 require_once 'includes/header.php';
 ?>
 

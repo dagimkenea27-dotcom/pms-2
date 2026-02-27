@@ -8,21 +8,32 @@ $db = $database->getConnection();
 // Handle product deletion
 if (isset($_GET['delete_id'])) {
     Auth::requireRole('manager'); // Only manager/admin can delete
+
+    // Validate CSRF token
+    if (!isset($_GET['csrf_token']) || !Auth::validateCSRF($_GET['csrf_token'])) {
+        $_SESSION['message'] = "Security error: Invalid CSRF token.";
+        $_SESSION['message_type'] = "danger";
+        header("Location: view_products.php");
+        exit();
+    }
+
+    $id = (int)$_GET['delete_id'];
+
     // First get the product to delete its image
     $get_query = "SELECT image FROM products WHERE id = :id";
     $get_stmt = $db->prepare($get_query);
-    $get_stmt->bindParam(":id", $_GET['delete_id']);
+    $get_stmt->bindParam(":id", $id);
     $get_stmt->execute();
     $product = $get_stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     $delete_query = "DELETE FROM products WHERE id = :id";
     $delete_stmt = $db->prepare($delete_query);
-    $delete_stmt->bindParam(":id", $_GET['delete_id']);
-    
+    $delete_stmt->bindParam(":id", $id);
+
     // Explicitly delete variants first to ensure cleanup
     $delete_variants = "DELETE FROM product_variants WHERE product_id = :id";
     $dv_stmt = $db->prepare($delete_variants);
-    $dv_stmt->bindParam(":id", $_GET['delete_id']);
+    $dv_stmt->bindParam(":id", $id);
     $dv_stmt->execute();
 
     if ($delete_stmt->execute()) {
@@ -30,10 +41,11 @@ if (isset($_GET['delete_id'])) {
         if (!empty($product['image']) && file_exists("../" . $product['image'])) {
             unlink("../" . $product['image']);
         }
-        
+
         $_SESSION['message'] = "Product deleted successfully!";
         $_SESSION['message_type'] = "success";
-    } else {
+    }
+    else {
         $_SESSION['message'] = "Error deleting product.";
         $_SESSION['message_type'] = "danger";
     }
@@ -57,7 +69,7 @@ $params = [];
 if (!empty($search)) {
     // Check if the search term looks like a barcode/SKU (numeric or alphanumeric without spaces)
     $is_exact_match = preg_match('/^[a-zA-Z0-9]+$/', $search) && strlen($search) > 3;
-    
+
     if ($is_exact_match) {
         // For exact barcode/SKU matches, prioritize exact matches first
         $where_clause .= "(sku = :exact_search OR barcode = :exact_search OR id = :exact_id OR name LIKE :search OR description LIKE :search OR id IN (SELECT product_id FROM product_variants WHERE sku = :exact_search OR id = :exact_variant_id))";
@@ -65,7 +77,8 @@ if (!empty($search)) {
         $params[':exact_id'] = $search;
         $params[':exact_variant_id'] = $search;
         $params[':search'] = "%$search%";
-    } else {
+    }
+    else {
         // For general searches, use LIKE with wildcards
         $where_clause .= "(name LIKE :search OR sku LIKE :search OR barcode LIKE :search OR description LIKE :search OR id IN (SELECT product_id FROM product_variants WHERE sku LIKE :search))";
         $params[':search'] = "%$search%";
@@ -82,7 +95,8 @@ if (!empty($filter_type)) {
     $and = !empty($where_clause) ? " AND " : "";
     if ($filter_type == 'low_stock') {
         $where_clause .= "{$and}quantity <= min_stock AND quantity > 0";
-    } elseif ($filter_type == 'out_of_stock') {
+    }
+    elseif ($filter_type == 'out_of_stock') {
         $where_clause .= "{$and}quantity = 0";
     }
 }
@@ -142,8 +156,8 @@ require_once "../includes/header.php";
 <?php
 // Display session messages
 if (isset($_SESSION['message'])) {
-    echo '<div class="alert alert-'.$_SESSION['message_type'].' alert-dismissible fade show" role="alert">
-            '.$_SESSION['message'].'
+    echo '<div class="alert alert-' . e($_SESSION['message_type']) . ' alert-dismissible fade show" role="alert">
+            ' . e($_SESSION['message']) . '
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
           </div>';
     unset($_SESSION['message']);
@@ -167,7 +181,8 @@ if (isset($_SESSION['message'])) {
         <a href="add_product.php" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
             <i class="fas fa-plus fa-sm text-white-50"></i> <?php echo __('add_new_product'); ?>
         </a>
-        <?php endif; ?>
+        <?php
+endif; ?>
     </div>
 </div>
 
@@ -179,8 +194,8 @@ if (isset($_SESSION['message'])) {
                 <label for="search" class="form-label"><?php echo __('search_products'); ?></label>
                 <div class="input-group">
                     <input type="text" class="form-control barcode-input" id="search" name="search" 
-                           placeholder="<?php echo __('search_products'); ?>" 
-                           value="<?php echo htmlspecialchars($search); ?>">
+                           placeholder="<?php echo e(__('search_products')); ?>" 
+                           value="<?php echo e($search); ?>">
                     <button class="btn btn-outline-secondary start-barcode-scanner" type="button" id="barcode-scan-btn" title="Scan Barcode (Ctrl+B)">
                         <i class="fas fa-barcode"></i>
                     </button>
@@ -194,11 +209,12 @@ if (isset($_SESSION['message'])) {
                 <select class="form-select" id="category" name="category">
                     <option value=""><?php echo __('all_categories'); ?></option>
                     <?php foreach ($categories as $cat): ?>
-                        <option value="<?php echo htmlspecialchars($cat['category']); ?>" 
+                        <option value="<?php echo e($cat['category']); ?>" 
                                 <?php echo $category_filter == $cat['category'] ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($cat['category']); ?>
+                            <?php echo e($cat['category']); ?>
                         </option>
-                    <?php endforeach; ?>
+                    <?php
+endforeach; ?>
                 </select>
             </div>
             <div class="col-md-2 d-flex align-items-end">
@@ -210,7 +226,8 @@ if (isset($_SESSION['message'])) {
                         <a href="view_products.php" class="btn btn-outline-secondary">
                             <i class="fas fa-times"></i> <?php echo __('clear'); ?>
                         </a>
-                    <?php endif; ?>
+                    <?php
+endif; ?>
                 </div>
             </div>
         </form>
@@ -337,7 +354,7 @@ if (isset($_SESSION['message'])) {
                 <tbody>
                     <?php if (count($products) > 0): ?>
                         <?php foreach ($products as $index => $product): ?>
-                            <tr <?php echo ($active_id == $product['id']) ? 'class="table-active"' : ''; ?> id="product-row-<?php echo $product['id']; ?>">
+                            <tr <?php echo($active_id == $product['id']) ? 'class="table-active"' : ''; ?> id="product-row-<?php echo $product['id']; ?>">
                                 <td>
                                     <div class="form-check">
                                         <input class="form-check-input product-select" type="checkbox" value="<?php echo $product['id']; ?>">
@@ -347,31 +364,36 @@ if (isset($_SESSION['message'])) {
                                 <td>
                                     <a href="view_product.php?id=<?php echo $product['id']; ?>">
                                         <?php if (!empty($product['image'])): ?>
-                                            <?php 
-                                            $is_url = (strpos($product['image'], 'http') === 0);
-                                            $img_src = $is_url ? $product['image'] : "../" . $product['image'];
-                                            ?>
+                                            <?php
+            $is_url = (strpos($product['image'], 'http') === 0);
+            $img_src = $is_url ? $product['image'] : "../" . $product['image'];
+?>
                                             <img src="<?php echo htmlspecialchars($img_src); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-image-small" onerror="this.src='../assets/img/noproduct.png'">
-                                        <?php else: ?>
+                                        <?php
+        else: ?>
                                             <img src="../assets/img/noproduct.png" alt="No Image" class="product-image-small">
-                                        <?php endif; ?>
+                                        <?php
+        endif; ?>
                                     </a>
                                 </td>
                                 <td>
-                                    <a href="view_product.php?id=<?php echo $product['id']; ?>" class="text-decoration-none font-weight-bold text-dark">
-                                        <?php echo htmlspecialchars($product['name']); ?>
+                                    <a href="view_product.php?id=<?php echo e($product['id']); ?>" class="text-decoration-none font-weight-bold text-dark">
+                                        <?php echo e($product['name']); ?>
                                     </a>
                                 </td>
-                                <td><?php echo htmlspecialchars($product['category']); ?></td>
-                                <td><?php echo htmlspecialchars($product['location'] ?? '-'); ?></td>
+                                <td><?php echo e($product['category']); ?></td>
+                                <td><?php echo e($product['location'] ?? '-'); ?></td>
                                 <td>
                                     <?php if ($product['quantity'] <= $product['min_stock'] && $product['quantity'] > 0): ?>
-                                        <span class="badge bg-warning"><?php echo $product['quantity']; ?></span>
-                                    <?php elseif ($product['quantity'] == 0): ?>
-                                        <span class="badge bg-danger"><?php echo __('out_of_stock'); ?></span>
-                                    <?php else: ?>
-                                        <?php echo $product['quantity']; ?>
-                                    <?php endif; ?>
+                                        <span class="badge bg-warning"><?php echo number_format($product['quantity']); ?></span>
+                                    <?php
+        elseif ($product['quantity'] == 0): ?>
+                                        <span class="badge bg-danger"><?php echo e(__('out_of_stock')); ?></span>
+                                    <?php
+        else: ?>
+                                        <?php echo number_format($product['quantity']); ?>
+                                    <?php
+        endif; ?>
                                 </td>
                                 <td>$<?php echo number_format($product['price'], 2); ?></td>
                                 <td>
@@ -383,7 +405,8 @@ if (isset($_SESSION['message'])) {
                                         <a href="update_stock.php?id=<?php echo $product['id']; ?>" class="btn btn-success btn-sm" title="Update Stock">
                                             <i class="fas fa-boxes"></i>
                                         </a>
-                                        <?php endif; ?>
+                                        <?php
+        endif; ?>
                                         <a href="view_product.php?id=<?php echo $product['id']; ?>" class="btn btn-info btn-sm" title="View">
                                             <i class="fas fa-eye"></i>
                                         </a>
@@ -391,19 +414,23 @@ if (isset($_SESSION['message'])) {
                                         <a href="edit_product.php?id=<?php echo $product['id']; ?>" class="btn btn-warning btn-sm" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <a href="?delete_id=<?php echo $product['id']; ?>" class="btn btn-danger btn-sm" title="Delete" onclick="return confirmDelete('<?php echo addslashes($product['name']); ?>')">
+                                        <a href="?delete_id=<?php echo e($product['id']); ?>&csrf_token=<?php echo e(Auth::generateCSRF()); ?>" class="btn btn-danger btn-sm" title="Delete" onclick="return confirmDelete('<?php echo e(addslashes($product['name'])); ?>')">
                                             <i class="fas fa-trash"></i>
                                         </a>
-                                        <?php endif; ?>
+                                        <?php
+        endif; ?>
                                     </div>
                                 </td>
                             </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
+                        <?php
+    endforeach; ?>
+                    <?php
+else: ?>
                         <tr>
                             <td colspan="9" class="text-center"><?php echo __('no_products_found'); ?></td>
                         </tr>
-                    <?php endif; ?>
+                    <?php
+endif; ?>
                 </tbody>
             </table>
         </div>
@@ -418,7 +445,8 @@ if (isset($_SESSION['message'])) {
                                 <span aria-hidden="true">&laquo;</span>
                             </a>
                         </li>
-                    <?php endif; ?>
+                    <?php
+    endif; ?>
                     
                     <?php for ($i = 1; $i <= $total_pages; $i++): ?>
                         <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
@@ -426,7 +454,8 @@ if (isset($_SESSION['message'])) {
                                 <?php echo $i; ?>
                             </a>
                         </li>
-                    <?php endfor; ?>
+                    <?php
+    endfor; ?>
                     
                     <?php if ($page < $total_pages): ?>
                         <li class="page-item">
@@ -434,10 +463,12 @@ if (isset($_SESSION['message'])) {
                                 <span aria-hidden="true">&raquo;</span>
                             </a>
                         </li>
-                    <?php endif; ?>
+                    <?php
+    endif; ?>
                 </ul>
             </nav>
-        <?php endif; ?>
+        <?php
+endif; ?>
     </div>
 </div>
 
@@ -518,11 +549,11 @@ if (isset($_SESSION['message'])) {
                             <option value="">No Change</option>
                              <!-- Dynamic categories -->
                              <?php
-                                $cat_ids = $db->query("SELECT id, name FROM categories ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
-                                foreach($cat_ids as $c) {
-                                    echo '<option value="'.$c['id'].'">'.htmlspecialchars($c['name']).'</option>';
-                                }
-                             ?>
+$cat_ids = $db->query("SELECT id, name FROM categories ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+foreach ($cat_ids as $c) {
+    echo '<option value="' . $c['id'] . '">' . htmlspecialchars($c['name']) . '</option>';
+}
+?>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -701,7 +732,8 @@ if (isset($_SESSION['message'])) {
             }, 3000);
         }
     });
-    <?php endif; ?>
+    <?php
+endif; ?>
 </script>
 
 <style>

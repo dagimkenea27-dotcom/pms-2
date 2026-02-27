@@ -57,21 +57,29 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // Handle Delete
 if (isset($_GET['delete_id'])) {
     $user->id = $_GET['delete_id'];
+
     // Prevent self-deletion
     if ($user->id == $_SESSION['user_id']) {
         $_SESSION['message'] = "Error: You cannot delete your own account.";
         $_SESSION['message_type'] = 'danger';
-    } else {
-        if ($user->delete()) {
+    }
+    else {
+        // Validate CSRF token
+        if (!isset($_GET['csrf_token']) || !Auth::validateCSRF($_GET['csrf_token'])) {
+            $_SESSION['message'] = "Security error: Invalid CSRF token.";
+            $_SESSION['message_type'] = 'danger';
+        }
+        elseif ($user->delete()) {
             $_SESSION['message'] = "User deleted successfully!";
             $_SESSION['message_type'] = 'success';
-        } else {
+        }
+        else {
             $_SESSION['message'] = "Error: Cannot delete the last admin user.";
             $_SESSION['message_type'] = 'danger';
         }
     }
     // Redirect with search parameters
-    $redirect_url = "view_users.php?page=$page";
+    $redirect_url = "view_users.php?page=" . (int)$page;
     if (!empty($search)) {
         $redirect_url .= "&search=" . urlencode($search);
     }
@@ -97,34 +105,37 @@ require_once "../includes/header.php";
         <form method="GET" class="row g-3">
             <div class="col-md-8">
                 <label for="search" class="form-label">Search Users</label>
-                <input type="text" class="form-control" id="search" name="search" 
-                       placeholder="Search by name, username, or email..." 
-                       value="<?php echo htmlspecialchars($search); ?>">
-            </div>
-            <div class="col-md-4 d-flex align-items-end">
-                <div class="btn-group" role="group">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-search"></i> Search
-                    </button>
-                    <?php if (!empty($search)): ?>
-                        <a href="view_users.php" class="btn btn-outline-secondary">
-                            <i class="fas fa-times"></i> Clear
-                        </a>
-                    <?php endif; ?>
+                        <input type="text" class="form-control" id="search" name="search" 
+                               placeholder="Search by name, username, or email..." 
+                               value="<?php echo e($search); ?>">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="btn-group" role="group">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                            <?php if (!empty($search)): ?>
+                                <a href="view_users.php" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times"></i> Clear
+                                </a>
+                            <?php
+endif; ?>
                 </div>
             </div>
         </form>
     </div>
 </div>
 
-<?php if (isset($_SESSION['message'])): ?>
-<div class="alert alert-<?php echo $_SESSION['message_type']; ?> alert-dismissible fade show" role="alert">
-    <?php echo $_SESSION['message']; ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-<?php 
+        <?php if (isset($_SESSION['message'])): ?>
+        <div class="alert alert-<?php echo e($_SESSION['message_type']); ?> alert-dismissible fade show" role="alert">
+            <?php echo e($_SESSION['message']); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+<?php
+
+    
 unset($_SESSION['message']);
-unset($_SESSION['message_type']);
+    unset($_SESSION['message_type']);
 endif; ?>
 
 <div class="card">
@@ -152,68 +163,74 @@ endif; ?>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($users as $user_data): 
-                            $status_class = $user_data['is_active'] ? 'success' : 'secondary';
-                            $status_text = $user_data['is_active'] ? 'Active' : 'Inactive';
-                            $role_class = [
-                                'admin' => 'danger',
-                                'manager' => 'warning', 
-                                'staff' => 'info'
-                            ][$user_data['role']] ?? 'secondary';
-                        ?>
+                        <?php foreach ($users as $user_data):
+        $status_class = $user_data['is_active'] ? 'success' : 'secondary';
+        $status_text = $user_data['is_active'] ? 'Active' : 'Inactive';
+        $role_class = [
+            'admin' => 'danger',
+            'manager' => 'warning',
+            'staff' => 'info'
+        ][$user_data['role']] ?? 'secondary';
+?>
                         <tr>
                             <td>
-                                <strong><?php echo htmlspecialchars($user_data['first_name'] . ' ' . $user_data['last_name']); ?></strong>
+                                <strong><?php echo e($user_data['first_name'] . ' ' . $user_data['last_name']); ?></strong>
                             </td>
-                            <td><?php echo htmlspecialchars($user_data['username']); ?></td>
-                            <td><?php echo htmlspecialchars($user_data['email']); ?></td>
+                            <td><?php echo e($user_data['username']); ?></td>
+                            <td><?php echo e($user_data['email']); ?></td>
                             <td>
-                                <span class="badge bg-<?php echo $role_class; ?>">
-                                    <?php echo ucfirst($user_data['role']); ?>
+                                <span class="badge bg-<?php echo e($role_class); ?>">
+                                    <?php echo e(ucfirst($user_data['role'])); ?>
                                 </span>
                             </td>
                             <td>
-                                <span class="badge bg-<?php echo $status_class; ?>">
-                                    <?php echo $status_text; ?>
+                                <span class="badge bg-<?php echo e($status_class); ?>">
+                                    <?php echo e($status_text); ?>
                                 </span>
                             </td>
                             <td>
                                 <?php if ($user_data['last_login']): ?>
                                     <?php echo date('M j, Y g:i A', strtotime($user_data['last_login'])); ?>
-                                <?php else: ?>
+                                <?php
+        else: ?>
                                     <span class="text-muted">Never</span>
-                                <?php endif; ?>
+                                <?php
+        endif; ?>
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="edit_user.php?id=<?php echo $user_data['id']; ?>" 
+                                    <a href="edit_user.php?id=<?php echo e($user_data['id']); ?>" 
                                        class="btn btn-outline-warning" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     <?php if ($user_data['id'] != $_SESSION['user_id']): ?>
                                         <?php if ($user_data['is_active']): ?>
-                                        <a href="toggle_status.php?id=<?php echo $user_data['id']; ?>&status=0&page=<?php echo $page; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" 
+                                        <a href="toggle_status.php?id=<?php echo e($user_data['id']); ?>&status=0&page=<?php echo e($page); ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>&csrf_token=<?php echo e(Auth::generateCSRF()); ?>" 
                                            class="btn btn-outline-secondary" title="Deactivate">
                                             <i class="fas fa-ban"></i>
                                         </a>
-                                        <?php else: ?>
-                                        <a href="toggle_status.php?id=<?php echo $user_data['id']; ?>&status=1&page=<?php echo $page; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" 
+                                        <?php
+            else: ?>
+                                        <a href="toggle_status.php?id=<?php echo e($user_data['id']); ?>&status=1&page=<?php echo e($page); ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>&csrf_token=<?php echo e(Auth::generateCSRF()); ?>" 
                                            class="btn btn-outline-success" title="Activate">
                                             <i class="fas fa-check"></i>
                                         </a>
-                                        <?php endif; ?>
+                                        <?php
+            endif; ?>
                                     
-                                    <a href="?delete_id=<?php echo $user_data['id']; ?>&page=<?php echo $page; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" 
+                                    <a href="?delete_id=<?php echo e($user_data['id']); ?>&page=<?php echo e($page); ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>&csrf_token=<?php echo e(Auth::generateCSRF()); ?>" 
                                        class="btn btn-outline-danger" 
                                        onclick="return confirm('Delete user <?php echo addslashes($user_data['username']); ?>?')"
                                        title="Delete">
                                         <i class="fas fa-trash"></i>
                                     </a>
-                                    <?php endif; ?>
+                                    <?php
+        endif; ?>
                                 </div>
                             </td>
                         </tr>
-                        <?php endforeach; ?>
+                        <?php
+    endforeach; ?>
                     </tbody>
                 </table>
             </div>
@@ -231,31 +248,31 @@ endif; ?>
                     
                     <!-- Page Numbers -->
                     <?php
-                    $start_page = max(1, $page - 2);
-                    $end_page = min($total_pages, $page + 2);
-                    
-                    // Show first page and ellipsis if needed
-                    if ($start_page > 1) {
-                        echo '<li class="page-item"><a class="page-link" href="?page=1' . (!empty($search) ? '&search=' . urlencode($search) : '') . '">1</a></li>';
-                        if ($start_page > 2) {
-                            echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
-                        }
-                    }
-                    
-                    // Page numbers
-                    for ($i = $start_page; $i <= $end_page; $i++) {
-                        $active = ($i == $page) ? 'active' : '';
-                        echo '<li class="page-item ' . $active . '"><a class="page-link" href="?page=' . $i . (!empty($search) ? '&search=' . urlencode($search) : '') . '">' . $i . '</a></li>';
-                    }
-                    
-                    // Show last page and ellipsis if needed
-                    if ($end_page < $total_pages) {
-                        if ($end_page < $total_pages - 1) {
-                            echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
-                        }
-                        echo '<li class="page-item"><a class="page-link" href="?page=' . $total_pages . (!empty($search) ? '&search=' . urlencode($search) : '') . '">' . $total_pages . '</a></li>';
-                    }
-                    ?>
+        $start_page = max(1, $page - 2);
+        $end_page = min($total_pages, $page + 2);
+
+        // Show first page and ellipsis if needed
+        if ($start_page > 1) {
+            echo '<li class="page-item"><a class="page-link" href="?page=1' . (!empty($search) ? '&search=' . urlencode($search) : '') . '">1</a></li>';
+            if ($start_page > 2) {
+                echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+            }
+        }
+
+        // Page numbers
+        for ($i = $start_page; $i <= $end_page; $i++) {
+            $active = ($i == $page) ? 'active' : '';
+            echo '<li class="page-item ' . $active . '"><a class="page-link" href="?page=' . $i . (!empty($search) ? '&search=' . urlencode($search) : '') . '">' . $i . '</a></li>';
+        }
+
+        // Show last page and ellipsis if needed
+        if ($end_page < $total_pages) {
+            if ($end_page < $total_pages - 1) {
+                echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+            }
+            echo '<li class="page-item"><a class="page-link" href="?page=' . $total_pages . (!empty($search) ? '&search=' . urlencode($search) : '') . '">' . $total_pages . '</a></li>';
+        }
+?>
                     
                     <!-- Next Button -->
                     <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
@@ -265,9 +282,11 @@ endif; ?>
                     </li>
                 </ul>
             </nav>
-            <?php endif; ?>
+            <?php
+    endif; ?>
             
-        <?php else: ?>
+        <?php
+else: ?>
             <div class="text-center py-4">
                 <i class="fas fa-users fa-3x text-muted mb-3"></i>
                 <h4>No users found</h4>
@@ -276,14 +295,17 @@ endif; ?>
                     <a href="view_users.php" class="btn btn-primary">
                         <i class="fas fa-times"></i> Clear Search
                     </a>
-                <?php else: ?>
+                <?php
+    else: ?>
                     <p class="text-muted">Get started by adding your first user.</p>
                     <a href="add_user.php" class="btn btn-primary">
                         <i class="fas fa-user-plus"></i> Add User
                     </a>
-                <?php endif; ?>
+                <?php
+    endif; ?>
             </div>
-        <?php endif; ?>
+        <?php
+endif; ?>
     </div>
 </div>
 

@@ -64,52 +64,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $cost_price = floatval($_POST['cost_price'] ?? 0);
     $min_stock = intval($_POST['min_stock'] ?? 0);
     $has_variants = isset($_POST['has_variants']) && $_POST['has_variants'] == 1;
-    
+
     // Validation checks
     if (empty($name)) {
         $errors[] = "Product name is required.";
     }
-    
+
     if (empty($sku)) {
         $errors[] = "SKU is required.";
-    } else {
+    }
+    else {
         // Check if new SKU already exists in products (excluding current)
         $check_query = "SELECT id FROM products WHERE sku = :sku AND id != :id";
         $check_stmt = $db->prepare($check_query);
         $check_stmt->bindParam(":sku", $sku);
         $check_stmt->bindParam(":id", $product['id']);
         $check_stmt->execute();
-        
+
         // Check if SKU exists in variants (any variant)
         $check_v_query = "SELECT id FROM product_variants WHERE sku = :sku";
         $check_v_stmt = $db->prepare($check_v_query);
         $check_v_stmt->bindParam(":sku", $sku);
         $check_v_stmt->execute();
-        
+
         if ($check_stmt->rowCount() > 0 || $check_v_stmt->rowCount() > 0) {
             $errors[] = "SKU '$sku' already exists (in products or variants). Please use a unique SKU.";
         }
     }
-    
+
     if ($price < 0) {
         $errors[] = "Selling price cannot be negative.";
     }
-    
+
     if ($cost_price < 0) {
         $errors[] = "Cost price cannot be negative.";
     }
-    
+
     if ($min_stock < 0) {
         $errors[] = "Minimum stock level cannot be negative.";
     }
-    
+
     // Process Variants Data
     $submitted_variants = [];
     $total_qty = 0;
     $used_skus = [$sku];
-    
+
     if ($has_variants) {
-         if (isset($_POST['variant_size']) && is_array($_POST['variant_size'])) {
+        if (isset($_POST['variant_size']) && is_array($_POST['variant_size'])) {
             for ($i = 0; $i < count($_POST['variant_size']); $i++) {
                 $v_id = $_POST['variant_id'][$i] ?? null; // ID for existing variants
                 $v_size = trim($_POST['variant_size'][$i]);
@@ -121,20 +122,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $v_sku = trim($_POST['variant_sku'][$i]);
 
                 if (empty($v_size) && empty($v_color)) {
-                    continue; 
+                    continue;
                 }
-                
+
                 if (empty($v_sku)) {
-                     $v_sku = generateSKU($db, $used_skus);
+                    $v_sku = generateSKU($db, $used_skus);
                 }
                 $used_skus[] = $v_sku;
 
                 // Check duplicate SKU among variants in this submit
                 foreach ($submitted_variants as $existing_v) {
-                     if ($existing_v['sku'] == $v_sku || ($existing_v['size'] == $v_size && $existing_v['color'] == $v_color)) {
-                         $errors[] = "Duplicate variant (Option/Color or SKU) within this product: " . $v_sku;
-                         break;
-                     }
+                    if ($existing_v['sku'] == $v_sku || ($existing_v['size'] == $v_size && $existing_v['color'] == $v_color)) {
+                        $errors[] = "Duplicate variant (Option/Color or SKU) within this product: " . $v_sku;
+                        break;
+                    }
                 }
 
                 // Check duplicate SKU in DB (variants table) - exclude current variant if editing
@@ -142,12 +143,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Editing existing variant - check if SKU exists for OTHER variants
                     $v_check = $db->prepare("SELECT id FROM product_variants WHERE sku = ? AND id != ?");
                     $v_check->execute([$v_sku, $v_id]);
-                } else {
+                }
+                else {
                     // Adding new variant - check if SKU exists anywhere in variants
                     $v_check = $db->prepare("SELECT id FROM product_variants WHERE sku = ?");
                     $v_check->execute([$v_sku]);
                 }
-                
+
                 // Check duplicate SKU in DB (products table) - exclude current parent product IF checking against parent (rare case if inputing same SKU)
                 // Actually, a variant SKU should NOT match distinct product SKUs.
                 // It specifically shouldn't match ANY product SKU ideally, but technically if it matches its OWN parent that *might* be confusing but is sometimes allowed in some systems. 
@@ -156,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $p_check->execute([$v_sku]);
 
                 if ($v_check->rowCount() > 0 || $p_check->rowCount() > 0) {
-                     $errors[] = "Variant SKU '$v_sku' already exists (in products or variants).";
+                    $errors[] = "Variant SKU '$v_sku' already exists (in products or variants).";
                 }
 
                 $submitted_variants[] = [
@@ -172,47 +174,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $total_qty += $v_qty;
             }
         }
-    } else {
-        // If switching to simple, take quantity from main input
     }
-    
+    else {
+    // If switching to simple, take quantity from main input
+    }
+
     // Handle image upload
     $image_path = $product['image']; // Keep existing image by default
     if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
         $upload_dir = '../uploads/products/';
-        if (!file_exists($upload_dir)) mkdir($upload_dir, 0777, true);
-        
-        $allowed_types = ['jpg', 'jpeg', 'png', 'gif'];
+        if (!file_exists($upload_dir)) {
+            mkdir($upload_dir, 0755, true);
+        }
+
+        $allowed_exts = ['jpg', 'jpeg', 'png', 'gif'];
+        $allowed_mimes = ['image/jpeg', 'image/png', 'image/gif'];
         $max_size = 5 * 1024 * 1024; // 5MB
-        
+
         $file_name = $_FILES['product_image']['name'];
         $file_size = $_FILES['product_image']['size'];
         $file_tmp = $_FILES['product_image']['tmp_name'];
-        
+
         $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-        
-        if (!in_array($file_ext, $allowed_types)) {
+
+        if (!in_array($file_ext, $allowed_exts)) {
             $errors[] = "Invalid file type. Only JPG, JPEG, PNG, and GIF files are allowed.";
         }
-        elseif ($file_size > $max_size) {
+
+        // Validate MIME type and image integrity
+        $image_info = @getimagesize($file_tmp);
+        if (!$image_info || !in_array($image_info['mime'], $allowed_mimes)) {
+            $errors[] = "Invalid image file or MIME type.";
+        }
+
+        if ($file_size > $max_size) {
             $errors[] = "File size too large. Maximum file size is 5MB.";
         }
         else {
             $new_filename = uniqid() . '_' . time() . '.' . $file_ext;
             $target_file = $upload_dir . $new_filename;
-            
+
             if (move_uploaded_file($file_tmp, $target_file)) {
                 $image_path = 'uploads/products/' . $new_filename;
                 // Delete old image
                 if (!empty($product['image']) && file_exists('../' . $product['image'])) {
                     unlink('../' . $product['image']);
                 }
-            } else {
+            }
+            else {
                 $errors[] = "Error uploading image file.";
             }
         }
     }
-    
+
     // If no errors, proceed with update
     if (empty($errors)) {
         try {
@@ -221,14 +235,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $category_id = !empty($_POST['category_id']) ? $_POST['category_id'] : null;
             $brand_id = !empty($_POST['brand_id']) ? $_POST['brand_id'] : null;
             $supplier_id = !empty($_POST['supplier_id']) ? $_POST['supplier_id'] : null;
-            
+
             $category_name = getName($db, 'categories', $category_id);
             $supplier_name = getName($db, 'suppliers', $supplier_id);
 
             $final_quantity = $product['quantity']; // Default to current
             if ($has_variants) {
                 $final_quantity = $total_qty;
-            } else {
+            }
+            else {
                 $final_quantity = intval($_POST['quantity']); // Simple product quantity
             }
 
@@ -251,9 +266,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                       has_variants = :has_variants,
                       status = :status
                       WHERE id = :id";
-            
+
             $stmt = $db->prepare($query);
-            
+
             $stmt->bindParam(":sku", $sku);
             $stmt->bindParam(":name", $name);
             $stmt->bindParam(":description", $_POST['description']);
@@ -268,21 +283,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bindParam(":supplier_id", $supplier_id);
             $stmt->bindParam(":location", $_POST['location']);
             $stmt->bindParam(":image", $image_path);
-            $stmt->bindParam(":barcode", $sku); 
+            $stmt->bindParam(":barcode", $sku);
             $has_variants_int = $has_variants ? 1 : 0;
             $stmt->bindParam(":has_variants", $has_variants_int);
             $status = $_POST['status'] ?? 'Active';
             $stmt->bindParam(":status", $status);
             $stmt->bindParam(":id", $product['id']);
-            
+
             $stmt->execute();
 
             // Handle Variants
             if ($has_variants) {
                 // Get existing variant IDs to detect deletions
                 $existing_ids = [];
-                foreach ($variants as $v) $existing_ids[] = $v['id'];
-                
+                foreach ($variants as $v)
+                    $existing_ids[] = $v['id'];
+
                 $processed_ids = [];
 
                 $upsert_sql = "INSERT INTO product_variants (id, product_id, sku, size, color, quantity, price, cost_price, location, min_stock) 
@@ -301,7 +317,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 foreach ($submitted_variants as $sv) {
                     // Handle the case where ID might be empty (new variants)
                     $variant_id = !empty($sv['id']) ? $sv['id'] : null;
-                    
+
                     $upsert->execute([
                         ':id' => $variant_id,
                         ':pid' => $product['id'],
@@ -314,7 +330,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':location' => $sv['location'],
                         ':min_stock' => $min_stock
                     ]);
-                    
+
                     // Audit Log for stock quantity change in variant
                     if ($variant_id) {
                         // Find original variant for comparison
@@ -324,17 +340,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 break;
                             }
                         }
-                    } else {
+                    }
+                    else {
                         // New variant - log initial stock as adjustment or in
                         $new_v_id = $db->lastInsertId();
                         if ($sv['qty'] != 0) {
                             logStockChange($db, $product['id'], $new_v_id, Auth::getCurrentUser()['id'], 'in', 0, $sv['qty'], 'Initial stock via product edit');
                         }
                     }
-                    
+
                     if ($variant_id) {
                         $processed_ids[] = $variant_id;
-                    } else {
+                    }
+                    else {
                         $new_id = $db->lastInsertId();
                         $processed_ids[] = $new_id;
                     }
@@ -343,18 +361,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Delete removed variants
                 $to_delete = array_diff($existing_ids, $processed_ids);
                 if (!empty($to_delete)) {
-                    $ids_str = implode(',', $to_delete);
-                    // Safe because integers
+                    // Explicitly cast to integers to prevent SQL injection
+                    $to_delete_clean = array_map('intval', $to_delete);
+                    $ids_str = implode(',', $to_delete_clean);
                     $db->exec("DELETE FROM product_variants WHERE id IN ($ids_str)");
                 }
 
-            } else {
+            }
+            else {
                 // If switched to simple, delete all variants
                 if ($product['has_variants']) {
                     $db->prepare("DELETE FROM product_variants WHERE product_id = ?")->execute([$product['id']]);
-                    // Logic to handle audit log for the main product's new simple quantity
+                // Logic to handle audit log for the main product's new simple quantity
                 }
-                
+
                 if ($product['quantity'] != $final_quantity) {
                     logStockChange($db, $product['id'], null, Auth::getCurrentUser()['id'], 'adjustment', $product['quantity'], $final_quantity, 'Updated via product edit page');
                 }
@@ -364,16 +384,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $message = "Product updated successfully!";
             $message_type = "success";
-            
+
             // Redirect to view products with the product ID as active
             header("Location: view_products.php?active_id=" . $product['id']);
             exit();
-        } catch (PDOException $exception) {
-            if ($db->inTransaction()) $db->rollBack();
+        }
+        catch (PDOException $exception) {
+            if ($db->inTransaction())
+                $db->rollBack();
             $message = "Error: " . $exception->getMessage();
             $message_type = "danger";
         }
-    } else {
+    }
+    else {
         $message = "Please correct the following errors:";
         $message_type = "danger";
     }
@@ -412,12 +435,15 @@ require_once "../includes/header.php";
         <ul class="mb-0 mt-2">
             <?php foreach ($errors as $error): ?>
                 <li><?php echo htmlspecialchars($error); ?></li>
-            <?php endforeach; ?>
+            <?php
+        endforeach; ?>
         </ul>
-    <?php endif; ?>
+    <?php
+    endif; ?>
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
-<?php endif; ?>
+<?php
+endif; ?>
 
 <div class="row gx-3">
     <!-- Main Content: Identity & Variants -->
@@ -449,13 +475,14 @@ require_once "../includes/header.php";
                             <div class="input-group input-group-sm">
                                 <select class="form-select form-select-sm" id="category_id" name="category_id">
                                     <option value="">Select Category</option>
-                                    <?php 
-                                    $categories->execute();
-                                    while ($row = $categories->fetch(PDO::FETCH_ASSOC)): 
-                                        $selected = ($product['category_id'] == $row['id']) ? 'selected' : '';
-                                    ?>
+                                    <?php
+$categories->execute();
+while ($row = $categories->fetch(PDO::FETCH_ASSOC)):
+    $selected = ($product['category_id'] == $row['id']) ? 'selected' : '';
+?>
                                         <option value="<?php echo $row['id']; ?>" <?php echo $selected; ?>><?php echo htmlspecialchars($row['name']); ?></option>
-                                    <?php endwhile; ?>
+                                    <?php
+endwhile; ?>
                                 </select>
                                 <a href="../categories/add.php" class="btn btn-outline-secondary"><i class="fas fa-plus"></i></a>
                             </div>
@@ -465,13 +492,14 @@ require_once "../includes/header.php";
                             <div class="input-group input-group-sm">
                                 <select class="form-select form-select-sm" id="brand_id" name="brand_id">
                                     <option value="">Select Brand</option>
-                                    <?php 
-                                    $brands->execute();
-                                    while ($row = $brands->fetch(PDO::FETCH_ASSOC)): 
-                                        $selected = ($product['brand_id'] == $row['id']) ? 'selected' : '';
-                                    ?>
+                                    <?php
+$brands->execute();
+while ($row = $brands->fetch(PDO::FETCH_ASSOC)):
+    $selected = ($product['brand_id'] == $row['id']) ? 'selected' : '';
+?>
                                         <option value="<?php echo $row['id']; ?>" <?php echo $selected; ?>><?php echo htmlspecialchars($row['name']); ?></option>
-                                    <?php endwhile; ?>
+                                    <?php
+endwhile; ?>
                                 </select>
                                 <a href="../brands/add.php" class="btn btn-outline-secondary"><i class="fas fa-plus"></i></a>
                             </div>
@@ -484,9 +512,9 @@ require_once "../includes/header.php";
                     <div class="mt-3">
                         <label for="status" class="form-label fw-bold small text-muted text-uppercase">Status</label>
                         <select class="form-select form-select-sm" id="status" name="status">
-                            <option value="Active" <?php echo ($product['status'] == 'Active') ? 'selected' : ''; ?>>Active</option>
-                            <option value="Inactive" <?php echo ($product['status'] == 'Inactive') ? 'selected' : ''; ?>>Inactive</option>
-                            <option value="Draft" <?php echo ($product['status'] == 'Draft') ? 'selected' : ''; ?>>Draft</option>
+                            <option value="Active" <?php echo($product['status'] == 'Active') ? 'selected' : ''; ?>>Active</option>
+                            <option value="Inactive" <?php echo($product['status'] == 'Inactive') ? 'selected' : ''; ?>>Inactive</option>
+                            <option value="Draft" <?php echo($product['status'] == 'Draft') ? 'selected' : ''; ?>>Draft</option>
                         </select>
                     </div>
                 </div>
@@ -531,8 +559,10 @@ require_once "../includes/header.php";
                                         <td><input type="text" class="form-control form-control-sm border-0 bg-light" name="variant_location[]" value="<?php echo htmlspecialchars($variant['location'] ?? ''); ?>" placeholder="Bin"></td>
                                         <td class="text-center"><button type="button" class="btn btn-link text-danger btn-sm remove-variant"><i class="fas fa-trash"></i></button></td>
                                     </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
+                                    <?php
+    endforeach; ?>
+                                <?php
+endif; ?>
                             </tbody>
                         </table>
                     </div>
@@ -590,13 +620,14 @@ require_once "../includes/header.php";
                     <div class="input-group input-group-sm">
                         <select class="form-select" name="supplier_id" form="editProductForm">
                             <option value="">Select Supplier</option>
-                            <?php 
-                            $suppliers->execute();
-                            while ($row = $suppliers->fetch(PDO::FETCH_ASSOC)): 
-                                $selected = ($product['supplier_id'] == $row['id']) ? 'selected' : '';
-                            ?>
+                            <?php
+$suppliers->execute();
+while ($row = $suppliers->fetch(PDO::FETCH_ASSOC)):
+    $selected = ($product['supplier_id'] == $row['id']) ? 'selected' : '';
+?>
                                 <option value="<?php echo $row['id']; ?>" <?php echo $selected; ?>><?php echo htmlspecialchars($row['name']); ?></option>
-                            <?php endwhile; ?>
+                            <?php
+endwhile; ?>
                         </select>
                         <a href="../suppliers/add_supplier.php" class="btn btn-outline-secondary"><i class="fas fa-plus"></i></a>
                     </div>
@@ -611,13 +642,15 @@ require_once "../includes/header.php";
             </div>
             <div class="card-body text-center">
                 <?php if (!empty($product['image'])): ?>
-                    <?php 
-                        $img_src = (strpos($product['image'], 'http') === 0) ? $product['image'] : '../' . $product['image'];
-                    ?>
+                    <?php
+    $img_src = (strpos($product['image'], 'http') === 0) ? $product['image'] : '../' . $product['image'];
+?>
                     <img src="<?php echo htmlspecialchars($img_src); ?>" class="img-fluid rounded mb-3 border shadow-sm" style="max-height: 180px;" onerror="this.src='../assets/img/noproduct.png'">
-                <?php else: ?>
+                <?php
+else: ?>
                     <img src="../assets/img/noproduct.png" class="img-fluid rounded mb-3 border shadow-sm" style="max-height: 180px;">
-                <?php endif; ?>
+                <?php
+endif; ?>
                 <input type="file" class="form-control form-control-sm" name="product_image" form="editProductForm" accept="image/*">
             </div>
         </div>

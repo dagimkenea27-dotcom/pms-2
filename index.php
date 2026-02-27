@@ -349,9 +349,10 @@ require_once "includes/header.php";
                         <div class="h4 font-weight-bold text-gray-800 mb-0"><?php echo $low_stock['count']; ?></div>
                     </div>
                     <div class="text-right">
-                        <?php if($low_stock['count'] > 0): ?>
+                        <?php if ($low_stock['count'] > 0): ?>
                             <span class="trend-indicator trend-down">Action Required</span>
-                        <?php endif; ?>
+                        <?php
+endif; ?>
                     </div>
                 </div>
             </div>
@@ -439,17 +440,20 @@ require_once "includes/header.php";
                             <tbody>
                                 <?php foreach ($top_products as $prod): ?>
                                 <tr>
-                                    <td><?php echo htmlspecialchars($prod['name']); ?></td>
+                                    <td><?php echo e($prod['name']); ?></td>
                                     <td class="text-center"><?php echo number_format($prod['total_sold']); ?></td>
                                     <td class="text-end font-weight-bold text-primary">$<?php echo number_format($prod['total_revenue'], 2); ?></td>
                                 </tr>
-                                <?php endforeach; ?>
+                                <?php
+    endforeach; ?>
                             </tbody>
                         </table>
                     </div>
-                <?php else: ?>
+                <?php
+else: ?>
                     <p class="text-muted text-center py-3">No sales recorded yet.</p>
-                <?php endif; ?>
+                <?php
+endif; ?>
             </div>
         </div>
 
@@ -474,21 +478,24 @@ require_once "includes/header.php";
                                 <?php foreach ($recent_movements as $movement): ?>
                                 <tr>
                                     <td><?php echo date('M j, Y', strtotime($movement['created_at'])); ?></td>
-                                    <td><?php echo htmlspecialchars($movement['product_name'] ?? 'N/A'); ?></td>
+                                    <td><?php echo e($movement['product_name'] ?? 'N/A'); ?></td>
                                     <td>
                                         <span class="badge bg-<?php echo $movement['movement_type'] == 'IN' ? 'success' : 'danger'; ?>">
-                                            <?php echo $movement['movement_type']; ?>
+                                            <?php echo e($movement['movement_type']); ?>
                                         </span>
                                     </td>
-                                    <td><?php echo $movement['quantity']; ?></td>
+                                    <td><?php echo number_format($movement['quantity']); ?></td>
                                 </tr>
-                                <?php endforeach; ?>
+                                <?php
+    endforeach; ?>
                             </tbody>
                         </table>
                     </div>
-                <?php else: ?>
+                <?php
+else: ?>
                     <p class="text-muted text-center">No recent stock movements.</p>
-                <?php endif; ?>
+                <?php
+endif; ?>
             </div>
         </div>
     </div>
@@ -547,16 +554,19 @@ require_once "includes/header.php";
                             <tbody>
                                 <?php foreach ($top_suppliers as $sup): ?>
                                 <tr>
-                                    <td><?php echo htmlspecialchars($sup['name']); ?></td>
+                                    <td><?php echo e($sup['name']); ?></td>
                                     <td class="text-end font-weight-bold text-success">+<?php echo number_format($sup['total_supplied']); ?></td>
                                 </tr>
-                                <?php endforeach; ?>
+                                <?php
+    endforeach; ?>
                             </tbody>
                         </table>
                     </div>
-                <?php else: ?>
+                <?php
+else: ?>
                     <p class="text-muted text-center py-3">No stock received yet.</p>
-                <?php endif; ?>
+                <?php
+endif; ?>
             </div>
         </div>
     </div>

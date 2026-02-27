@@ -21,17 +21,25 @@ if (!isset($_FILES['image'])) {
 $file = $_FILES['image'];
 $tempDir = '../uploads/temp_searches/';
 if (!is_dir($tempDir)) {
-    mkdir($tempDir, 0777, true);
+    mkdir($tempDir, 0755, true);
+}
+
+// Basic validation
+$allowed_mimes = ['image/jpeg', 'image/png', 'image/gif'];
+$image_info = @getimagesize($file['tmp_name']);
+if (!$image_info || !in_array($image_info['mime'], $allowed_mimes)) {
+    echo json_encode(['success' => false, 'message' => 'Invalid image file or type']);
+    exit;
 }
 
 $fileName = time() . '_' . basename($file['name']);
 $targetPath = $tempDir . $fileName;
 
 if (move_uploaded_file($file['tmp_name'], $targetPath)) {
-    
+
     // Calculate hash for the search image
     $searchHash = ImageSearch::getDHash($targetPath);
-    
+
     if (!$searchHash) {
         @unlink($targetPath);
         echo json_encode(['success' => false, 'message' => 'Failed to process search image']);
@@ -52,12 +60,12 @@ if (move_uploaded_file($file['tmp_name'], $targetPath)) {
 
     foreach ($products as $product) {
         $productImagePath = $basePath . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $product['image']);
-        
+
         if (file_exists($productImagePath)) {
             $productHash = ImageSearch::getDHash($productImagePath);
             if ($productHash) {
                 $distance = ImageSearch::hammingDistance($searchHash, $productHash);
-                
+
                 // Typical threshold for dHash is around 10-12 for "similar"
                 // For exact or near-exact, it's < 5
                 if ($distance <= 15) { // Relaxed threshold for better hit rate
@@ -70,7 +78,7 @@ if (move_uploaded_file($file['tmp_name'], $targetPath)) {
     }
 
     // Sort by distance (lowest first)
-    usort($matches, function($a, $b) {
+    usort($matches, function ($a, $b) {
         return $a['distance'] <=> $b['distance'];
     });
 
@@ -82,6 +90,7 @@ if (move_uploaded_file($file['tmp_name'], $targetPath)) {
         'matches' => array_slice($matches, 0, 10) // Return top 10 matches
     ]);
 
-} else {
+}
+else {
     echo json_encode(['success' => false, 'message' => 'Failed to save uploaded image']);
 }

@@ -9,6 +9,14 @@ $db = $database->getConnection();
 
 // Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Validate CSRF token for all POST requests
+    $token = $_POST['csrf_token'] ?? '';
+    if (!Auth::validateCSRF($token)) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => 'Security error: Invalid CSRF token']);
+        exit;
+    }
+
     $action = $_POST['action'] ?? '';
 
     if ($action === 'create') {
@@ -855,6 +863,7 @@ require_once "../includes/header.php";
             e.preventDefault();
             const fd = new FormData(newCallForm);
             fd.append('action', 'create');
+            fd.append('csrf_token', '<?php echo Auth::generateCSRF(); ?>');
             
             const btn = document.getElementById('submit-btn');
             btn.disabled = true;
@@ -876,6 +885,7 @@ require_once "../includes/header.php";
             e.preventDefault();
             const fd = new FormData(editForm);
             fd.append('action', 'update');
+            fd.append('csrf_token', '<?php echo Auth::generateCSRF(); ?>');
             const res = await apiRequest(fd);
             if (res.success) {
                 showToast('Record updated!');
@@ -889,6 +899,7 @@ require_once "../includes/header.php";
             const fd = new FormData();
             fd.append('action', 'delete');
             fd.append('id', deleteRecordId);
+            fd.append('csrf_token', '<?php echo Auth::generateCSRF(); ?>');
             const res = await apiRequest(fd);
             if (res.success) {
                 showToast('Record deleted');

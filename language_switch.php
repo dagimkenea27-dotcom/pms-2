@@ -1,8 +1,6 @@
 <?php
-require_once "config/auth.php"; // This likely includes session start logic, but let's be sure
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once "config/auth.php";
+Auth::startSession();
 
 $lang = $_GET['lang'] ?? 'en';
 $allowed_langs = ['en', 'ja'];

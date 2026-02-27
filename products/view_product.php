@@ -53,40 +53,42 @@ require_once "../includes/header.php";
                     <div class="col-md-6">
                         <dl class="row">
                             <dt class="col-sm-4">SKU:</dt>
-                            <dd class="col-sm-8"><?php echo htmlspecialchars($product['sku']); ?></dd>
+                            <dd class="col-sm-8"><?php echo e($product['sku']); ?></dd>
                             
                             <dt class="col-sm-4">Name:</dt>
-                            <dd class="col-sm-8"><?php echo htmlspecialchars($product['name']); ?></dd>
+                            <dd class="col-sm-8"><?php echo e($product['name']); ?></dd>
                             
                             <dt class="col-sm-4">Category:</dt>
-                            <dd class="col-sm-8"><?php echo htmlspecialchars($product['category']); ?></dd>
+                            <dd class="col-sm-8"><?php echo e($product['category']); ?></dd>
                             
                             <dt class="col-sm-4">Brand:</dt>
                             <dd class="col-sm-8">
-                                <?php 
-                                if ($product['brand_id']) {
-                                    $brand_stmt = $db->prepare("SELECT name FROM brands WHERE id = ?");
-                                    $brand_stmt->execute([$product['brand_id']]);
-                                    $brand = $brand_stmt->fetch(PDO::FETCH_ASSOC);
-                                    echo $brand ? htmlspecialchars($brand['name']) : 'N/A';
-                                } else {
-                                    echo 'N/A';
-                                }
-                                ?>
+                                <?php
+if ($product['brand_id']) {
+    $brand_stmt = $db->prepare("SELECT name FROM brands WHERE id = ?");
+    $brand_stmt->execute([$product['brand_id']]);
+    $brand = $brand_stmt->fetch(PDO::FETCH_ASSOC);
+    echo $brand ? e($brand['name']) : 'N/A';
+}
+else {
+    echo 'N/A';
+}
+?>
                             </dd>
                             
                             <dt class="col-sm-4">Supplier:</dt>
                             <dd class="col-sm-8">
-                                <?php 
-                                if ($product['supplier_id']) {
-                                    $supplier_stmt = $db->prepare("SELECT name FROM suppliers WHERE id = ?");
-                                    $supplier_stmt->execute([$product['supplier_id']]);
-                                    $supplier = $supplier_stmt->fetch(PDO::FETCH_ASSOC);
-                                    echo $supplier ? htmlspecialchars($supplier['name']) : 'N/A';
-                                } else {
-                                    echo 'N/A';
-                                }
-                                ?>
+                                <?php
+if ($product['supplier_id']) {
+    $supplier_stmt = $db->prepare("SELECT name FROM suppliers WHERE id = ?");
+    $supplier_stmt->execute([$product['supplier_id']]);
+    $supplier = $supplier_stmt->fetch(PDO::FETCH_ASSOC);
+    echo $supplier ? e($supplier['name']) : 'N/A';
+}
+else {
+    echo 'N/A';
+}
+?>
                             </dd>
                         </dl>
                     </div>
@@ -107,15 +109,15 @@ require_once "../includes/header.php";
                             
                             <dt class="col-sm-4">Status:</dt>
                             <dd class="col-sm-8">
-                                <?php 
-                                $status = $product['status'] ?? 'Active';
-                                $badge_class = ($status == 'Active') ? 'bg-success' : 'bg-secondary';
-                                echo "<span class='badge $badge_class'>".htmlspecialchars($status)."</span>";
-                                ?>
+                                <?php
+$status = $product['status'] ?? 'Active';
+$badge_class = ($status == 'Active') ? 'bg-success' : 'bg-secondary';
+echo "<span class='badge $badge_class'>" . e($status) . "</span>";
+?>
                             </dd>
 
                             <dt class="col-sm-4">Location:</dt>
-                            <dd class="col-sm-8"><?php echo htmlspecialchars($product['location']); ?></dd>
+                            <dd class="col-sm-8"><?php echo e($product['location']); ?></dd>
                         </dl>
                     </div>
                 </div>
@@ -127,7 +129,8 @@ require_once "../includes/header.php";
                         <p><?php echo nl2br(htmlspecialchars($product['description'])); ?></p>
                     </div>
                 </div>
-                <?php endif; ?>
+                <?php
+endif; ?>
                 
                 <?php if ($product['has_variants'] && !empty($variants)): ?>
                 <div class="row mt-3">
@@ -147,19 +150,21 @@ require_once "../includes/header.php";
                                 <tbody>
                                     <?php foreach ($variants as $variant): ?>
                                     <tr>
-                                        <td><?php echo htmlspecialchars($variant['sku']); ?></td>
-                                        <td><?php echo htmlspecialchars($variant['size']); ?></td>
-                                        <td><?php echo htmlspecialchars($variant['color']); ?></td>
-                                        <td><?php echo $variant['quantity']; ?></td>
+                                        <td><?php echo e($variant['sku']); ?></td>
+                                        <td><?php echo e($variant['size']); ?></td>
+                                        <td><?php echo e($variant['color']); ?></td>
+                                        <td><?php echo number_format($variant['quantity']); ?></td>
                                         <td><?php echo $variant['price'] ? '$' . number_format($variant['price'], 2) : 'Same as main'; ?></td>
                                     </tr>
-                                    <?php endforeach; ?>
+                                    <?php
+    endforeach; ?>
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-                <?php endif; ?>
+                <?php
+endif; ?>
             </div>
         </div>
     </div>
@@ -171,13 +176,15 @@ require_once "../includes/header.php";
             </div>
             <div class="card-body text-center">
                 <?php if (!empty($product['image'])): ?>
-                    <?php 
-                        $img_src = (strpos($product['image'], 'http') === 0) ? $product['image'] : '../' . $product['image'];
-                    ?>
+                    <?php
+    $img_src = (strpos($product['image'], 'http') === 0) ? $product['image'] : '../' . $product['image'];
+?>
                     <img src="<?php echo htmlspecialchars($img_src); ?>" alt="Product Image" class="img-fluid rounded" onerror="this.src='../assets/img/noproduct.png'">
-                <?php else: ?>
+                <?php
+else: ?>
                     <img src="../assets/img/noproduct.png" alt="No Image" class="img-fluid rounded">
-                <?php endif; ?>
+                <?php
+endif; ?>
             </div>
         </div>
         

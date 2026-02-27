@@ -22,28 +22,36 @@ if (!isset($_FILES['screenshot'])) {
 $file = $_FILES['screenshot'];
 $uploadDir = '../uploads/shein_searches/';
 if (!is_dir($uploadDir)) {
-    mkdir($uploadDir, 0777, true);
+    mkdir($uploadDir, 0755, true);
+}
+
+// Basic validation
+$allowed_mimes = ['image/jpeg', 'image/png', 'image/gif'];
+$image_info = @getimagesize($file['tmp_name']);
+if (!$image_info || !in_array($image_info['mime'], $allowed_mimes)) {
+    echo json_encode(['success' => false, 'message' => 'Invalid image file or type']);
+    exit;
 }
 
 $fileName = time() . '_' . basename($file['name']);
 $targetPath = $uploadDir . $fileName;
 
 if (move_uploaded_file($file['tmp_name'], $targetPath)) {
-    
+
     // --- API INTEGRATION POINT ---
     // Here you would call the SHEIN Visual Search API.
     // Example using Apify SHEIN Product Image Search:
     /*
-    $apiKey = 'YOUR_APIFY_KEY';
-    $ch = curl_init('https://api.apify.com/v2/acts/apify~shein-product-image-search/run-sync-get-dataset-items?token=' . $apiKey);
-    // ... post the image ...
-    $response = curl_exec($ch);
-    $data = json_decode($response, true);
-    */
-    
+     $apiKey = 'YOUR_APIFY_KEY';
+     $ch = curl_init('https://api.apify.com/v2/acts/apify~shein-product-image-search/run-sync-get-dataset-items?token=' . $apiKey);
+     // ... post the image ...
+     $response = curl_exec($ch);
+     $data = json_decode($response, true);
+     */
+
     // FOR DEMO: Let's mock a successful response after a brief sleep
     usleep(1500000); // 1.5s delay to feel real
-    
+
     // Determine random mock data
     $isJeans = rand(0, 1);
     $mockData = [
@@ -60,6 +68,7 @@ if (move_uploaded_file($file['tmp_name'], $targetPath)) {
     ];
 
     echo json_encode($mockData);
-} else {
+}
+else {
     echo json_encode(['success' => false, 'message' => 'Failed to save image']);
 }
