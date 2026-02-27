@@ -10,7 +10,7 @@ $db = $database->getConnection();
 // Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    
+
     if ($action === 'create') {
         $name = $_POST['name'] ?? '';
         $phone = $_POST['phone'] ?? '';
@@ -30,7 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $success = $stmt->execute([$name, $phone, $product, $size, $location, $call_type, $purchased, $telegram, $reason, $notes, $date]);
             echo json_encode(['success' => $success]);
-        } catch (Exception $e) {
+        }
+        catch (Exception $e) {
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
         exit;
@@ -55,7 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $success = $stmt->execute([$name, $phone, $product, $size, $location, $call_type, $purchased, $telegram, $reason, $notes, $date, $id]);
             echo json_encode(['success' => $success]);
-        } catch (Exception $e) {
+        }
+        catch (Exception $e) {
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
         exit;
@@ -88,8 +90,9 @@ try {
         date        DATE         NOT NULL,
         created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-} catch (Exception $e) {
-    // Log silently — table likely already exists
+}
+catch (Exception $e) {
+// Log silently — table likely already exists
 }
 
 // Fetch records for the initial page load
@@ -99,14 +102,15 @@ try {
     $stmt = $db->prepare($query);
     $stmt->execute();
     $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
+}
+catch (Exception $e) {
     $records = []; // Graceful fallback — page still renders
 }
 
 // Process records for JS
 foreach ($records as &$r) {
     $r['purchased'] = (bool)$r['purchased'];
-    $r['telegram']  = (bool)$r['telegram'];
+    $r['telegram'] = (bool)$r['telegram'];
 }
 
 require_once "../includes/header.php";
@@ -326,9 +330,28 @@ require_once "../includes/header.php";
      <!-- History View -->
      <div id="view-history" class="hidden">
       <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-       <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+       <div class="p-6 border-b border-slate-200 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h2 class="text-xl font-bold text-slate-800 m-0">Call History</h2>
-        <div class="flex gap-2"><input type="text" id="search-input" placeholder="Search..." class="px-4 py-2 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"></div>
+        <div class="flex flex-wrap gap-2 items-center">
+         <select id="filter-date" onchange="renderHistoryTable()" class="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+          <option value="all">All Time</option>
+          <option value="today">Today</option>
+          <option value="7days">Last 7 Days</option>
+          <option value="30days">Last 30 Days</option>
+         </select>
+         <select id="filter-status" onchange="renderHistoryTable()" class="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+          <option value="all">All Statuses</option>
+          <option value="success">Success</option>
+          <option value="nosale">No Sale</option>
+         </select>
+         <select id="filter-type" onchange="renderHistoryTable()" class="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+          <option value="all">All Types</option>
+          <option value="normal">Normal Call</option>
+          <option value="ring_once">Ring Once</option>
+          <option value="info_request">Info Request</option>
+         </select>
+         <input type="text" id="search-input" oninput="renderHistoryTable()" placeholder="Search..." class="px-4 py-2 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+        </div>
        </div>
        <div class="overflow-x-auto">
         <table class="w-full text-left">
@@ -651,12 +674,45 @@ require_once "../includes/header.php";
     function renderHistoryTable() {
         const tbody = document.getElementById('history-table');
         const search = document.getElementById('search-input').value.toLowerCase();
+        const dateFilter = document.getElementById('filter-date').value;
+        const statusFilter = document.getElementById('filter-status').value;
+        const typeFilter = document.getElementById('filter-type').value;
         
-        const filtered = records.filter(r => 
-            r.name.toLowerCase().includes(search) || 
-            r.product.toLowerCase().includes(search) || 
-            (r.phone && r.phone.includes(search))
-        );
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const filtered = records.filter(r => {
+            // Text Search Filter
+            const matchesSearch = r.name.toLowerCase().includes(search) || 
+                                  r.product.toLowerCase().includes(search) || 
+                                  (r.phone && r.phone.includes(search));
+            if (!matchesSearch) return false;
+
+            // Date Filter
+            if (dateFilter !== 'all') {
+                const rDate = new Date(r.date);
+                if (dateFilter === 'today') {
+                    if (r.date !== today.toISOString().split('T')[0]) return false;
+                } else if (dateFilter === '7days') {
+                    const diffTime = Math.abs(today - rDate);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                    if (diffDays > 7) return false;
+                } else if (dateFilter === '30days') {
+                    const diffTime = Math.abs(today - rDate);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                    if (diffDays > 30) return false;
+                }
+            }
+
+            // Status Filter
+            if (statusFilter === 'success' && !r.purchased) return false;
+            if (statusFilter === 'nosale' && r.purchased) return false;
+
+            // Type Filter
+            if (typeFilter !== 'all' && r.call_type !== typeFilter) return false;
+
+            return true;
+        });
 
         if (filtered.length === 0) {
             tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-12 text-center text-slate-500 font-sans">No matching records found</td></tr>';
@@ -781,6 +837,18 @@ require_once "../includes/header.php";
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
         
+        // Initial Renders
+        updateCharts();
+        renderHistoryTable();
+        renderRecentActivity();
+        
+        // Polling (optional) to keep recent activity fresh
+        setInterval(() => {
+            if (activeTab === 'dashboard') {
+                document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+            }
+        }, 60000);
+
         // Form Logic
         const newCallForm = document.getElementById('call-form');
         newCallForm.addEventListener('submit', async (e) => {

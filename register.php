@@ -7,10 +7,11 @@ require_once "includes/functions.php";
 
 Auth::startSession();
 
-// If already logged in, redirect to dashboard
-if (Auth::isLoggedIn()) {
-    header("Location: index.php");
-    exit();
+// Require login and admin role
+Auth::requireLogin();
+$current_user = Auth::getCurrentUser();
+if ($current_user['role'] !== 'admin') {
+    die("Access denied. Only administrators can access the registration page. Please use the Add User section in the admin dashboard.");
 }
 
 // Initialize database and models
@@ -27,7 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // CSRF Validation
     if (!isset($_POST['csrf_token']) || !Auth::validateCSRF($_POST['csrf_token'])) {
         $error = __('security_check_failed');
-    } else {
+    }
+    else {
         $user->username = $_POST['username'] ?? '';
         $user->password = $_POST['password'] ?? '';
         $user->email = $_POST['email'] ?? '';
@@ -35,30 +37,36 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $user->first_name = $_POST['first_name'] ?? '';
         $user->last_name = $_POST['last_name'] ?? '';
         $user->role = 'staff'; // Default role
-        
+
         // Validation checks
         if (empty($user->username) || empty($user->password) || empty($user->email)) {
             $error = __('please_fill_required');
-        } elseif ($user->password !== $confirm_password) {
+        }
+        elseif ($user->password !== $confirm_password) {
             $error = __('passwords_do_not_match');
-        } elseif ($user->usernameExists()) {
+        }
+        elseif ($user->usernameExists()) {
             $error = __('username_exists');
-        } elseif ($user->emailExists()) {
+        }
+        elseif ($user->emailExists()) {
             $error = __('email_exists');
-        } elseif (strlen($user->password) < 8 || 
-                 !preg_match('/[A-Z]/', $user->password) || 
-                 !preg_match('/[a-z]/', $user->password) || 
-                 !preg_match('/[0-9]/', $user->password) || 
-                 !preg_match('/[!@#$%^&*(),.?":{}|<>]/', $user->password)) {
+        }
+        elseif (strlen($user->password) < 8 ||
+        !preg_match('/[A-Z]/', $user->password) ||
+        !preg_match('/[a-z]/', $user->password) ||
+        !preg_match('/[0-9]/', $user->password) ||
+        !preg_match('/[!@#$%^&*(),.?":{}|<>]/', $user->password)) {
             $error = __('password_requirements_error');
-        } else {
+        }
+        else {
             if ($user->create()) {
                 // Notify admins
                 $notifMsg = "New user registration: " . $user->username . " (" . $user->email . ")";
                 $notification->notifyAdmins($notifMsg, "users/view_users.php", "info");
-                
+
                 $message = __('registration_successful');
-            } else {
+            }
+            else {
                 $error = __('unable_to_register');
             }
         }
@@ -628,7 +636,8 @@ $csrf_token = Auth::generateCSRF();
                     <div><?php echo htmlspecialchars($message); ?></div>
                     <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
                 </div>
-                <?php endif; ?>
+                <?php
+endif; ?>
                 
                 <?php if ($error): ?>
                 <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
@@ -636,7 +645,8 @@ $csrf_token = Auth::generateCSRF();
                     <div><?php echo htmlspecialchars($error); ?></div>
                     <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
                 </div>
-                <?php endif; ?>
+                <?php
+endif; ?>
 
                 <form method="POST" action="" id="registerForm" novalidate>
                     <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">

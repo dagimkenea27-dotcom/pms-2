@@ -3,10 +3,12 @@
  * Finance Model
  * Handles financial calculations, profit/loss, and expense tracking
  */
-class Finance {
+class Finance
+{
     private $db;
 
-    public function __construct($db) {
+    public function __construct($db)
+    {
         $this->db = $db;
     }
 
@@ -14,7 +16,8 @@ class Finance {
      * Get Gross Profit for a period
      * Gross Profit = Sales Revenue - Cost of Goods Sold (COGS)
      */
-    public function getGrossProfit($startDate, $endDate) {
+    public function getGrossProfit($startDate, $endDate)
+    {
         $query = "
             SELECT 
                 SUM(CASE WHEN sm.movement_type = 'OUT' AND (sm.reason = 'Sale' OR sm.reason IS NULL OR sm.reason = '') 
@@ -29,14 +32,14 @@ class Finance {
             JOIN products p ON sm.product_id = p.id
             LEFT JOIN product_variants pv ON sm.variant_id = pv.id
             WHERE DATE(sm.created_at) BETWEEN ? AND ?";
-        
+
         $stmt = $this->db->prepare($query);
         $stmt->execute([$startDate, $endDate]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        
+
         $netRevenue = ($row['revenue'] ?? 0) - ($row['returns_revenue'] ?? 0);
         $netCogs = ($row['cogs'] ?? 0) - ($row['returns_cogs'] ?? 0);
-        
+
         return [
             'revenue' => $netRevenue,
             'cogs' => $netCogs,
@@ -47,15 +50,16 @@ class Finance {
     /**
      * Get Total Expenses for a period
      */
-    public function getTotalExpenses($startDate, $endDate) {
+    public function getTotalExpenses($startDate, $endDate)
+    {
         // 1. General Business Expenses
-        $query = "SELECT SUM(amount) as total FROM business_expenses WHERE expense_date BETWEEN ? AND ?";
+        $query = "SELECT SUM(amount) as total FROM business_expenses WHERE DATE(expense_date) BETWEEN ? AND ?";
         $stmt = $this->db->prepare($query);
         $stmt->execute([$startDate, $endDate]);
         $generalExpenses = $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
 
         // 2. Route/Logistics Costs
-        $query = "SELECT SUM(amount) as total FROM route_costs WHERE recorded_at BETWEEN ? AND ?";
+        $query = "SELECT SUM(amount) as total FROM route_costs WHERE DATE(recorded_at) BETWEEN ? AND ?";
         $stmt = $this->db->prepare($query);
         $stmt->execute([$startDate, $endDate]);
         $logisticsCosts = $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
@@ -70,10 +74,11 @@ class Finance {
     /**
      * Get Net Profit
      */
-    public function getNetProfit($startDate, $endDate) {
+    public function getNetProfit($startDate, $endDate)
+    {
         $gross = $this->getGrossProfit($startDate, $endDate);
         $expenses = $this->getTotalExpenses($startDate, $endDate);
-        
+
         return [
             'gross_profit' => $gross['gross_profit'],
             'total_expenses' => $expenses['total'],
@@ -86,7 +91,8 @@ class Finance {
     /**
      * Get expense breakdown by category
      */
-    public function getExpenseBreakdown($startDate, $endDate) {
+    public function getExpenseBreakdown($startDate, $endDate)
+    {
         $query = "SELECT c.name, SUM(e.amount) as total, c.icon
                   FROM business_expenses e
                   JOIN expense_categories c ON e.category_id = c.id

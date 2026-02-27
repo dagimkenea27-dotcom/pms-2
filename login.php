@@ -25,18 +25,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // CSRF Validation
     if (!isset($_POST['csrf_token']) || !Auth::validateCSRF($_POST['csrf_token'])) {
         $error = "Security check failed. Please refresh the page and try again.";
-    } else {
+    }
+    else {
         $user->username = $_POST['username'];
         $user->password = $_POST['password'];
-        
+
         // Attempt login using the User model's login method
         if ($user->login()) {
             // Login successful
             Auth::login($user);
-            
+
             header("Location: index.php");
             exit();
-        } else {
+        }
+        else {
             $error = "Invalid username or password.";
         }
     }
@@ -447,7 +449,8 @@ $csrf_token = Auth::generateCSRF();
                         <div><?php echo htmlspecialchars($error); ?></div>
                         <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
                     </div>
-                    <?php endif; ?>
+                    <?php
+endif; ?>
 
                     <form method="POST" action="" id="loginForm">
                         <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
@@ -499,13 +502,7 @@ $csrf_token = Auth::generateCSRF();
                                 </span>
                             </button>
                             
-                            <div class="divider">
-                                <span>or continue with</span>
-                            </div>
                             
-                            <a href="register.php" class="btn btn-outline-primary">
-                                <i class="fas fa-user-plus me-2"></i> <?php echo __('create_new_account'); ?>
-                            </a>
                         </div>
                     </form>
                     
