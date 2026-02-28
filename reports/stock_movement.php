@@ -58,7 +58,7 @@ if (isset($_GET['driver_id']) && !empty($_GET['driver_id'])) {
 $where_sql = count($where_clauses) > 0 ? "WHERE " . implode(" AND ", $where_clauses) : "";
 
 // Count total rows for pagination
-$count_query = "SELECT COUNT(*) as total_rows FROM stock_movements sm " . $where_sql;
+$count_query = "SELECT COUNT(*) as total_rows FROM stock_movements sm LEFT JOIN products p ON sm.product_id = p.id " . $where_sql;
 $stmt = $db->prepare($count_query);
 foreach ($params as $key => $val) {
     $stmt->bindValue($key, $val);
