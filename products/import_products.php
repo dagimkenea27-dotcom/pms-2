@@ -6,8 +6,18 @@ require_once "../config/database.php";
 $database = new Database();
 $db = $database->getConnection();
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['csv_file'])) {
-    $file = $_FILES['csv_file'];
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    // Validate CSRF token
+    $token = $_POST['csrf_token'] ?? '';
+    if (!Auth::validateCSRF($token)) {
+        $_SESSION['message'] = "Security error: Invalid CSRF token.";
+        $_SESSION['message_type'] = "danger";
+        header("Location: view_products.php");
+        exit();
+    }
+
+    if (isset($_FILES['csv_file'])) {
+        $file = $_FILES['csv_file'];
     
     // Validate file type
     $fileType = pathinfo($file['name'], PATHINFO_EXTENSION);
@@ -150,9 +160,5 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['csv_file'])) {
     header("Location: view_products.php");
     exit();
 
-} else {
-    // Direct access not allowed
-    header("Location: view_products.php");
-    exit();
 }
 ?>

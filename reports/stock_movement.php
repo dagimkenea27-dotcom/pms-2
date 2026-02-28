@@ -40,6 +40,21 @@ if (isset($_GET['date_to']) && !empty($_GET['date_to'])) {
     $params[':date_to'] = $_GET['date_to'];
 }
 
+if (isset($_GET['category_id']) && !empty($_GET['category_id'])) {
+    $where_clauses[] = "p.category_id = :category_id";
+    $params[':category_id'] = $_GET['category_id'];
+}
+
+if (isset($_GET['user_id']) && !empty($_GET['user_id'])) {
+    $where_clauses[] = "sm.user_id = :user_id";
+    $params[':user_id'] = $_GET['user_id'];
+}
+
+if (isset($_GET['driver_id']) && !empty($_GET['driver_id'])) {
+    $where_clauses[] = "sm.driver_id = :driver_id";
+    $params[':driver_id'] = $_GET['driver_id'];
+}
+
 $where_sql = count($where_clauses) > 0 ? "WHERE " . implode(" AND ", $where_clauses) : "";
 
 // Count total rows for pagination
@@ -86,6 +101,15 @@ $products_stmt = $db->prepare($products_query);
 $products_stmt->execute();
 $all_products = $products_stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Get categories for filter
+$categories = $db->query("SELECT id, name FROM categories ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+
+// Get users for filter
+$users = $db->query("SELECT id, username, first_name, last_name FROM users ORDER BY username")->fetchAll(PDO::FETCH_ASSOC);
+
+// Get drivers for filter
+$drivers = $db->query("SELECT id, full_name FROM drivers ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+
 require_once "../includes/header.php";
 ?>
 
@@ -107,18 +131,31 @@ require_once "../includes/header.php";
                 <select name="product_id" class="form-select">
                     <option value="">All Products</option>
                     <?php foreach ($all_products as $p): ?>
-                        <option value="<?php echo $p['id']; ?>" <?php echo (isset($_GET['product_id']) && $_GET['product_id'] == $p['id']) ? 'selected' : ''; ?>>
+                        <option value="<?php echo $p['id']; ?>" <?php echo(isset($_GET['product_id']) && $_GET['product_id'] == $p['id']) ? 'selected' : ''; ?>>
                             <?php echo htmlspecialchars($p['sku'] . ' - ' . $p['name']); ?>
                         </option>
-                    <?php endforeach; ?>
+                    <?php
+endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Category</label>
+                <select name="category_id" class="form-select">
+                    <option value="">All Categories</option>
+                    <?php foreach ($categories as $cat): ?>
+                        <option value="<?php echo $cat['id']; ?>" <?php echo(isset($_GET['category_id']) && $_GET['category_id'] == $cat['id']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($cat['name']); ?>
+                        </option>
+                    <?php
+endforeach; ?>
                 </select>
             </div>
             <div class="col-md-2">
                 <label class="form-label">Type</label>
                 <select name="type" class="form-select">
                     <option value="">All Types</option>
-                    <option value="IN" <?php echo (isset($_GET['type']) && $_GET['type'] == 'IN') ? 'selected' : ''; ?>>Stock IN</option>
-                    <option value="OUT" <?php echo (isset($_GET['type']) && $_GET['type'] == 'OUT') ? 'selected' : ''; ?>>Stock OUT</option>
+                    <option value="IN" <?php echo(isset($_GET['type']) && $_GET['type'] == 'IN') ? 'selected' : ''; ?>>Stock IN</option>
+                    <option value="OUT" <?php echo(isset($_GET['type']) && $_GET['type'] == 'OUT') ? 'selected' : ''; ?>>Stock OUT</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -128,6 +165,30 @@ require_once "../includes/header.php";
             <div class="col-md-2">
                 <label class="form-label">To Date</label>
                 <input type="date" name="date_to" class="form-control" value="<?php echo htmlspecialchars($_GET['date_to'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">User</label>
+                <select name="user_id" class="form-select">
+                    <option value="">All Users</option>
+                    <?php foreach ($users as $u): ?>
+                        <option value="<?php echo $u['id']; ?>" <?php echo(isset($_GET['user_id']) && $_GET['user_id'] == $u['id']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($u['first_name'] ? ($u['first_name'] . ' ' . $u['last_name']) : $u['username']); ?>
+                        </option>
+                    <?php
+endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Driver</label>
+                <select name="driver_id" class="form-select">
+                    <option value="">All Drivers</option>
+                    <?php foreach ($drivers as $d): ?>
+                        <option value="<?php echo $d['id']; ?>" <?php echo(isset($_GET['driver_id']) && $_GET['driver_id'] == $d['id']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($d['full_name']); ?>
+                        </option>
+                    <?php
+endforeach; ?>
+                </select>
             </div>
             <div class="col-md-3 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary me-2"><i class="fas fa-filter"></i> Filter</button>
@@ -179,13 +240,14 @@ require_once "../includes/header.php";
                             <td><?php echo htmlspecialchars($row['reference'] ?? '-'); ?></td>
                             <td>
                                 <small>
-                                <?php 
-                                if (!empty($row['first_name'])) {
-                                    echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']);
-                                } else {
-                                    echo htmlspecialchars($row['username'] ?? 'System');
-                                }
-                                ?>
+                                <?php
+        if (!empty($row['first_name'])) {
+            echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']);
+        }
+        else {
+            echo htmlspecialchars($row['username'] ?? 'System');
+        }
+?>
                                 </small>
                             </td>
                             <td>
@@ -194,12 +256,15 @@ require_once "../includes/header.php";
                                 </small>
                             </td>
                         </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
+                        <?php
+    endforeach; ?>
+                    <?php
+else: ?>
                         <tr>
                             <td colspan="9" class="text-center py-4 text-muted">No movements found matching your criteria.</td>
                         </tr>
-                    <?php endif; ?>
+                    <?php
+endif; ?>
                 </tbody>
             </table>
         </div>
@@ -215,13 +280,15 @@ require_once "../includes/header.php";
                 <li class="page-item <?php echo $page == $i ? 'active' : ''; ?>">
                     <a class="page-link" href="?page=<?php echo $i; ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => ''])); ?>"><?php echo $i; ?></a>
                 </li>
-                <?php endfor; ?>
+                <?php
+    endfor; ?>
                 <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
                     <a class="page-link" href="?page=<?php echo $page + 1; ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => ''])); ?>">Next</a>
                 </li>
             </ul>
         </nav>
-        <?php endif; ?>
+        <?php
+endif; ?>
     </div>
 </div>
 

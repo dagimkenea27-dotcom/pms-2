@@ -492,6 +492,7 @@ endif; ?>
                 <div class="tab-content" id="importTabsContent">
                     <div class="tab-pane fade show active" id="standard" role="tabpanel">
                         <form action="import_products.php" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" value="<?php echo Auth::generateCSRF(); ?>">
                             <div class="mb-3">
                                 <label for="csv_file" class="form-label">Select Standard CSV File</label>
                                 <input class="form-control" type="file" id="csv_file" name="csv_file" accept=".csv" required>
@@ -504,6 +505,7 @@ endif; ?>
                     </div>
                     <div class="tab-pane fade" id="external" role="tabpanel">
                         <form id="externalImportForm" action="import_external.php" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" value="<?php echo Auth::generateCSRF(); ?>">
                             <div class="alert alert-info py-2 small">
                                 <i class="fas fa-info-circle me-1"></i> Use this for exports from your shopping platform. Both <b>.csv</b> and <b>.xlsx</b> (Excel) files are supported.
                             </div>

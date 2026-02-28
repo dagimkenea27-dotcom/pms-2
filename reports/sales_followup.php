@@ -685,6 +685,8 @@ require_once "../includes/header.php";
         const dateFilter = document.getElementById('filter-date').value;
         const statusFilter = document.getElementById('filter-status').value;
         const typeFilter = document.getElementById('filter-type').value;
+        const locationFilter = document.getElementById('filter-location').value;
+        const productFilter = document.getElementById('filter-product').value;
         
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -718,6 +720,12 @@ require_once "../includes/header.php";
 
             // Type Filter
             if (typeFilter !== 'all' && r.call_type !== typeFilter) return false;
+
+            // Location Filter
+            if (locationFilter !== 'all' && r.location !== locationFilter) return false;
+
+            // Product Filter
+            if (productFilter !== 'all' && r.product !== productFilter) return false;
 
             return true;
         });
