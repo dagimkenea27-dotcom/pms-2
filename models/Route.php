@@ -2,19 +2,22 @@
 // models/Route.php
 require_once __DIR__ . '/../config/database.php';
 
-class Route {
+class Route
+{
     private $conn;
     private $table = 'routes';
     private $stops_table = 'route_stops';
     private $settings_table = 'route_optimization_settings';
 
-    public function __construct() {
+    public function __construct()
+    {
         $database = new Database();
         $this->conn = $database->getConnection();
     }
 
     // Save a new route
-    public function saveRoute($name, $warehouse_locations, $driver_count, $country_code, $created_by, $stops, $algorithm = 'nearest_neighbor') {
+    public function saveRoute($name, $warehouse_locations, $driver_count, $country_code, $created_by, $stops, $algorithm = 'nearest_neighbor')
+    {
         try {
             $this->conn->beginTransaction();
 
@@ -23,15 +26,15 @@ class Route {
                       VALUES (:name, :warehouse_locations, :driver_count, :country_code, :created_by)";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':name', $name);
-            $stmt->bindParam(':warehouse_locations', json_encode($warehouse_locations));
+            $stmt->bindValue(':warehouse_locations', json_encode($warehouse_locations));
             $stmt->bindParam(':driver_count', $driver_count);
             $stmt->bindParam(':country_code', $country_code);
             $stmt->bindParam(':created_by', $created_by);
-            
+
             if (!$stmt->execute()) {
                 throw new Exception("Failed to save route");
             }
-            
+
             $route_id = $this->conn->lastInsertId();
 
             // Insert stops
@@ -43,12 +46,12 @@ class Route {
                     $stmt = $this->conn->prepare($query);
                     $stmt->bindParam(':route_id', $route_id);
                     $stmt->bindParam(':address', $stop['address']);
-                    $stmt->bindParam(':coordinates', json_encode(['lat' => $stop['lat'], 'lon' => $stop['lon']]));
+                    $stmt->bindValue(':coordinates', json_encode(['lat' => $stop['lat'], 'lon' => $stop['lon']]));
                     $stmt->bindParam(':stop_number', $stop_number);
                     $stmt->bindParam(':driver_id', $driver_id);
                     $distance = isset($stop['distance']) ? $stop['distance'] : 0;
                     $stmt->bindParam(':distance', $distance);
-                    
+
                     if (!$stmt->execute()) {
                         throw new Exception("Failed to save route stops");
                     }
@@ -62,21 +65,23 @@ class Route {
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':route_id', $route_id);
             $stmt->bindParam(':algorithm', $algorithm);
-            
+
             if (!$stmt->execute()) {
                 throw new Exception("Failed to save route settings");
             }
 
             $this->conn->commit();
             return $route_id;
-        } catch (Exception $e) {
+        }
+        catch (Exception $e) {
             $this->conn->rollback();
             throw $e;
         }
     }
 
     // Get all routes for a user
-    public function getUserRoutes($user_id) {
+    public function getUserRoutes($user_id)
+    {
         $query = "SELECT * FROM " . $this->table . " 
                   WHERE created_by = :user_id 
                   ORDER BY created_at DESC";
@@ -87,7 +92,8 @@ class Route {
     }
 
     // Get a specific route with stops
-    public function getRouteWithStops($route_id) {
+    public function getRouteWithStops($route_id)
+    {
         // Get route details
         $query = "SELECT * FROM " . $this->table . " WHERE id = :route_id";
         $stmt = $this->conn->prepare($query);
@@ -128,67 +134,72 @@ class Route {
     }
 
     // Delete a route
-    public function deleteRoute($route_id) {
+    public function deleteRoute($route_id)
+    {
         $query = "DELETE FROM " . $this->table . " WHERE id = :route_id";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':route_id', $route_id);
         return $stmt->execute();
     }
-    
+
     /**
      * Optimize route with advanced algorithms
      */
-    public function optimizeWithAlgorithm($warehouse, $points, $numVehicles, $algorithm = 'nearest_neighbor', $options = []) {
+    public function optimizeWithAlgorithm($warehouse, $points, $numVehicles, $algorithm = 'nearest_neighbor', $options = [])
+    {
         require_once __DIR__ . '/../routes/classes/AdvancedOptimizer.php';
         require_once __DIR__ . '/../routes/classes/TimeWindowOptimizer.php';
         require_once __DIR__ . '/../routes/classes/CapacityPlanner.php';
-        
+
         switch ($algorithm) {
             case 'savings':
                 return AdvancedOptimizer::savingsAlgorithm($warehouse, $points, $numVehicles);
-                
+
             case 'genetic':
                 $generations = $options['generations'] ?? 100;
                 return AdvancedOptimizer::geneticAlgorithm($warehouse, $points, $numVehicles, $generations);
-                
+
             case 'multi_objective':
                 $weights = $options['weights'] ?? null;
                 return AdvancedOptimizer::multiObjective($warehouse, $points, $numVehicles, $weights);
-                
+
             case 'time_window':
                 $optimizer = new TimeWindowOptimizer($warehouse, $points, $numVehicles);
                 return $optimizer->optimize();
-                
+
             default: // nearest_neighbor
                 return AdvancedOptimizer::nearestNeighbor($warehouse, $points, $numVehicles);
         }
     }
-    
+
     /**
      * Validate capacity constraints
      */
-    public function validateCapacity($vehicles, $packages) {
+    public function validateCapacity($vehicles, $packages)
+    {
         require_once __DIR__ . '/../routes/classes/CapacityPlanner.php';
-        
+
         $planner = new CapacityPlanner($vehicles, $packages);
         return $planner->assignPackages();
     }
-    
+
     /**
      * Get route performance metrics
      */
-    public function getPerformanceMetrics($route_id) {
+    public function getPerformanceMetrics($route_id)
+    {
         $query = "SELECT * FROM route_performance WHERE route_id = :route_id";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':route_id', $route_id);
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
-    
+
     /**
      * Save route performance data
      */
-    public function savePerformance($data) {
+    public function savePerformance($data)
+    {
         $query = "INSERT INTO route_performance 
                   (route_id, driver_id, vehicle_id, planned_distance, actual_distance,
                    planned_duration, actual_duration, fuel_consumed, fuel_cost, labor_cost,
@@ -199,9 +210,9 @@ class Route {
                    :planned_duration, :actual_duration, :fuel_consumed, :fuel_cost, :labor_cost,
                    :total_cost, :deliveries_planned, :deliveries_completed, :deliveries_failed,
                    :on_time_percentage, :customer_rating, :carbon_footprint, :completed_at)";
-        
+
         $stmt = $this->conn->prepare($query);
-        
+
         $stmt->bindParam(':route_id', $data['route_id']);
         $stmt->bindParam(':driver_id', $data['driver_id']);
         $stmt->bindParam(':vehicle_id', $data['vehicle_id']);
@@ -220,7 +231,7 @@ class Route {
         $stmt->bindParam(':customer_rating', $data['customer_rating']);
         $stmt->bindParam(':carbon_footprint', $data['carbon_footprint']);
         $stmt->bindParam(':completed_at', $data['completed_at']);
-        
+
         return $stmt->execute();
     }
 }

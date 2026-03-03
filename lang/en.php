@@ -70,11 +70,11 @@ return [
     'email_exists' => 'Email already exists.',
     'password_requirements_error' => 'Password must be at least 8 characters long and include uppercase, lowercase, numbers, and special characters.',
     'unable_to_register' => 'Unable to register. Please try again.',
-     'security_check_failed' => 'Security check failed. Please refresh the page and try again.',
-     'alerts_center' => 'Alerts Center',
-     'show_all_alerts' => 'Show All Alerts',
-     'no_new_alerts' => 'No new alerts',
-     'welcome_back' => 'Welcome Back',
+    'security_check_failed' => 'Security check failed. Please refresh the page and try again.',
+    'alerts_center' => 'Alerts Center',
+    'show_all_alerts' => 'Show All Alerts',
+    'no_new_alerts' => 'No new alerts',
+    'welcome_back' => 'Welcome Back',
     'sign_in_to_continue' => 'Sign in to continue',
     'sign_in' => 'Sign In',
     'create_new_account' => 'Create New Account',
@@ -85,7 +85,7 @@ return [
     'inventory_system' => 'Inventory System',
     'enter_username' => 'Enter your username',
     'enter_password' => 'Enter your password',
-    
+
     // Dashboard
     'total_products' => 'Total Products',
     'low_stock_alerts' => 'Low Stock Alerts',
@@ -142,7 +142,7 @@ return [
     'choose_product' => 'Choose a product',
     'choose_supplier' => 'Choose a supplier',
     'search_products' => 'Search products...',
-    
+
     // Reasons
     'reason_purchase_order' => 'Purchase Order',
     'reason_supplier_delivery' => 'Supplier Delivery',
@@ -150,12 +150,10 @@ return [
     'reason_adjustment' => 'Adjustment',
     'reason_other' => 'Other',
     // Categories
-    'categories' => 'Categories',
     'all_categories' => 'All Categories',
     'add_category' => 'Add Category',
     'category_name' => 'Name',
     'description' => 'Description',
-    'search_categories' => 'Search categories...',
     'no_categories_found' => 'No categories found',
     'no_categories_match' => 'No categories match your search criteria.',
     'start_adding_category' => 'Get started by adding your first category.',
@@ -163,18 +161,14 @@ return [
     'category_delete_confirm' => 'Are you sure you want to delete this category?',
 
     // Products
-    'products' => 'Products',
     'all_products' => 'All Products',
     'add_product' => 'Add Product',
     'import_products' => 'Import Products',
     'sku' => 'SKU',
     'product_name' => 'Product Name',
-    'category' => 'Category',
     'location' => 'Location',
     'price' => 'Price',
-    'stock' => 'Stock',
     'status' => 'Status',
-    'search_products' => 'Search products...',
     'filter_category' => 'Filter by Category',
     'filter_status' => 'Filter by Status',
 

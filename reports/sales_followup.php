@@ -358,6 +358,28 @@ require_once "../includes/header.php";
           <option value="ring_once">Ring Once</option>
           <option value="info_request">Info Request</option>
          </select>
+         <select id="filter-location" onchange="renderHistoryTable()" class="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+          <option value="all">All Locations</option>
+          <?php
+$locations = array_unique(array_column($records, 'location'));
+sort($locations);
+foreach ($locations as $loc) {
+    if (!empty($loc))
+        echo "<option value=\"" . htmlspecialchars($loc) . "\">" . htmlspecialchars($loc) . "</option>";
+}
+?>
+         </select>
+         <select id="filter-product" onchange="renderHistoryTable()" class="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+          <option value="all">All Products</option>
+          <?php
+$prods = array_unique(array_column($records, 'product'));
+sort($prods);
+foreach ($prods as $prod) {
+    if (!empty($prod))
+        echo "<option value=\"" . htmlspecialchars($prod) . "\">" . htmlspecialchars($prod) . "</option>";
+}
+?>
+         </select>
          <input type="text" id="search-input" oninput="renderHistoryTable()" placeholder="Search..." class="px-4 py-2 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
         </div>
        </div>
@@ -682,11 +704,11 @@ require_once "../includes/header.php";
     function renderHistoryTable() {
         const tbody = document.getElementById('history-table');
         const search = document.getElementById('search-input').value.toLowerCase();
-        const dateFilter = document.getElementById('filter-date').value;
-        const statusFilter = document.getElementById('filter-status').value;
-        const typeFilter = document.getElementById('filter-type').value;
-        const locationFilter = document.getElementById('filter-location').value;
-        const productFilter = document.getElementById('filter-product').value;
+        const dateFilter = document.getElementById('filter-date')?.value || 'all';
+        const statusFilter = document.getElementById('filter-status')?.value || 'all';
+        const typeFilter = document.getElementById('filter-type')?.value || 'all';
+        const locationFilter = document.getElementById('filter-location')?.value || 'all';
+        const productFilter = document.getElementById('filter-product')?.value || 'all';
         
         const today = new Date();
         today.setHours(0, 0, 0, 0);

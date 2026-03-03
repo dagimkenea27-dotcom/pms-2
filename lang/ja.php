@@ -151,12 +151,10 @@ return [
     'reason_adjustment' => '在庫調整',
     'reason_other' => 'その他',
     // Categories
-    'categories' => 'カテゴリ',
     'all_categories' => '全カテゴリ',
     'add_category' => 'カテゴリ追加',
     'category_name' => '名前',
     'description' => '説明',
-    'search_categories' => 'カテゴリを検索...',
     'no_categories_found' => 'カテゴリが見つかりません',
     'no_categories_match' => '検索条件に一致するカテゴリはありません。',
     'start_adding_category' => '最初のカテゴリを追加して始めましょう。',
@@ -164,18 +162,14 @@ return [
     'category_delete_confirm' => 'このカテゴリを削除してもよろしいですか？',
 
     // Products
-    'products' => '製品',
     'all_products' => '全製品',
     'add_product' => '製品追加',
     'import_products' => '製品インポート',
     'sku' => 'SKU',
     'product_name' => '製品名',
-    'category' => 'カテゴリ',
     'location' => 'ロケーション',
     'price' => '価格',
-    'stock' => '在庫',
     'status' => 'ステータス',
-    'search_products' => '製品を検索...',
     'filter_category' => 'カテゴリで絞り込み',
     'filter_status' => 'ステータスで絞り込み',
 
