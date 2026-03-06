@@ -57,9 +57,9 @@ Auth::startSession();
             </div>
 
             <!-- Nav Item - Pricing -->
-            <?php 
-            $isPricingActive = strpos($_SERVER['REQUEST_URI'], 'price') !== false;
-            ?>
+            <?php
+$isPricingActive = strpos($_SERVER['REQUEST_URI'], 'price') !== false;
+?>
             <li class="nav-item <?php echo $isPricingActive ? 'active' : ''; ?>">
                 <a class="nav-link <?php echo $isPricingActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapsePricing"
                     aria-expanded="<?php echo $isPricingActive ? 'true' : 'false'; ?>" aria-controls="collapsePricing">
@@ -75,9 +75,9 @@ Auth::startSession();
             </li>
 
             <!-- Nav Item - Catalog -->
-            <?php 
-            $isCatalogActive = (strpos($_SERVER['REQUEST_URI'], 'products/') !== false && strpos($_SERVER['REQUEST_URI'], 'stock_') === false && strpos($_SERVER['REQUEST_URI'], 'purchase_orders') === false && strpos($_SERVER['REQUEST_URI'], 'edit_po.php') === false) || strpos($_SERVER['REQUEST_URI'], 'categories/') !== false || strpos($_SERVER['REQUEST_URI'], 'brands/') !== false;
-            ?>
+            <?php
+$isCatalogActive = (strpos($_SERVER['REQUEST_URI'], 'products/') !== false && strpos($_SERVER['REQUEST_URI'], 'stock_') === false && strpos($_SERVER['REQUEST_URI'], 'purchase_orders') === false && strpos($_SERVER['REQUEST_URI'], 'edit_po.php') === false) || strpos($_SERVER['REQUEST_URI'], 'categories/') !== false || strpos($_SERVER['REQUEST_URI'], 'brands/') !== false;
+?>
             <li class="nav-item <?php echo $isCatalogActive ? 'active' : ''; ?>">
                 <a class="nav-link <?php echo $isCatalogActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseCatalog"
                     aria-expanded="<?php echo $isCatalogActive ? 'true' : 'false'; ?>" aria-controls="collapseCatalog">
@@ -102,9 +102,9 @@ Auth::startSession();
             </div>
 
             <!-- Nav Item - Stock Movements -->
-            <?php 
-            $isStockActive = strpos($_SERVER['REQUEST_URI'], 'products/stock_in') !== false || strpos($_SERVER['REQUEST_URI'], 'products/stock_out') !== false || strpos($_SERVER['REQUEST_URI'], 'products/purchase_orders') !== false || strpos($_SERVER['REQUEST_URI'], 'products/edit_po.php') !== false;
-            ?>
+            <?php
+$isStockActive = strpos($_SERVER['REQUEST_URI'], 'products/stock_in') !== false || strpos($_SERVER['REQUEST_URI'], 'products/stock_out') !== false || strpos($_SERVER['REQUEST_URI'], 'products/purchase_orders') !== false || strpos($_SERVER['REQUEST_URI'], 'products/edit_po.php') !== false || strpos($_SERVER['REQUEST_URI'], 'products/stock_audit') !== false;
+?>
             <li class="nav-item <?php echo $isStockActive ? 'active' : ''; ?>">
                 <a class="nav-link <?php echo $isStockActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseStock"
                     aria-expanded="<?php echo $isStockActive ? 'true' : 'false'; ?>" aria-controls="collapseStock">
@@ -118,14 +118,17 @@ Auth::startSession();
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'products/purchase_orders.php') !== false || strpos($_SERVER['REQUEST_URI'], 'products/edit_po.php') !== false ? 'active' : ''; ?> fw-bold" href="<?php echo BASE_URL; ?>products/purchase_orders.php">
                             <i class="fas fa-file-invoice fa-sm"></i> Purchase Orders
                         </a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'products/stock_audit.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>products/stock_audit.php">
+                            <i class="fas fa-clipboard-list fa-sm"></i> Stock Audit Log
+                        </a>
                     </div>
                 </div>
             </li>
 
             <!-- Nav Item - Suppliers -->
-            <?php 
-            $isSupplierActive = strpos($_SERVER['REQUEST_URI'], 'suppliers/') !== false;
-            ?>
+            <?php
+$isSupplierActive = strpos($_SERVER['REQUEST_URI'], 'suppliers/') !== false;
+?>
             <li class="nav-item <?php echo $isSupplierActive ? 'active' : ''; ?>">
                 <a class="nav-link <?php echo $isSupplierActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseSuppliers"
                     aria-expanded="<?php echo $isSupplierActive ? 'true' : 'false'; ?>" aria-controls="collapseSuppliers">
@@ -141,9 +144,9 @@ Auth::startSession();
             </li>
 
             <!-- Nav Item - Branch Operations -->
-            <?php 
-            $isBranchActive = strpos($_SERVER['REQUEST_URI'], 'jimma/') !== false;
-            ?>
+            <?php
+$isBranchActive = strpos($_SERVER['REQUEST_URI'], 'jimma/') !== false;
+?>
             <li class="nav-item <?php echo $isBranchActive ? 'active' : ''; ?>">
                 <a class="nav-link <?php echo $isBranchActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseBranch"
                     aria-expanded="<?php echo $isBranchActive ? 'true' : 'false'; ?>" aria-controls="collapseBranch">
@@ -159,9 +162,9 @@ Auth::startSession();
             </li>
 
             <!-- Nav Item - Drivers & Fleet -->
-            <?php 
-            $isFleetActive = strpos($_SERVER['REQUEST_URI'], 'drivers/') !== false || strpos($_SERVER['REQUEST_URI'], 'vehicles/') !== false;
-            ?>
+            <?php
+$isFleetActive = strpos($_SERVER['REQUEST_URI'], 'drivers/') !== false || strpos($_SERVER['REQUEST_URI'], 'vehicles/') !== false;
+?>
             <li class="nav-item <?php echo $isFleetActive ? 'active' : ''; ?>">
                 <a class="nav-link <?php echo $isFleetActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseFleet"
                     aria-expanded="<?php echo $isFleetActive ? 'true' : 'false'; ?>" aria-controls="collapseFleet">
@@ -177,9 +180,9 @@ Auth::startSession();
             </li>
 
             <!-- Nav Item - Route Optimizer -->
-            <?php 
-            $isRouteActive = strpos($_SERVER['REQUEST_URI'], 'routes/') !== false;
-            ?>
+            <?php
+$isRouteActive = strpos($_SERVER['REQUEST_URI'], 'routes/') !== false;
+?>
             <li class="nav-item <?php echo $isRouteActive ? 'active' : ''; ?>">
                 <a class="nav-link <?php echo $isRouteActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseRoutes"
                     aria-expanded="<?php echo $isRouteActive ? 'true' : 'false'; ?>" aria-controls="collapseRoutes">
@@ -254,9 +257,9 @@ Auth::startSession();
             </li>
 
             <!-- Nav Item - Daily Sales -->
-            <?php 
-            $isDailySalesActive = strpos($_SERVER['REQUEST_URI'], 'daily_sales.php') !== false || strpos($_SERVER['REQUEST_URI'], 'reports/daily_sales_report.php') !== false;
-            ?>
+            <?php
+$isDailySalesActive = strpos($_SERVER['REQUEST_URI'], 'daily_sales.php') !== false || strpos($_SERVER['REQUEST_URI'], 'reports/daily_sales_report.php') !== false;
+?>
             <li class="nav-item <?php echo $isDailySalesActive ? 'active' : ''; ?>">
                 <a class="nav-link <?php echo $isDailySalesActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseDailySales"
                     aria-expanded="<?php echo $isDailySalesActive ? 'true' : 'false'; ?>" aria-controls="collapseDailySales">
@@ -281,9 +284,9 @@ Auth::startSession();
 
             <!-- Nav Item - Admin Tools -->
             <?php if (Auth::isLoggedIn() && Auth::getCurrentUser()['role'] == 'admin'): ?>
-            <?php 
-            $isAdminActive = strpos($_SERVER['REQUEST_URI'], 'users/') !== false || strpos($_SERVER['REQUEST_URI'], 'admin/') !== false || strpos($_SERVER['REQUEST_URI'], 'tax_fee_admin.php') !== false || strpos($_SERVER['REQUEST_URI'], 'settings/backup.php') !== false;
-            ?>
+            <?php
+    $isAdminActive = strpos($_SERVER['REQUEST_URI'], 'users/') !== false || strpos($_SERVER['REQUEST_URI'], 'admin/') !== false || strpos($_SERVER['REQUEST_URI'], 'tax_fee_admin.php') !== false || strpos($_SERVER['REQUEST_URI'], 'settings/backup.php') !== false;
+?>
             <li class="nav-item <?php echo $isAdminActive ? 'active' : ''; ?>">
                 <a class="nav-link <?php echo $isAdminActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseAdmin"
                     aria-expanded="<?php echo $isAdminActive ? 'true' : 'false'; ?>" aria-controls="collapseAdmin">
@@ -299,7 +302,8 @@ Auth::startSession();
                     </div>
                 </div>
             </li>
-            <?php endif; ?>
+            <?php
+endif; ?>
 
             <!-- Divider -->
             <hr class="sidebar-divider d-none d-md-block">
@@ -323,16 +327,16 @@ Auth::startSession();
                     </button>
 
                     <!-- Topbar Navbar -->
-                    <?php if (Auth::isLoggedIn()): 
-                        $current_user = Auth::getCurrentUser();
-                        
-                        // Fetch Notifications
-                        require_once dirname(__DIR__) . '/models/Notification.php';
-                        $db = (new Database())->getConnection();
-                        $notification = new Notification($db);
-                        $unread_count = $notification->countUnread($current_user['id']);
-                        $recent_notifs = $notification->getRecent($current_user['id']);
-                    ?>
+                    <?php if (Auth::isLoggedIn()):
+    $current_user = Auth::getCurrentUser();
+
+    // Fetch Notifications
+    require_once dirname(__DIR__) . '/models/Notification.php';
+    $db = (new Database())->getConnection();
+    $notification = new Notification($db);
+    $unread_count = $notification->countUnread($current_user['id']);
+    $recent_notifs = $notification->getRecent($current_user['id']);
+?>
                     
                     <!-- Right Side: Toggles and User Profile -->
                     <ul class="navbar-nav ms-auto">
@@ -388,10 +392,13 @@ Auth::startSession();
                                                 <span class="font-weight-<?php echo $notif['is_read'] ? 'normal' : 'bold'; ?>"><?php echo htmlspecialchars($notif['message']); ?></span>
                                             </div>
                                         </a>
-                                        <?php endwhile; ?>
-                                    <?php else: ?>
+                                        <?php
+        endwhile; ?>
+                                    <?php
+    else: ?>
                                         <a class="dropdown-item text-center small text-gray-500" href="#"><?php echo __('no_new_alerts'); ?></a>
-                                    <?php endif; ?>
+                                    <?php
+    endif; ?>
                                 </div>
                                 <a class="dropdown-item text-center small text-gray-500 py-2 bg-light border-top" href="<?php echo BASE_URL; ?>notifications.php"><?php echo __('show_all_alerts'); ?></a>
                             </div>
@@ -568,7 +575,8 @@ Auth::startSession();
                             </div>
                         </li>
                     </ul>
-                    <?php else: ?>
+                    <?php
+else: ?>
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item">
                             <a class="nav-link" href="<?php echo BASE_URL; ?>login.php">
@@ -577,7 +585,8 @@ Auth::startSession();
                             </a>
                         </li>
                     </ul>
-                    <?php endif; ?>
+                    <?php
+endif; ?>
                 </nav>
                 <!-- End of Topbar -->
 
