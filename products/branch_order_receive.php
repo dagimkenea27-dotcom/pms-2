@@ -105,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // AJAX request for product details
 if (isset($_GET['ajax']) && $_GET['ajax'] === 'get_product' && isset($_GET['product_id'])) {
-    header('Content-Type', 'application/json');
+    header('Content-Type: application/json');
     try {
         $product_id = $_GET['product_id'];
         

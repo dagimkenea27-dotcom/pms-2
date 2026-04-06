@@ -145,11 +145,7 @@ $isSupplierActive = strpos($_SERVER['REQUEST_URI'], 'suppliers/') !== false;
 
             <!-- Nav Item - Branch Operations -->
             <?php
-<<<<<<< HEAD
 $isBranchActive = strpos($_SERVER['REQUEST_URI'], 'jimma/') !== false || strpos($_SERVER['REQUEST_URI'], 'branch_order') !== false;
-=======
-$isBranchActive = strpos($_SERVER['REQUEST_URI'], 'jimma/') !== false;
->>>>>>> 87d615a02ff5d7821180c7f3bc65d8f3c02bece8
 ?>
             <li class="nav-item <?php echo $isBranchActive ? 'active' : ''; ?>">
                 <a class="nav-link <?php echo $isBranchActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseBranch"

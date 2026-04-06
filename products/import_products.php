@@ -157,6 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $_SESSION['message_type'] = "danger";
     }
 
+    } // Added missing closing brace for if (isset($_FILES['csv_file']))
     header("Location: view_products.php");
     exit();
 }
