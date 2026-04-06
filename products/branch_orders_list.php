@@ -56,6 +56,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     }
 }
 
+// Handle delete order via POST
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_order'])) {
+    if (!isset($_POST['csrf_token']) || !Auth::validateCSRF($_POST['csrf_token'])) {
+        $_SESSION['message'] = "Security Error: Invalid Token";
+        $_SESSION['message_type'] = "danger";
+    } else {
+        $order_id = $_POST['order_id'];
+        
+        if ($branchOrder->delete($order_id)) {
+            $_SESSION['message'] = "Order deleted successfully!";
+            $_SESSION['message_type'] = "success";
+        } else {
+            $_SESSION['message'] = "Failed to delete order.";
+            $_SESSION['message_type'] = "danger";
+        }
+        
+        header("Location: branch_orders_list.php?page=$page");
+        exit();
+    }
+}
+
 require_once "../includes/header.php";
 ?>
 
@@ -269,6 +290,16 @@ if ($message): ?>
                                             <a class="dropdown-item" href="branch_order_edit.php?id=<?php echo $order['id']; ?>">
                                                 <i class="fas fa-edit"></i> <?php echo __('edit'); ?>
                                             </a>
+                                        </li>
+                                        <li>
+                                            <form method="POST" action="" onsubmit="return confirm('Are you sure you want to completely delete this order?');" class="m-0 p-0">
+                                                <input type="hidden" name="csrf_token" value="<?php echo Auth::generateCSRF(); ?>">
+                                                <input type="hidden" name="delete_order" value="1">
+                                                <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
+                                                <button type="submit" class="dropdown-item text-danger">
+                                                    <i class="fas fa-trash-alt"></i> <?php echo __('delete'); ?>
+                                                </button>
+                                            </form>
                                         </li>
                                         <li><hr class="dropdown-divider"></li>
                                         <li>
