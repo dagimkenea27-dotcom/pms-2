@@ -48,27 +48,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception("Phone number is required.");
             }
             
-            // If product_id is provided, verify it exists
-            if ($product_id) {
-                $verify_stmt = $db->prepare("SELECT id, name FROM products WHERE id = ?");
-                $verify_stmt->execute([$product_id]);
-                $verified_product = $verify_stmt->fetch(PDO::FETCH_ASSOC);
-                
-                if (!$verified_product) {
-                    $product_id = null; // Reset if not found
-                } else {
-                    // Use the verified product name from database
-                    $product_name = $verified_product['name'];
-                }
-            }
-            
-            $variant_id = !empty($_POST['variant_id']) ? $_POST['variant_id'] : null;
-            
             $data = [
                 'order_number' => $order_number,
                 'customer_name' => $customer_name,
-                'product_id' => $product_id,
-                'variant_id' => $variant_id,
+                'product_id' => null, // No database connection
+                'variant_id' => null, // No database connection
                 'product_name' => $product_name,
                 'product_color' => $product_color,
                 'product_size' => $product_size,
@@ -103,44 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// AJAX request for product details
-if (isset($_GET['ajax']) && $_GET['ajax'] === 'get_product' && isset($_GET['product_id'])) {
-    header('Content-Type: application/json');
-    try {
-        $product_id = $_GET['product_id'];
-        
-        // Get product details
-        $stmt = $db->prepare("SELECT id, name, sku FROM products WHERE id = ?");
-        $stmt->execute([$product_id]);
-        $product = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($product) {
-            echo json_encode([
-                'success' => true, 
-                'product' => $product
-            ]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Product not found']);
-        }
-    } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-    }
-    exit;
-}
-
-// AJAX request for variants
-if (isset($_GET['ajax']) && $_GET['ajax'] === 'get_variants' && isset($_GET['product_id'])) {
-    header('Content-Type: application/json');
-    try {
-        $stmt = $db->prepare("SELECT id, size, color, sku, quantity FROM product_variants WHERE product_id = ? ORDER BY color ASC, size ASC");
-        $stmt->execute([$_GET['product_id']]);
-        $variants = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        echo json_encode(['success' => true, 'variants' => $variants]);
-    } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-    }
-    exit;
-}
+// No AJAX endpoints needed since product lookups are removed
 
 require_once "../includes/header.php";
 ?>
@@ -202,38 +149,10 @@ if ($message): ?>
                     <h5 class="mb-3 text-secondary"><?php echo __('product_details'); ?></h5>
                     
                     <div class="mb-3">
-                        <label for="product_search" class="form-label"><?php echo __('select_product'); ?></label>
-                        <div class="position-relative">
-                            <select class="form-select" id="product_id_select" style="display: none;">
-                                <option value=""><?php echo __('choose_product'); ?></option>
-                                <?php
-                                $products_query = "SELECT id, sku, name, has_variants FROM products ORDER BY name ASC";
-                                $products_stmt = $db->prepare($products_query);
-                                $products_stmt->execute();
-                                $all_products = $products_stmt->fetchAll(PDO::FETCH_ASSOC);
-                                foreach ($all_products as $prod): ?>
-                                <option value="<?php echo $prod['id']; ?>" 
-                                        data-has-variants="<?php echo $prod['has_variants']; ?>"
-                                        data-name="<?php echo htmlspecialchars($prod['name']); ?>"
-                                        data-sku="<?php echo htmlspecialchars($prod['sku']); ?>">
-                                    <?php echo htmlspecialchars($prod['sku']); ?> - <?php echo htmlspecialchars($prod['name']); ?>
-                                </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <div class="searchable-select-container">
-                                <input type="text" class="form-control" id="product_search" 
-                                       placeholder="<?php echo __('search_products'); ?>" autocomplete="off">
-                                <div id="product_dropdown" class="dropdown-menu w-100" 
-                                     style="max-height: 200px; overflow-y: auto; position: absolute; z-index: 1000; display: none;"></div>
-                            </div>
-                            <input type="hidden" id="selected_product_id" name="product_id">
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
                         <label for="product_name_display" class="form-label"><?php echo __('product_name'); ?> *</label>
                         <input type="text" class="form-control" id="product_name_display" name="product_name" 
                                placeholder="<?php echo __('enter_product_name'); ?>" required>
+                        <small class="text-muted">Enter the name of the product manually.</small>
                     </div>
                     
                     <div class="row mb-3">
@@ -247,14 +166,6 @@ if ($message): ?>
                             <input type="text" class="form-control" id="product_size" name="product_size" 
                                    placeholder="<?php echo __('e.g.'); ?> S, M, L, XL">
                         </div>
-                    </div>
-                    
-                    <div class="mb-3" id="variant_container" style="display:none;">
-                        <label for="variant_id" class="form-label"><?php echo __('select_variant'); ?></label>
-                        <select class="form-select" id="variant_id" name="variant_id">
-                            <option value=""><?php echo __('choose_variant'); ?></option>
-                        </select>
-                        <small class="text-muted"><?php echo __('select_if_product_has_variants'); ?></small>
                     </div>
                     
                     <div class="row mb-3">
@@ -357,109 +268,6 @@ if ($message): ?>
     </div>
 </div>
 
-<script>
-// Searchable dropdown functionality for product selection
-(function() {
-    const searchInput = document.getElementById('product_search');
-    const dropdown = document.getElementById('product_dropdown');
-    const hiddenInput = document.getElementById('selected_product_id');
-    const originalSelect = document.getElementById('product_id_select');
-    const productNameDisplay = document.getElementById('product_name_display');
-    
-    // Store all options for searching
-    const options = [];
-    for (let i = 1; i < originalSelect.options.length; i++) {
-        const option = originalSelect.options[i];
-        options.push({
-            value: option.value,
-            text: option.text,
-            name: option.getAttribute('data-name'),
-            sku: option.getAttribute('data-sku'),
-            hasVariants: option.getAttribute('data-has-variants')
-        });
-    }
-    
-    // Show dropdown with filtered options
-    searchInput.addEventListener('focus', function() {
-        filterOptions('');
-        dropdown.style.display = 'block';
-    });
-    
-    // Hide dropdown when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
-            dropdown.style.display = 'none';
-        }
-    });
-    
-    // Filter options based on search term
-    searchInput.addEventListener('input', function() {
-        filterOptions(this.value);
-        dropdown.style.display = 'block';
-    });
-    
-    function filterOptions(searchTerm) {
-        const term = searchTerm.toLowerCase().trim();
-        dropdown.innerHTML = '';
-        
-        const filtered = options.filter(option => 
-            !term || option.text.toLowerCase().includes(term)
-        );
-        
-        if (filtered.length === 0) {
-            dropdown.innerHTML = '<div class="dropdown-item disabled">No products found</div>';
-        } else {
-            filtered.forEach(option => {
-                const item = document.createElement('div');
-                item.className = 'dropdown-item';
-                item.textContent = option.text;
-                item.addEventListener('click', function() {
-                    searchInput.value = option.text;
-                    hiddenInput.value = option.value;
-                    dropdown.style.display = 'none';
-                    
-                    // Auto-fill product name if empty
-                    if (productNameDisplay.value.trim() === '') {
-                        productNameDisplay.value = option.name;
-                    }
-                    
-                    // Handle variants
-                    const variantContainer = document.getElementById('variant_container');
-                    const variantSelect = document.getElementById('variant_id');
-                    
-                    variantSelect.innerHTML = '<option value="">Choose a variant</option>';
-                    
-                    if (option.hasVariants == '1' && option.value) {
-                        variantContainer.style.display = 'block';
-                        variantSelect.setAttribute('required', 'required');
-                        fetch(`branch_order_receive.php?ajax=get_variants&product_id=${option.value}`)
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    data.variants.forEach(v => {
-                                        const variantOption = document.createElement('option');
-                                        variantOption.value = v.id;
-                                        variantOption.textContent = `${v.size} ${v.color} (Qty: ${v.quantity})`;
-                                        variantSelect.appendChild(variantOption);
-                                    });
-                                }
-                            });
-                    } else {
-                        variantContainer.style.display = 'none';
-                        variantSelect.removeAttribute('required');
-                    }
-                    
-                    const event = new Event('change', { bubbles: true });
-                    hiddenInput.dispatchEvent(event);
-                });
-                dropdown.appendChild(item);
-            });
-        }
-    }
-    
-    // Initialize
-    filterOptions('');
-})();
-</script>
+<!-- No complex JavaScript needed for simple forms -->
 
 <?php require_once "../includes/footer.php"; ?>
