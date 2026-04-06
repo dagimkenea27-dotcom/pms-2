@@ -257,19 +257,24 @@ if ($message): ?>
                                     </button>
                                     <ul class="dropdown-menu">
                                         <li>
-                                            <a class="dropdown-item" href="#" onclick="viewOrder(<?php echo $order['id']; ?>)">
+                                            <a class="dropdown-item" href="#" 
+                                               data-bs-toggle="modal" 
+                                               data-bs-target="#viewOrderModal"
+                                               data-order='<?php echo htmlspecialchars(json_encode($order), ENT_QUOTES, "UTF-8"); ?>'
+                                               onclick="viewOrder(this)">
                                                 <i class="fas fa-eye"></i> <?php echo __('view'); ?>
                                             </a>
                                         </li>
                                         <li>
-                                            <a class="dropdown-item" href="#" onclick="editOrder(<?php echo $order['id']; ?>)">
+                                            <a class="dropdown-item" href="branch_order_edit.php?id=<?php echo $order['id']; ?>">
                                                 <i class="fas fa-edit"></i> <?php echo __('edit'); ?>
                                             </a>
                                         </li>
                                         <li><hr class="dropdown-divider"></li>
                                         <li>
-                                            <form method="POST" style="display:inline;">
+                                            <form method="POST" action="">
                                                 <input type="hidden" name="csrf_token" value="<?php echo Auth::generateCSRF(); ?>">
+                                                <input type="hidden" name="update_status" value="1">
                                                 <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
                                                 <select name="new_status" class="form-select form-select-sm" onchange="this.form.submit()">
                                                     <option value="" disabled selected><?php echo __('change_status'); ?></option>
@@ -340,14 +345,64 @@ if ($message): ?>
 </div>
 
 <script>
-function viewOrder(orderId) {
-    // For now, just show an alert. You can implement AJAX loading later.
-    alert('<?php echo __('view_order_feature_coming_soon'); ?>');
-}
+function viewOrder(element) {
+    const orderRaw = element.getAttribute('data-order');
+    if (!orderRaw) return;
+    
+    const order = JSON.parse(orderRaw);
+    const modalContent = document.getElementById('orderDetailsContent');
+    
+    // Status Badge Logic
+    let statusClass = 'info';
+    if(order.status === 'completed') statusClass = 'success';
+    else if(order.status === 'processing') statusClass = 'warning';
+    else if(order.status === 'cancelled') statusClass = 'danger';
+    
+    const formattedDate = new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' });
 
-function editOrder(orderId) {
-    // Redirect to edit page or open modal
-    alert('<?php echo __('edit_order_feature_coming_soon'); ?>');
+    let html = `
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <strong><?php echo __('order_number'); ?>:</strong><br>
+                <span>${order.order_number}</span>
+            </div>
+            <div class="col-md-6">
+                <strong><?php echo __('status'); ?>:</strong><br>
+                <span class="badge bg-${statusClass}">${order.status.charAt(0).toUpperCase() + order.status.slice(1)}</span>
+            </div>
+        </div>
+        <hr>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <h6 class="text-primary"><?php echo __('customer_info'); ?></h6>
+                <strong>${order.customer_name}</strong><br>
+                <i class="fas fa-phone fa-sm"></i> ${order.phone_number}<br>
+                <i class="fas fa-map-marker-alt fa-sm"></i> ${order.address || 'N/A'}
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-primary"><?php echo __('product_details'); ?></h6>
+                <strong>${order.product_name}</strong><br>
+                Color: ${order.product_color || '-'}<br>
+                Size: ${order.product_size || '-'}<br>
+                Qty: ${order.quantity}<br>
+                Options: ${order.option_available || '-'}
+            </div>
+        </div>
+        <hr>
+        <div class="row mb-3">
+            <div class="col-12">
+                <strong><?php echo __('notes'); ?>:</strong><br>
+                <span>${order.notes || 'None'}</span>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12 text-muted small">
+                Created: ${formattedDate}
+            </div>
+        </div>
+    `;
+    
+    modalContent.innerHTML = html;
 }
 </script>
 
