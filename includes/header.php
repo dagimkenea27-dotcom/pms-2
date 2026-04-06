@@ -145,16 +145,19 @@ $isSupplierActive = strpos($_SERVER['REQUEST_URI'], 'suppliers/') !== false;
 
             <!-- Nav Item - Branch Operations -->
             <?php
-$isBranchActive = strpos($_SERVER['REQUEST_URI'], 'jimma/') !== false;
+$isBranchActive = strpos($_SERVER['REQUEST_URI'], 'jimma/') !== false || strpos($_SERVER['REQUEST_URI'], 'branch_order') !== false;
 ?>
             <li class="nav-item <?php echo $isBranchActive ? 'active' : ''; ?>">
                 <a class="nav-link <?php echo $isBranchActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseBranch"
                     aria-expanded="<?php echo $isBranchActive ? 'true' : 'false'; ?>" aria-controls="collapseBranch">
                     <i class="fas fa-fw fa-store"></i>
-                    <span>Branch Operations</span>
+                    <span><?php echo __('branch_activities'); ?></span>
                 </a>
                 <div id="collapseBranch" class="collapse <?php echo $isBranchActive ? 'show' : ''; ?>" aria-labelledby="headingBranch" data-parent="#accordionSidebar">
                     <div class="py-2 collapse-inner rounded">
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'products/branch_order_receive.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>products/branch_order_receive.php"><?php echo __('branch_order_receiving'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'products/branch_orders_list.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>products/branch_orders_list.php"><?php echo __('view_orders'); ?></a>
+                        <hr class="sidebar-divider">
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'jimma/sales_request.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>jimma/sales_request.php">Jimma Stock Request</a>
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'jimma/view_requests.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>jimma/view_requests.php">View All Requests</a>
                     </div>
