@@ -236,10 +236,8 @@ if ($message): ?>
                     <tr>
                         <th><?php echo __('order_number'); ?></th>
                         <th><?php echo __('customer'); ?></th>
-                        <th><?php echo __('product'); ?></th>
-                        <th><?php echo __('color'); ?></th>
-                        <th><?php echo __('size'); ?></th>
-                        <th><?php echo __('qty'); ?></th>
+                        <th>Items Summary</th>
+                        <th class="text-center">Total Qty</th>
                         <th><?php echo __('phone'); ?></th>
                         <th><?php echo __('status'); ?></th>
                         <th><?php echo __('date'); ?></th>
@@ -255,10 +253,12 @@ if ($message): ?>
                                 <?php echo htmlspecialchars($order['customer_name']); ?><br>
                                 <small class="text-muted"><?php echo htmlspecialchars(substr($order['address'] ?? '', 0, 30)); ?><?php echo strlen($order['address'] ?? '') > 30 ? '...' : ''; ?></small>
                             </td>
-                            <td><?php echo htmlspecialchars($order['product_name']); ?></td>
-                            <td><?php echo htmlspecialchars($order['product_color'] ?? '-'); ?></td>
-                            <td><?php echo htmlspecialchars($order['product_size'] ?? '-'); ?></td>
-                            <td><?php echo $order['quantity']; ?></td>
+                            <td>
+                                <span class="small"><?php echo htmlspecialchars($order['product_summary'] ?: 'No items'); ?></span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border"><?php echo $order['total_quantity'] ?: 0; ?></span>
+                            </td>
                             <td><?php echo htmlspecialchars($order['phone_number']); ?></td>
                             <td>
                                 <span class="badge bg-<?php 
@@ -281,9 +281,9 @@ if ($message): ?>
                                             <a class="dropdown-item" href="#" 
                                                data-bs-toggle="modal" 
                                                data-bs-target="#viewOrderModal"
-                                               data-order='<?php echo htmlspecialchars(json_encode($order), ENT_QUOTES, "UTF-8"); ?>'
+                                               data-id="<?php echo $order['id']; ?>"
                                                onclick="viewOrder(this)">
-                                                <i class="fas fa-eye"></i> <?php echo __('view'); ?>
+                                                <i class="fas fa-eye text-info"></i> <?php echo __('view'); ?>
                                             </a>
                                         </li>
                                         <li>
@@ -369,6 +369,7 @@ if ($message): ?>
                 <!-- Content will be loaded dynamically -->
             </div>
             <div class="modal-footer">
+                <a href="#" id="printOrderBtn" target="_blank" class="btn btn-primary"><i class="fas fa-print"></i> Print Order</a>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo __('close'); ?></button>
             </div>
         </div>
@@ -377,63 +378,109 @@ if ($message): ?>
 
 <script>
 function viewOrder(element) {
-    const orderRaw = element.getAttribute('data-order');
-    if (!orderRaw) return;
-    
-    const order = JSON.parse(orderRaw);
+    const orderId = element.getAttribute('data-id');
     const modalContent = document.getElementById('orderDetailsContent');
+    const printBtn = document.getElementById('printOrderBtn');
     
-    // Status Badge Logic
-    let statusClass = 'info';
-    if(order.status === 'completed') statusClass = 'success';
-    else if(order.status === 'processing') statusClass = 'warning';
-    else if(order.status === 'cancelled') statusClass = 'danger';
+    printBtn.href = `print_branch_order.php?id=${orderId}`;
+    modalContent.innerHTML = '<div class="text-center my-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Loading details...</p></div>';
     
-    const formattedDate = new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' });
+    fetch(`../api/get_branch_order_details.php?id=${orderId}`)
+        .then(response => response.json())
+        .then(res => {
+            if (!res.success) {
+                modalContent.innerHTML = `<div class="alert alert-danger">${res.message}</div>`;
+                return;
+            }
+            const order = res.data;
+            
+            let statusClass = 'info';
+            if(order.status === 'completed') statusClass = 'success';
+            else if(order.status === 'processing') statusClass = 'warning';
+            else if(order.status === 'cancelled') statusClass = 'danger';
+            
+            const formattedDate = new Date(order.created_at).toLocaleDateString();
 
-    let html = `
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <strong><?php echo __('order_number'); ?>:</strong><br>
-                <span>${order.order_number}</span>
-            </div>
-            <div class="col-md-6">
-                <strong><?php echo __('status'); ?>:</strong><br>
-                <span class="badge bg-${statusClass}">${order.status.charAt(0).toUpperCase() + order.status.slice(1)}</span>
-            </div>
-        </div>
-        <hr>
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <h6 class="text-primary"><?php echo __('customer_info'); ?></h6>
-                <strong>${order.customer_name}</strong><br>
-                <i class="fas fa-phone fa-sm"></i> ${order.phone_number}<br>
-                <i class="fas fa-map-marker-alt fa-sm"></i> ${order.address || 'N/A'}
-            </div>
-            <div class="col-md-6">
-                <h6 class="text-primary"><?php echo __('product_details'); ?></h6>
-                <strong>${order.product_name}</strong><br>
-                Color: ${order.product_color || '-'}<br>
-                Size: ${order.product_size || '-'}<br>
-                Qty: ${order.quantity}<br>
-                Options: ${order.option_available || '-'}
-            </div>
-        </div>
-        <hr>
-        <div class="row mb-3">
-            <div class="col-12">
-                <strong><?php echo __('notes'); ?>:</strong><br>
-                <span>${order.notes || 'None'}</span>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-12 text-muted small">
-                Created: ${formattedDate}
-            </div>
-        </div>
-    `;
-    
-    modalContent.innerHTML = html;
+            let productsHtml = '';
+            order.products.forEach(p => {
+                let variationsHtml = '';
+                p.variations.forEach(v => {
+                    variationsHtml += `
+                        <tr>
+                            <td>${v.color || '-'}</td>
+                            <td>${v.size || '-'}</td>
+                            <td><strong>${v.quantity}</strong></td>
+                            <td>${v.options || '-'}</td>
+                        </tr>`;
+                });
+
+                productsHtml += `
+                <div class="card mb-3 border-left-info shadow-sm">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                ${p.image_path ? `<img src="../${p.image_path}" class="img-fluid rounded border shadow-sm" alt="Product">` : `<div class="bg-light rounded border p-3 text-center"><i class="fas fa-image fa-2x text-gray-300"></i></div>`}
+                            </div>
+                            <div class="col-md-9">
+                                <h6 class="font-weight-bold mb-3">${p.product_name}</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered mb-0">
+                                        <thead class="table-light">
+                                            <tr class="small text-uppercase">
+                                                <th>Color</th>
+                                                <th>Size</th>
+                                                <th>Qty</th>
+                                                <th>Options</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>${variationsHtml}</tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+
+            modalContent.innerHTML = `
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>${order.order_number}</strong></p>
+                        <span class="badge bg-${statusClass} text-uppercase">${order.status}</span>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <small class="text-muted">Date: ${formattedDate}</small>
+                    </div>
+                </div>
+                <div class="card mb-4 bg-light border-0 shadow-none">
+                    <div class="card-body py-3">
+                        <div class="row">
+                            <div class="col-md-6 border-right">
+                                <label class="text-xs text-uppercase text-muted font-weight-bold mb-1">Customer</label>
+                                <p class="mb-0 font-weight-bold">${order.customer_name}</p>
+                                <p class="mb-0 small"><i class="fas fa-phone fa-xs"></i> ${order.phone_number}</p>
+                            </div>
+                            <div class="col-md-6 ps-md-4">
+                                <label class="text-xs text-uppercase text-muted font-weight-bold mb-1">Shipping Address</label>
+                                <p class="mb-0 small">${order.address || 'No address provided'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <h6 class="font-weight-bold text-primary mb-3">Products & Images</h6>
+                ${productsHtml}
+
+                ${order.notes ? `
+                <div class="mt-4">
+                    <label class="text-xs text-uppercase text-muted font-weight-bold mb-1">Order Notes</label>
+                    <div class="p-3 bg-light rounded text-dark small">${order.notes.replace(/\n/g, '<br>')}</div>
+                </div>` : ''}
+            `;
+        })
+        .catch(err => {
+            modalContent.innerHTML = `<div class="alert alert-danger">Error loading data: ${err.message}</div>`;
+        });
 }
 </script>
 
