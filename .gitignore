@@ -1,10 +1,27 @@
+# Environment
 .env
-vendor/
-node_modules/
+
+# Dependencies
+/vendor/
+/node_modules/
+
+# IDE / Editor
 .idea/
 .vscode/
-*.log
+
+# System files
 .DS_Store
-Uploads/
-.htaccess
-sql/
+
+# Logs
+*.log
+error_log
+*/error_log
+
+# Database / SQL dumps
+/sql/
+
+# Uploads
+/uploads/
+
+# Cache
+/cache/locations.json
