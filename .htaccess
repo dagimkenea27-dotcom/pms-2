@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # ===============================
 # DISABLE EXECUTION OF DANGEROUS FILES
 # ===============================
@@ -82,5 +81,4 @@ Options -Indexes
     Header always set Referrer-Policy "no-referrer-when-downgrade"
     Header always unset Content-Security-Policy
     Header set Content-Security-Policy "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.tailwindcss.com https://cdn.sheetjs.com https://unpkg.com https://code.jquery.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://*.tile.openstreetmap.org https://unpkg.com https://ui-avatars.com https:; connect-src 'self' https://nominatim.openstreetmap.org https://*.tile.openstreetmap.org https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com;"
->>>>>>> 0dd27a10c148d223d42f7951c4938d1b917115f9
 </IfModule>
