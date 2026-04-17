@@ -302,6 +302,9 @@ $isDailySalesActive = strpos($_SERVER['REQUEST_URI'], 'daily_sales.php') !== fal
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'admin/audit_logs.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>admin/audit_logs.php"><?php echo __('audit_logs'); ?></a>
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'tax_fee_admin.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>tax_fee_admin.php"><?php echo __('tax_fee_config'); ?></a>
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'settings/backup.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>settings/backup.php"><?php echo __('database_backup'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'vendor_payment_requests.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>vendor_payment_requests.php">
+                            <i class="fas fa-money-check-alt fa-sm"></i> Vendor Payments
+                        </a>
                     </div>
                 </div>
             </li>
