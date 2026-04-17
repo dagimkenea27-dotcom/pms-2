@@ -22,10 +22,12 @@ require_once "includes/header.php";
         overflow: hidden;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
+
     .vp-stat-card:hover {
         transform: translateY(-3px);
-        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
     }
+
     .vp-stat-card .stat-icon {
         position: absolute;
         top: 12px;
@@ -33,6 +35,7 @@ require_once "includes/header.php";
         font-size: 28px;
         opacity: 0.15;
     }
+
     .vp-stat-card .stat-label {
         font-size: 10px;
         font-weight: 800;
@@ -40,6 +43,7 @@ require_once "includes/header.php";
         letter-spacing: 1px;
         margin-bottom: 4px;
     }
+
     .vp-stat-card .stat-value {
         font-size: 1.6rem;
         font-weight: 800;
@@ -58,10 +62,26 @@ require_once "includes/header.php";
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
-    .vp-badge-pending { background: #FEF3C7; color: #92400E; }
-    .vp-badge-approved { background: #D1FAE5; color: #065F46; }
-    .vp-badge-rejected { background: #FEE2E2; color: #991B1B; }
-    .vp-badge-paid { background: #DBEAFE; color: #1E40AF; }
+
+    .vp-badge-pending {
+        background: #FEF3C7;
+        color: #92400E;
+    }
+
+    .vp-badge-approved {
+        background: #D1FAE5;
+        color: #065F46;
+    }
+
+    .vp-badge-rejected {
+        background: #FEE2E2;
+        color: #991B1B;
+    }
+
+    .vp-badge-paid {
+        background: #DBEAFE;
+        color: #1E40AF;
+    }
 
     /* Action Buttons */
     .vp-action-btn {
@@ -76,18 +96,51 @@ require_once "includes/header.php";
         align-items: center;
         gap: 4px;
     }
+
     .vp-action-btn:hover {
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
-    .vp-btn-approve { background: #D1FAE5; color: #065F46; }
-    .vp-btn-approve:hover { background: #A7F3D0; color: #065F46; }
-    .vp-btn-reject { background: #FEE2E2; color: #991B1B; }
-    .vp-btn-reject:hover { background: #FECACA; color: #991B1B; }
-    .vp-btn-paid { background: #DBEAFE; color: #1E40AF; }
-    .vp-btn-paid:hover { background: #BFDBFE; color: #1E40AF; }
-    .vp-btn-delete { background: #FEE2E2; color: #991B1B; }
-    .vp-btn-delete:hover { background: #FECACA; color: #991B1B; }
+
+    .vp-btn-approve {
+        background: #D1FAE5;
+        color: #065F46;
+    }
+
+    .vp-btn-approve:hover {
+        background: #A7F3D0;
+        color: #065F46;
+    }
+
+    .vp-btn-reject {
+        background: #FEE2E2;
+        color: #991B1B;
+    }
+
+    .vp-btn-reject:hover {
+        background: #FECACA;
+        color: #991B1B;
+    }
+
+    .vp-btn-paid {
+        background: #DBEAFE;
+        color: #1E40AF;
+    }
+
+    .vp-btn-paid:hover {
+        background: #BFDBFE;
+        color: #1E40AF;
+    }
+
+    .vp-btn-delete {
+        background: #FEE2E2;
+        color: #991B1B;
+    }
+
+    .vp-btn-delete:hover {
+        background: #FECACA;
+        color: #991B1B;
+    }
 
     /* Filter Pills */
     .vp-filter-btn {
@@ -101,7 +154,11 @@ require_once "includes/header.php";
         cursor: pointer;
         transition: all 0.2s ease;
     }
-    .vp-filter-btn:hover { background: #f8fafc; }
+
+    .vp-filter-btn:hover {
+        background: #f8fafc;
+    }
+
     .vp-filter-btn.active {
         background: #1e293b;
         color: #fff;
@@ -120,7 +177,7 @@ require_once "includes/header.php";
     }
 
     /* Table styling */
-    #vendor-pay-app .table > thead > tr > th {
+    #vendor-pay-app .table>thead>tr>th {
         font-size: 10px;
         font-weight: 800;
         text-transform: uppercase;
@@ -130,14 +187,16 @@ require_once "includes/header.php";
         padding: 12px 14px;
         background: #f8fafc;
     }
-    #vendor-pay-app .table > tbody > tr > td {
+
+    #vendor-pay-app .table>tbody>tr>td {
         padding: 14px;
         font-size: 13px;
         color: #334155;
         vertical-align: middle;
         border-bottom: 1px solid #f1f5f9;
     }
-    #vendor-pay-app .table > tbody > tr:hover {
+
+    #vendor-pay-app .table>tbody>tr:hover {
         background: #f8fafc;
     }
 
@@ -161,16 +220,19 @@ require_once "includes/header.php";
         border-radius: 0;
         padding: 20px 24px;
     }
+
     .vp-modal-header .modal-title {
         color: #fff;
         font-weight: 800;
         font-size: 16px;
     }
+
     .vp-modal-header .btn-close {
         filter: brightness(0) invert(1);
     }
+
     .vp-modal-header .modal-subtitle {
-        color: rgba(255,255,255,0.7);
+        color: rgba(255, 255, 255, 0.7);
         font-size: 12px;
         margin-top: 2px;
     }
@@ -189,11 +251,21 @@ require_once "includes/header.php";
         transform: translateY(100px);
         opacity: 0;
         transition: all 0.35s ease;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
     }
-    .vp-toast.show { transform: translateY(0); opacity: 1; }
-    .vp-toast-success { background: linear-gradient(135deg, #059669, #10B981); }
-    .vp-toast-error { background: linear-gradient(135deg, #DC2626, #EF4444); }
+
+    .vp-toast.show {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    .vp-toast-success {
+        background: linear-gradient(135deg, #059669, #10B981);
+    }
+
+    .vp-toast-error {
+        background: linear-gradient(135deg, #DC2626, #EF4444);
+    }
 
     /* Empty state */
     .vp-empty-state {
@@ -210,14 +282,40 @@ require_once "includes/header.php";
 
     /* Animations */
     @keyframes vpFadeIn {
-        from { opacity: 0; transform: translateY(12px); }
-        to { opacity: 1; transform: translateY(0); }
+        from {
+            opacity: 0;
+            transform: translateY(12px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
-    .vp-fade-in { animation: vpFadeIn 0.4s ease forwards; }
-    .vp-fade-in-1 { animation-delay: 0.05s; opacity: 0; }
-    .vp-fade-in-2 { animation-delay: 0.1s; opacity: 0; }
-    .vp-fade-in-3 { animation-delay: 0.15s; opacity: 0; }
-    .vp-fade-in-4 { animation-delay: 0.2s; opacity: 0; }
+
+    .vp-fade-in {
+        animation: vpFadeIn 0.4s ease forwards;
+    }
+
+    .vp-fade-in-1 {
+        animation-delay: 0.05s;
+        opacity: 0;
+    }
+
+    .vp-fade-in-2 {
+        animation-delay: 0.1s;
+        opacity: 0;
+    }
+
+    .vp-fade-in-3 {
+        animation-delay: 0.15s;
+        opacity: 0;
+    }
+
+    .vp-fade-in-4 {
+        animation-delay: 0.2s;
+        opacity: 0;
+    }
 
     /* Primary gradient button */
     .vp-btn-primary {
@@ -230,12 +328,14 @@ require_once "includes/header.php";
         box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);
         transition: all 0.2s ease;
     }
+
     .vp-btn-primary:hover {
         background: linear-gradient(135deg, #6d28d9, #4338ca);
         color: #fff;
         box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
         transform: translateY(-1px);
     }
+
     .vp-btn-primary:active {
         transform: scale(0.97);
     }
@@ -248,6 +348,7 @@ require_once "includes/header.php";
         font-size: 14px;
         transition: all 0.2s ease;
     }
+
     .vp-form-control:focus {
         border-color: #7c3aed;
         box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
@@ -258,6 +359,7 @@ require_once "includes/header.php";
         font-weight: 800;
         color: #1e293b;
     }
+
     .vp-amount-unit {
         font-size: 11px;
         font-weight: 400;
@@ -293,7 +395,8 @@ require_once "includes/header.php";
 <div id="vendor-pay-app">
 
     <!-- Header -->
-    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between mb-4 vp-fade-in">
+    <div
+        class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between mb-4 vp-fade-in">
         <div class="d-flex align-items-center gap-3 mb-2 mb-md-0">
             <div class="vp-header-icon">💳</div>
             <div>
@@ -301,7 +404,8 @@ require_once "includes/header.php";
                 <p class="mb-0 small text-muted">Manage and track all vendor payment requests</p>
             </div>
         </div>
-        <button class="btn vp-btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#newRequestModal">
+        <button class="btn vp-btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal"
+            data-bs-target="#newRequestModal">
             <i class="fas fa-plus"></i> New Request
         </button>
     </div>
@@ -313,7 +417,8 @@ require_once "includes/header.php";
                 <i class="fas fa-clock stat-icon" style="color: #D97706;"></i>
                 <div class="stat-label" style="color: #D97706;">Pending Total</div>
                 <div class="stat-value" id="stat-pending-amt" style="color: #92400E; font-size: 1.2rem;">0 ETB</div>
-                <div class="small text-muted" id="stat-pending-count" style="font-size: 10px; font-weight: 700;">0 requests</div>
+                <div class="small text-muted" id="stat-pending-count" style="font-size: 10px; font-weight: 700;">0
+                    requests</div>
             </div>
         </div>
         <div class="col-6 col-md-3 vp-fade-in vp-fade-in-2">
@@ -321,7 +426,8 @@ require_once "includes/header.php";
                 <i class="fas fa-check-circle stat-icon" style="color: #059669;"></i>
                 <div class="stat-label" style="color: #059669;">Approved Total</div>
                 <div class="stat-value" id="stat-approved-amt" style="color: #065F46; font-size: 1.2rem;">0 ETB</div>
-                <div class="small text-muted" id="stat-approved-count" style="font-size: 10px; font-weight: 700; color: #059669 !important; opacity: 0.7;">0 requests</div>
+                <div class="small text-muted" id="stat-approved-count"
+                    style="font-size: 10px; font-weight: 700; color: #059669 !important; opacity: 0.7;">0 requests</div>
             </div>
         </div>
         <div class="col-6 col-md-3 vp-fade-in vp-fade-in-3">
@@ -329,7 +435,8 @@ require_once "includes/header.php";
                 <i class="fas fa-coins stat-icon" style="color: #2563EB;"></i>
                 <div class="stat-label" style="color: #2563EB;">Paid Total</div>
                 <div class="stat-value" id="stat-paid-amt" style="color: #1E40AF; font-size: 1.2rem;">0 ETB</div>
-                <div class="small text-muted" id="stat-paid-count" style="font-size: 10px; font-weight: 700; color: #2563EB !important; opacity: 0.7;">0 requests</div>
+                <div class="small text-muted" id="stat-paid-count"
+                    style="font-size: 10px; font-weight: 700; color: #2563EB !important; opacity: 0.7;">0 requests</div>
             </div>
         </div>
         <div class="col-6 col-md-3 vp-fade-in vp-fade-in-4">
@@ -337,14 +444,17 @@ require_once "includes/header.php";
                 <i class="fas fa-hand-holding-usd stat-icon" style="color: #7C3AED;"></i>
                 <div class="stat-label" style="color: #7C3AED;">Actual Commission</div>
                 <div class="stat-value" id="stat-total-amt" style="color: #5B21B6; font-size: 1.2rem;">0 ETB</div>
-                <div class="small text-muted" id="stat-total-count" style="font-size: 10px; font-weight: 700; color: #7C3AED !important; opacity: 0.7;">Actual Commission Collected</div>
+                <div class="small text-muted" id="stat-total-count"
+                    style="font-size: 10px; font-weight: 700; color: #7C3AED !important; opacity: 0.7;">Actual
+                    Commission Collected</div>
             </div>
         </div>
     </div>
 
     <!-- Filter Bar -->
     <div class="d-flex flex-column gap-3 mb-4 vp-fade-in vp-fade-in-3">
-        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+        <div
+            class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
             <div class="d-flex flex-wrap gap-2">
                 <button data-filter="all" class="vp-filter-btn active">All</button>
                 <button data-filter="pending" class="vp-filter-btn">Pending</button>
@@ -354,13 +464,18 @@ require_once "includes/header.php";
             </div>
             <div class="d-flex align-items-center gap-2">
                 <div class="input-group input-group-sm" style="width: auto;">
-                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-calendar-alt text-muted fa-xs"></i></span>
-                    <input type="date" id="filter-from" class="form-control vp-form-control border-start-0" title="From Date" style="font-size: 11px; width: 125px;">
+                    <span class="input-group-text bg-white border-end-0"><i
+                            class="fas fa-calendar-alt text-muted fa-xs"></i></span>
+                    <input type="date" id="filter-from" class="form-control vp-form-control border-start-0"
+                        title="From Date" style="font-size: 11px; width: 125px;">
                     <span class="input-group-text bg-white">to</span>
-                    <input type="date" id="filter-to" class="form-control vp-form-control" title="To Date" style="font-size: 11px; width: 125px;">
-                    <button id="btn-reset-filters" class="btn btn-outline-secondary" title="Reset Filters"><i class="fas fa-undo fa-xs"></i></button>
+                    <input type="date" id="filter-to" class="form-control vp-form-control" title="To Date"
+                        style="font-size: 11px; width: 125px;">
+                    <button id="btn-reset-filters" class="btn btn-outline-secondary" title="Reset Filters"><i
+                            class="fas fa-undo fa-xs"></i></button>
                 </div>
-                <input id="search-input" type="text" class="form-control form-control-sm vp-form-control" placeholder="Search..." style="width: 150px; font-size: 11px;">
+                <input id="search-input" type="text" class="form-control form-control-sm vp-form-control"
+                    placeholder="Search..." style="width: 150px; font-size: 11px;">
             </div>
         </div>
     </div>
@@ -415,37 +530,47 @@ require_once "includes/header.php";
                     <form id="request-form">
                         <div class="mb-3">
                             <label class="form-label fw-bold small">Shop Name <span class="text-danger">*</span></label>
-                            <input type="text" id="form-shop-name" required placeholder="e.g. Zara, H&M, AliExpress..." class="form-control vp-form-control">
+                            <input type="text" id="form-shop-name" required placeholder="e.g. Zara, H&M, AliExpress..."
+                                class="form-control vp-form-control">
                         </div>
                         <div id="orders-container">
                             <div class="order-row border-bottom pb-3 mb-3">
                                 <div class="row g-3">
                                     <div class="col-6">
-                                        <label class="form-label fw-bold small">Order ID <span class="text-danger">*</span></label>
-                                        <input type="text" required placeholder="e.g. ORD-12345" class="form-control vp-form-control form-order-id">
+                                        <label class="form-label fw-bold small">Order ID <span
+                                                class="text-danger">*</span></label>
+                                        <input type="text" required placeholder="e.g. ORD-12345"
+                                            class="form-control vp-form-control form-order-id">
                                     </div>
                                     <div class="col-6">
-                                        <label class="form-label fw-bold small">Amount (ETB) <span class="text-danger">*</span></label>
+                                        <label class="form-label fw-bold small">Amount (ETB) <span
+                                                class="text-danger">*</span></label>
                                         <div class="input-group">
-                                            <input type="number" required min="0.01" step="0.01" placeholder="0.00" class="form-control vp-form-control form-order-amount">
-                                            <button type="button" class="btn btn-outline-danger border-0 btn-remove-row" style="display: none;"><i class="fas fa-trash-alt"></i></button>
+                                            <input type="number" required min="0.01" step="0.01" placeholder="0.00"
+                                                class="form-control vp-form-control form-order-amount">
+                                            <button type="button" class="btn btn-outline-danger border-0 btn-remove-row"
+                                                style="display: none;"><i class="fas fa-trash-alt"></i></button>
                                         </div>
                                     </div>
                                     <div class="col-12 mt-1">
                                         <div class="form-check">
                                             <input class="form-check-input form-pays-comm" type="checkbox">
-                                            <label class="form-check-label small text-muted">Collect Commission (8% / 6.5% / 5% Tiered)</label>
+                                            <label class="form-check-label small text-muted">Collect Commission (8% /
+                                                6.5% / 5% Tiered)</label>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <button type="button" id="btn-add-order" class="btn btn-sm btn-link text-decoration-none fw-bold p-0 mb-3">
+                        <button type="button" id="btn-add-order"
+                            class="btn btn-sm btn-link text-decoration-none fw-bold p-0 mb-3">
                             <i class="fas fa-plus-circle me-1"></i> Add Another Order
                         </button>
                         <div class="mb-3">
-                            <label class="form-label fw-bold small">Notes <span class="text-muted fw-normal">(optional)</span></label>
-                            <textarea id="form-notes" rows="2" placeholder="Any additional details..." class="form-control vp-form-control" style="resize: none;"></textarea>
+                            <label class="form-label fw-bold small">Notes <span
+                                    class="text-muted fw-normal">(optional)</span></label>
+                            <textarea id="form-notes" rows="2" placeholder="Any additional details..."
+                                class="form-control vp-form-control" style="resize: none;"></textarea>
                         </div>
                     </form>
                 </div>
@@ -464,302 +589,302 @@ require_once "includes/header.php";
 </div>
 
 <script>
-(function() {
-    const API_URL = '<?php echo BASE_URL; ?>api/vendor_payment_requests_api.php';
-    let allRequests = [];
-    let currentFilter = 'all';
+    (function () {
+        const API_URL = '<?php echo BASE_URL; ?>api/vendor_payment_requests_api.php';
+        let allRequests = [];
+        let currentFilter = 'all';
 
-    const tbody = document.getElementById('requests-tbody');
-    const toastEl = document.getElementById('vp-toast');
-    const searchInput = document.getElementById('search-input');
-    const modalEl = document.getElementById('newRequestModal');
-    let bsModal = null;
+        const tbody = document.getElementById('requests-tbody');
+        const toastEl = document.getElementById('vp-toast');
+        const searchInput = document.getElementById('search-input');
+        const modalEl = document.getElementById('newRequestModal');
+        let bsModal = null;
 
-    function getModal() {
-        if (!bsModal && typeof bootstrap !== 'undefined' && modalEl) {
-            bsModal = new bootstrap.Modal(modalEl);
+        function getModal() {
+            if (!bsModal && typeof bootstrap !== 'undefined' && modalEl) {
+                bsModal = new bootstrap.Modal(modalEl);
+            }
+            return bsModal;
         }
-        return bsModal;
-    }
 
-    const ordersContainer = document.getElementById('orders-container');
-    const btnAddOrder = document.getElementById('btn-add-order');
+        const ordersContainer = document.getElementById('orders-container');
+        const btnAddOrder = document.getElementById('btn-add-order');
 
-    function updateRemoveButtons() {
-        const rows = ordersContainer.querySelectorAll('.order-row');
-        rows.forEach(row => {
-            const btn = row.querySelector('.btn-remove-row');
-            if (btn) btn.style.display = rows.length > 1 ? 'block' : 'none';
-        });
-    }
-
-    btnAddOrder.addEventListener('click', () => {
-        const firstRow = ordersContainer.querySelector('.order-row');
-        const newRow = firstRow.cloneNode(true);
-        newRow.classList.remove('vp-fade-in'); // Avoid re-triggering animation if any
-        newRow.querySelectorAll('input').forEach(input => {
-            input.value = '';
-            input.classList.remove('is-invalid');
-        });
-        ordersContainer.appendChild(newRow);
-        updateRemoveButtons();
-        validateOrderIDs();
-    });
-
-    ordersContainer.addEventListener('click', (e) => {
-        if (e.target.closest('.btn-remove-row')) {
+        function updateRemoveButtons() {
             const rows = ordersContainer.querySelectorAll('.order-row');
-            if (rows.length > 1) {
-                e.target.closest('.order-row').remove();
-                updateRemoveButtons();
+            rows.forEach(row => {
+                const btn = row.querySelector('.btn-remove-row');
+                if (btn) btn.style.display = rows.length > 1 ? 'block' : 'none';
+            });
+        }
+
+        btnAddOrder.addEventListener('click', () => {
+            const firstRow = ordersContainer.querySelector('.order-row');
+            const newRow = firstRow.cloneNode(true);
+            newRow.classList.remove('vp-fade-in'); // Avoid re-triggering animation if any
+            newRow.querySelectorAll('input').forEach(input => {
+                input.value = '';
+                input.classList.remove('is-invalid');
+            });
+            ordersContainer.appendChild(newRow);
+            updateRemoveButtons();
+            validateOrderIDs();
+        });
+
+        ordersContainer.addEventListener('click', (e) => {
+            if (e.target.closest('.btn-remove-row')) {
+                const rows = ordersContainer.querySelectorAll('.order-row');
+                if (rows.length > 1) {
+                    e.target.closest('.order-row').remove();
+                    updateRemoveButtons();
+                    validateOrderIDs();
+                }
+            }
+        });
+
+        const resetModal = () => {
+            document.getElementById('request-form').reset();
+            const rows = ordersContainer.querySelectorAll('.order-row');
+            rows.forEach((row, i) => { if (i > 0) row.remove(); });
+            ordersContainer.querySelectorAll('.form-pays-comm').forEach(chk => chk.checked = false);
+            updateRemoveButtons();
+        };
+
+        const filterFrom = document.getElementById('filter-from');
+        const filterTo = document.getElementById('filter-to');
+        const btnReset = document.getElementById('btn-reset-filters');
+        const btnSubmit = document.getElementById('btn-submit');
+
+        function validateOrderIDs() {
+            let isAnyDuplicate = false;
+            const currentInputs = Array.from(ordersContainer.querySelectorAll('.form-order-id'));
+            const enteredValues = currentInputs.map(input => input.value.trim().toLowerCase());
+
+            currentInputs.forEach((input, index) => {
+                const val = input.value.trim().toLowerCase();
+                if (!val) {
+                    input.classList.remove('is-invalid');
+                    return;
+                }
+
+                // Check against other entries in the same modal
+                const isDuplicateInModal = enteredValues.filter((v, i) => v === val && i !== index).length > 0;
+
+                // Check against all existing requests in the system
+                const isDuplicateInSystem = allRequests.some(r => (r.order_id || '').toLowerCase() === val);
+
+                if (isDuplicateInModal || isDuplicateInSystem) {
+                    input.classList.add('is-invalid');
+                    isAnyDuplicate = true;
+
+                    // Add tooltip or label if not exists
+                    let feedback = input.parentNode.querySelector('.invalid-feedback');
+                    if (!feedback) {
+                        feedback = document.createElement('div');
+                        feedback.className = 'invalid-feedback';
+                        feedback.style.fontSize = '10px';
+                        input.parentNode.appendChild(feedback);
+                    }
+                    feedback.textContent = isDuplicateInSystem ? 'Order ID already exists in the system' : 'Duplicate Order ID in this request';
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            });
+
+            btnSubmit.disabled = isAnyDuplicate;
+            if (isAnyDuplicate) {
+                btnSubmit.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Resolve Duplicates';
+            } else {
+                btnSubmit.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Submit Request';
+            }
+        }
+
+        ordersContainer.addEventListener('input', (e) => {
+            if (e.target.classList.contains('form-order-id')) {
                 validateOrderIDs();
             }
-        }
-    });
-
-    const resetModal = () => {
-        document.getElementById('request-form').reset();
-        const rows = ordersContainer.querySelectorAll('.order-row');
-        rows.forEach((row, i) => { if (i > 0) row.remove(); });
-        ordersContainer.querySelectorAll('.form-pays-comm').forEach(chk => chk.checked = false);
-        updateRemoveButtons();
-    };
-
-    const filterFrom = document.getElementById('filter-from');
-    const filterTo = document.getElementById('filter-to');
-    const btnReset = document.getElementById('btn-reset-filters');
-    const btnSubmit = document.getElementById('btn-submit');
-
-    function validateOrderIDs() {
-        let isAnyDuplicate = false;
-        const currentInputs = Array.from(ordersContainer.querySelectorAll('.form-order-id'));
-        const enteredValues = currentInputs.map(input => input.value.trim().toLowerCase());
-
-        currentInputs.forEach((input, index) => {
-            const val = input.value.trim().toLowerCase();
-            if (!val) {
-                input.classList.remove('is-invalid');
-                return;
-            }
-
-            // Check against other entries in the same modal
-            const isDuplicateInModal = enteredValues.filter((v, i) => v === val && i !== index).length > 0;
-            
-            // Check against all existing requests in the system
-            const isDuplicateInSystem = allRequests.some(r => (r.order_id || '').toLowerCase() === val);
-
-            if (isDuplicateInModal || isDuplicateInSystem) {
-                input.classList.add('is-invalid');
-                isAnyDuplicate = true;
-                
-                // Add tooltip or label if not exists
-                let feedback = input.parentNode.querySelector('.invalid-feedback');
-                if (!feedback) {
-                    feedback = document.createElement('div');
-                    feedback.className = 'invalid-feedback';
-                    feedback.style.fontSize = '10px';
-                    input.parentNode.appendChild(feedback);
-                }
-                feedback.textContent = isDuplicateInSystem ? 'Order ID already exists in the system' : 'Duplicate Order ID in this request';
-            } else {
-                input.classList.remove('is-invalid');
-            }
         });
 
-        btnSubmit.disabled = isAnyDuplicate;
-        if (isAnyDuplicate) {
-            btnSubmit.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Resolve Duplicates';
-        } else {
-            btnSubmit.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Submit Request';
-        }
-    }
+        const shopNameInput = document.getElementById('form-shop-name');
+        const notesInput = document.getElementById('form-notes');
 
-    ordersContainer.addEventListener('input', (e) => {
-        if (e.target.classList.contains('form-order-id')) {
-            validateOrderIDs();
-        }
-    });
+        const autoFetchNote = () => {
+            const name = shopNameInput.value.trim().toLowerCase();
+            if (!name) return;
 
-    const shopNameInput = document.getElementById('form-shop-name');
-    const notesInput = document.getElementById('form-notes');
+            // Try to find the MOST RECENT and NON-EMPTY note for this shop
+            // allRequests is already sorted by date DESC from API
+            const previousRequest = allRequests.find(r =>
+                (r.shop_name || '').trim().toLowerCase() === name &&
+                (r.notes || '').trim() !== ''
+            );
 
-    const autoFetchNote = () => {
-        const name = shopNameInput.value.trim().toLowerCase();
-        if (!name) return;
+            if (previousRequest && previousRequest.notes && !notesInput.value.trim()) {
+                notesInput.value = previousRequest.notes;
+                showToast('Auto-fetched previous account details', 'success');
+            }
+        };
 
-        // Try to find the MOST RECENT and NON-EMPTY note for this shop
-        // allRequests is already sorted by date DESC from API
-        const previousRequest = allRequests.find(r => 
-            (r.shop_name || '').trim().toLowerCase() === name && 
-            (r.notes || '').trim() !== ''
-        );
-        
-        if (previousRequest && previousRequest.notes && !notesInput.value.trim()) {
-            notesInput.value = previousRequest.notes;
-            showToast('Auto-fetched previous account details', 'success');
-        }
-    };
+        shopNameInput.addEventListener('change', autoFetchNote);
+        shopNameInput.addEventListener('blur', autoFetchNote);
 
-    shopNameInput.addEventListener('change', autoFetchNote);
-    shopNameInput.addEventListener('blur', autoFetchNote);
+        // Filters
+        document.querySelectorAll('.vp-filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.vp-filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderTable();
+            });
+        });
 
-    // Filters
-    document.querySelectorAll('.vp-filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        // Search & Date
+        searchInput.addEventListener('input', () => renderTable());
+        filterFrom.addEventListener('change', () => renderTable());
+        filterTo.addEventListener('change', () => renderTable());
+
+        // Reset
+        btnReset.addEventListener('click', () => {
+            filterFrom.value = '';
+            filterTo.value = '';
+            searchInput.value = '';
             document.querySelectorAll('.vp-filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentFilter = btn.dataset.filter;
+            document.querySelector('[data-filter="all"]').classList.add('active');
+            currentFilter = 'all';
             renderTable();
         });
-    });
 
-    // Search & Date
-    searchInput.addEventListener('input', () => renderTable());
-    filterFrom.addEventListener('change', () => renderTable());
-    filterTo.addEventListener('change', () => renderTable());
+        // Toast
+        function showToast(msg, type = 'success') {
+            toastEl.textContent = msg;
+            toastEl.className = `vp-toast vp-toast-${type} show`;
+            setTimeout(() => toastEl.classList.remove('show'), 3000);
+        }
 
-    // Reset
-    btnReset.addEventListener('click', () => {
-        filterFrom.value = '';
-        filterTo.value = '';
-        searchInput.value = '';
-        document.querySelectorAll('.vp-filter-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector('[data-filter="all"]').classList.add('active');
-        currentFilter = 'all';
-        renderTable();
-    });
-
-    // Toast
-    function showToast(msg, type = 'success') {
-        toastEl.textContent = msg;
-        toastEl.className = `vp-toast vp-toast-${type} show`;
-        setTimeout(() => toastEl.classList.remove('show'), 3000);
-    }
-
-    // Fetch
-    async function fetchRequests() {
-        try {
-            const res = await fetch(API_URL);
-            const data = await res.json();
-            if (data.isOk) {
-                allRequests = data.data || [];
-                updateStats();
-                renderTable();
-            } else {
-                showToast(data.message, 'error');
+        // Fetch
+        async function fetchRequests() {
+            try {
+                const res = await fetch(API_URL);
+                const data = await res.json();
+                if (data.isOk) {
+                    allRequests = data.data || [];
+                    updateStats();
+                    renderTable();
+                } else {
+                    showToast(data.message, 'error');
+                    allRequests = [];
+                    updateStats();
+                    renderTable();
+                }
+            } catch (err) {
+                showToast('Failed to load data', 'error');
                 allRequests = [];
                 updateStats();
                 renderTable();
             }
-        } catch (err) {
-            showToast('Failed to load data', 'error');
-            allRequests = [];
-            updateStats();
-            renderTable();
         }
-    }
 
-    // Stats
-    function updateStats(data = allRequests) {
-        const stats = {
-            pending: { gross: 0, net: 0, count: 0 },
-            approved: { gross: 0, net: 0, count: 0 },
-            paid: { gross: 0, net: 0, count: 0 },
-            total: { gross: 0, net: 0, comm: 0, paidComm: 0, count: data.length }
-        };
+        // Stats
+        function updateStats(data = allRequests) {
+            const stats = {
+                pending: { gross: 0, net: 0, count: 0 },
+                approved: { gross: 0, net: 0, count: 0 },
+                paid: { gross: 0, net: 0, count: 0 },
+                total: { gross: 0, net: 0, comm: 0, paidComm: 0, count: data.length }
+            };
 
-        data.forEach(r => {
-            const gross = parseFloat(r.order_amount || 0);
-            const net = parseFloat(r.net_amount || 0);
-            const comm = parseFloat(r.commission_amount || 0);
-            
-            stats.total.gross += gross;
-            stats.total.net += net;
-            stats.total.comm += comm;
-            if (r.status === 'paid') stats.total.paidComm += comm;
+            data.forEach(r => {
+                const gross = parseFloat(r.order_amount || 0);
+                const net = parseFloat(r.net_amount || 0);
+                const comm = parseFloat(r.commission_amount || 0);
 
-            if (stats[r.status]) {
-                stats[r.status].gross += gross;
-                stats[r.status].net += net;
-                stats[r.status].count++;
+                stats.total.gross += gross;
+                stats.total.net += net;
+                stats.total.comm += comm;
+                if (r.status === 'paid') stats.total.paidComm += comm;
+
+                if (stats[r.status]) {
+                    stats[r.status].gross += gross;
+                    stats[r.status].net += net;
+                    stats[r.status].count++;
+                }
+            });
+
+            const fmt = (v) => v.toLocaleString('en', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+            document.getElementById('stat-pending-amt').textContent = fmt(stats.pending.net) + ' ETB';
+            document.getElementById('stat-pending-count').textContent = stats.pending.count + ' req (' + fmt(stats.pending.gross) + ' Gross)';
+
+            document.getElementById('stat-approved-amt').textContent = fmt(stats.approved.net) + ' ETB';
+            document.getElementById('stat-approved-count').textContent = stats.approved.count + ' req (' + fmt(stats.approved.gross) + ' Gross)';
+
+            document.getElementById('stat-paid-amt').textContent = fmt(stats.paid.net) + ' ETB';
+            document.getElementById('stat-paid-count').textContent = stats.paid.count + ' req (' + fmt(stats.paid.gross) + ' Gross)';
+
+            document.getElementById('stat-total-amt').textContent = fmt(stats.total.paidComm) + ' ETB';
+            document.getElementById('stat-total-count').textContent = 'Actual Commission | Gross: ' + fmt(stats.total.gross);
+        }
+
+        // Render
+        function renderTable() {
+            const search = searchInput.value.toLowerCase();
+            const from = filterFrom.value;
+            const to = filterTo.value;
+            let filtered = allRequests;
+
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(r => r.status === currentFilter);
             }
-        });
+            if (search) {
+                filtered = filtered.filter(r =>
+                    (r.shop_name || '').toLowerCase().includes(search) ||
+                    (r.order_id || '').toLowerCase().includes(search) ||
+                    (r.notes || '').toLowerCase().includes(search)
+                );
+            }
+            if (from) {
+                filtered = filtered.filter(r => r.created_at >= from + ' 00:00:00');
+            }
+            if (to) {
+                filtered = filtered.filter(r => r.created_at <= to + ' 23:59:59');
+            }
 
-        const fmt = (v) => v.toLocaleString('en', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            updateStats(filtered);
 
-        document.getElementById('stat-pending-amt').textContent = fmt(stats.pending.net) + ' ETB';
-        document.getElementById('stat-pending-count').textContent = stats.pending.count + ' req (' + fmt(stats.pending.gross) + ' Gross)';
-
-        document.getElementById('stat-approved-amt').textContent = fmt(stats.approved.net) + ' ETB';
-        document.getElementById('stat-approved-count').textContent = stats.approved.count + ' req (' + fmt(stats.approved.gross) + ' Gross)';
-
-        document.getElementById('stat-paid-amt').textContent = fmt(stats.paid.net) + ' ETB';
-        document.getElementById('stat-paid-count').textContent = stats.paid.count + ' req (' + fmt(stats.paid.gross) + ' Gross)';
-
-        document.getElementById('stat-total-amt').textContent = fmt(stats.total.paidComm) + ' ETB';
-        document.getElementById('stat-total-count').textContent = 'Actual Commission | Gross: ' + fmt(stats.total.gross);
-    }
-
-    // Render
-    function renderTable() {
-        const search = searchInput.value.toLowerCase();
-        const from = filterFrom.value;
-        const to = filterTo.value;
-        let filtered = allRequests;
-
-        if (currentFilter !== 'all') {
-            filtered = filtered.filter(r => r.status === currentFilter);
-        }
-        if (search) {
-            filtered = filtered.filter(r =>
-                (r.shop_name || '').toLowerCase().includes(search) ||
-                (r.order_id || '').toLowerCase().includes(search) ||
-                (r.notes || '').toLowerCase().includes(search)
-            );
-        }
-        if (from) {
-            filtered = filtered.filter(r => r.created_at >= from + ' 00:00:00');
-        }
-        if (to) {
-            filtered = filtered.filter(r => r.created_at <= to + ' 23:59:59');
-        }
-
-        updateStats(filtered);
-
-        if (filtered.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8">
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8">
                 <div class="vp-empty-state">
                     <div style="font-size: 40px;" class="mb-2">📭</div>
                     <div class="fw-bold text-muted">No payment requests found</div>
                     <div class="text-muted small mt-1">Click "New Request" to create one</div>
                 </div>
             </td></tr>`;
-            return;
-        }
-
-        tbody.innerHTML = filtered.map((r, i) => {
-            const date = new Date(r.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-            const gross = parseFloat(r.order_amount).toLocaleString('en', { minimumFractionDigits: 2 });
-            const net = parseFloat(r.net_amount).toLocaleString('en', { minimumFractionDigits: 2 });
-            const comm = parseFloat(r.commission_amount).toLocaleString('en', { minimumFractionDigits: 2 });
-            const dots = { pending: '🟡', approved: '🟢', rejected: '🔴', paid: '🔵' };
-
-            let commHtml = `<span class="text-muted">-${comm}</span>`;
-            if (r.pays_commission == 1) {
-                commHtml = `<span class="text-danger fw-bold">-${comm}</span> <br><small class="text-muted" style="font-size:9px;">(${r.commission_rate}%)</small>`;
+                return;
             }
 
-            let actions = '';
-            if (r.status === 'pending') {
-                actions = `
+            tbody.innerHTML = filtered.map((r, i) => {
+                const date = new Date(r.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                const gross = parseFloat(r.order_amount).toLocaleString('en', { minimumFractionDigits: 2 });
+                const net = parseFloat(r.net_amount).toLocaleString('en', { minimumFractionDigits: 2 });
+                const comm = parseFloat(r.commission_amount).toLocaleString('en', { minimumFractionDigits: 2 });
+                const dots = { pending: '🟡', approved: '🟢', rejected: '🔴', paid: '🔵' };
+
+                let commHtml = `<span class="text-muted">-${comm}</span>`;
+                if (r.pays_commission == 1) {
+                    commHtml = `<span class="text-danger fw-bold">-${comm}</span> <br><small class="text-muted" style="font-size:9px;">(${r.commission_rate}%)</small>`;
+                }
+
+                let actions = '';
+                if (r.status === 'pending') {
+                    actions = `
                     <button class="vp-action-btn vp-btn-approve" onclick="vpUpdateStatus(${r.id}, 'approve')"><i class="fas fa-check fa-xs"></i> Approve</button>
                     <button class="vp-action-btn vp-btn-reject" onclick="vpUpdateStatus(${r.id}, 'reject')"><i class="fas fa-times fa-xs"></i> Reject</button>`;
-            } else if (r.status === 'approved') {
-                actions = `<button class="vp-action-btn vp-btn-paid" onclick="vpUpdateStatus(${r.id}, 'mark_paid')"><i class="fas fa-money-bill fa-xs"></i> Mark Paid</button>`;
-            }
-            actions += `<button class="vp-action-btn vp-btn-delete ms-1" onclick="vpDeleteRequest(${r.id})" title="Delete"><i class="fas fa-trash fa-xs"></i></button>`;
+                } else if (r.status === 'approved') {
+                    actions = `<button class="vp-action-btn vp-btn-paid" onclick="vpUpdateStatus(${r.id}, 'mark_paid')"><i class="fas fa-money-bill fa-xs"></i> Mark Paid</button>`;
+                }
+                actions += `<button class="vp-action-btn vp-btn-delete ms-1" onclick="vpDeleteRequest(${r.id})" title="Delete"><i class="fas fa-trash fa-xs"></i></button>`;
 
-            return `<tr>
+                return `<tr>
                 <td class="vp-row-num">${i + 1}</td>
                 <td class="vp-shop-name">${escHtml(r.shop_name)}</td>
                 <td><span class="vp-order-code">${escHtml(r.order_id)}</span></td>
@@ -774,111 +899,111 @@ require_once "includes/header.php";
                 <td class="vp-date">${date}</td>
                 <td class="text-center"><div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">${actions}</div></td>
             </tr>`;
-        }).join('');
-    }
+            }).join('');
+        }
 
-    function escHtml(str) {
-        if (!str) return '';
-        const d = document.createElement('div');
-        d.textContent = str;
-        return d.innerHTML;
-    }
+        function escHtml(str) {
+            if (!str) return '';
+            const d = document.createElement('div');
+            d.textContent = str;
+            return d.innerHTML;
+        }
 
-    // Submit
-    document.getElementById('btn-submit').addEventListener('click', async () => {
-        const shopName = document.getElementById('form-shop-name').value.trim();
-        const notes = document.getElementById('form-notes').value.trim();
+        // Submit
+        document.getElementById('btn-submit').addEventListener('click', async () => {
+            const shopName = document.getElementById('form-shop-name').value.trim();
+            const notes = document.getElementById('form-notes').value.trim();
 
-        const orders = [];
-        let valid = true;
-        ordersContainer.querySelectorAll('.order-row').forEach(row => {
-            const id = row.querySelector('.form-order-id').value.trim();
-            const amt = row.querySelector('.form-order-amount').value;
-            const paysComm = row.querySelector('.form-pays-comm').checked;
-            if (!id || !amt) valid = false;
-            orders.push({ order_id: id, order_amount: amt, pays_commission: paysComm });
+            const orders = [];
+            let valid = true;
+            ordersContainer.querySelectorAll('.order-row').forEach(row => {
+                const id = row.querySelector('.form-order-id').value.trim();
+                const amt = row.querySelector('.form-order-amount').value;
+                const paysComm = row.querySelector('.form-pays-comm').checked;
+                if (!id || !amt) valid = false;
+                orders.push({ order_id: id, order_amount: amt, pays_commission: paysComm });
+            });
+
+            if (!shopName || !valid || orders.length === 0) {
+                showToast('Please fill all required fields for all orders', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btn-submit');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Submitting...';
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ shop_name: shopName, orders: orders, notes: notes })
+                });
+                const data = await res.json();
+                if (data.isOk) {
+                    showToast(data.message || 'Payment request created!');
+                    const modal = getModal();
+                    if (modal) modal.hide();
+                    resetModal();
+                    fetchRequests();
+                } else {
+                    showToast(data.message, 'error');
+                }
+            } catch (err) {
+                showToast('Failed to create request', 'error');
+            }
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Submit Request';
         });
 
-        if (!shopName || !valid || orders.length === 0) {
-            showToast('Please fill all required fields for all orders', 'error');
-            return;
-        }
+        // Update status
+        window.vpUpdateStatus = async function (id, action) {
+            const labels = { approve: 'Approve', reject: 'Reject', mark_paid: 'Mark as Paid' };
+            if (!confirm(`Are you sure you want to ${labels[action]} this request?`)) return;
 
-        const btn = document.getElementById('btn-submit');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Submitting...';
-
-        try {
-            const res = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ shop_name: shopName, orders: orders, notes: notes })
-            });
-            const data = await res.json();
-            if (data.isOk) {
-                showToast(data.message || 'Payment request created!');
-                const modal = getModal();
-                if (modal) modal.hide();
-                resetModal();
-                fetchRequests();
-            } else {
-                showToast(data.message, 'error');
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ _method: 'PUT', id, action })
+                });
+                const data = await res.json();
+                if (data.isOk) {
+                    showToast(data.message);
+                    fetchRequests();
+                } else {
+                    showToast(data.message, 'error');
+                }
+            } catch (err) {
+                showToast('Failed to update status', 'error');
             }
-        } catch (err) {
-            showToast('Failed to create request', 'error');
-        }
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Submit Request';
-    });
+        };
 
-    // Update status
-    window.vpUpdateStatus = async function(id, action) {
-        const labels = { approve: 'Approve', reject: 'Reject', mark_paid: 'Mark as Paid' };
-        if (!confirm(`Are you sure you want to ${labels[action]} this request?`)) return;
+        // Delete
+        window.vpDeleteRequest = async function (id) {
+            if (!confirm('Are you sure you want to permanently delete this request?')) return;
 
-        try {
-            const res = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ _method: 'PUT', id, action })
-            });
-            const data = await res.json();
-            if (data.isOk) {
-                showToast(data.message);
-                fetchRequests();
-            } else {
-                showToast(data.message, 'error');
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ _method: 'DELETE', id })
+                });
+                const data = await res.json();
+                if (data.isOk) {
+                    showToast('Request deleted.');
+                    fetchRequests();
+                } else {
+                    showToast(data.message, 'error');
+                }
+            } catch (err) {
+                showToast('Failed to delete request', 'error');
             }
-        } catch (err) {
-            showToast('Failed to update status', 'error');
-        }
-    };
+        };
 
-    // Delete
-    window.vpDeleteRequest = async function(id) {
-        if (!confirm('Are you sure you want to permanently delete this request?')) return;
-
-        try {
-            const res = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ _method: 'DELETE', id })
-            });
-            const data = await res.json();
-            if (data.isOk) {
-                showToast('Request deleted.');
-                fetchRequests();
-            } else {
-                showToast(data.message, 'error');
-            }
-        } catch (err) {
-            showToast('Failed to delete request', 'error');
-        }
-    };
-
-    // Init
-    fetchRequests();
-})();
+        // Init
+        fetchRequests();
+    })();
 </script>
 
 <?php require_once "includes/footer.php"; ?>
