@@ -14,7 +14,9 @@ require_once "includes/header.php";
         font-family: 'Nunito', sans-serif;
     }
 
-    /* Stat Cards */
+    /* =========================
+   Stat Cards
+========================= */
     .vp-stat-card {
         border-radius: 14px;
         padding: 18px 22px;
@@ -50,7 +52,9 @@ require_once "includes/header.php";
         line-height: 1.2;
     }
 
-    /* Status Badges */
+    /* =========================
+   Badges
+========================= */
     .vp-badge {
         display: inline-flex;
         align-items: center;
@@ -60,7 +64,6 @@ require_once "includes/header.php";
         font-size: 11px;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
     }
 
     .vp-badge-pending {
@@ -83,7 +86,9 @@ require_once "includes/header.php";
         color: #1E40AF;
     }
 
-    /* Action Buttons */
+    /* =========================
+   Buttons
+========================= */
     .vp-action-btn {
         padding: 4px 12px;
         border-radius: 8px;
@@ -91,10 +96,11 @@ require_once "includes/header.php";
         font-weight: 700;
         border: none;
         cursor: pointer;
-        transition: all 0.2s ease;
         display: inline-flex;
         align-items: center;
         gap: 4px;
+        transition: all 0.2s ease;
+        white-space: nowrap;
     }
 
     .vp-action-btn:hover {
@@ -107,18 +113,8 @@ require_once "includes/header.php";
         color: #065F46;
     }
 
-    .vp-btn-approve:hover {
-        background: #A7F3D0;
-        color: #065F46;
-    }
-
     .vp-btn-reject {
         background: #FEE2E2;
-        color: #991B1B;
-    }
-
-    .vp-btn-reject:hover {
-        background: #FECACA;
         color: #991B1B;
     }
 
@@ -127,22 +123,14 @@ require_once "includes/header.php";
         color: #1E40AF;
     }
 
-    .vp-btn-paid:hover {
-        background: #BFDBFE;
-        color: #1E40AF;
-    }
-
     .vp-btn-delete {
         background: #FEE2E2;
         color: #991B1B;
     }
 
-    .vp-btn-delete:hover {
-        background: #FECACA;
-        color: #991B1B;
-    }
-
-    /* Filter Pills */
+    /* =========================
+   Filters
+========================= */
     .vp-filter-btn {
         padding: 6px 16px;
         border-radius: 8px;
@@ -152,376 +140,126 @@ require_once "includes/header.php";
         background: #fff;
         color: #64748b;
         cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .vp-filter-btn:hover {
-        background: #f8fafc;
     }
 
     .vp-filter-btn.active {
         background: #1e293b;
         color: #fff;
-        border-color: #1e293b;
     }
 
-    /* Order ID code style */
-    .vp-order-code {
-        background: #f1f5f9;
-        color: #7c3aed;
-        padding: 3px 8px;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 700;
-        font-family: 'Courier New', monospace;
-    }
-
-    /* Table styling */
-    #vendor-pay-app .table>thead>tr>th {
+    /* =========================
+   Table
+========================= */
+    #vendor-pay-app .table th {
         font-size: 10px;
         font-weight: 800;
         text-transform: uppercase;
-        letter-spacing: 0.8px;
         color: #64748B;
-        border-bottom: 2px solid #e2e8f0;
-        padding: 12px 14px;
         background: #f8fafc;
     }
 
-    #vendor-pay-app .table>tbody>tr>td {
-        padding: 14px;
+    #vendor-pay-app .table td {
         font-size: 13px;
         color: #334155;
-        vertical-align: middle;
-        border-bottom: 1px solid #f1f5f9;
     }
 
-    #vendor-pay-app .table>tbody>tr:hover {
-        background: #f8fafc;
-    }
+    /* =========================
+   Responsive Fixes
+========================= */
 
-    /* Header icon */
-    .vp-header-icon {
-        width: 42px;
-        height: 42px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 20px;
-        background: linear-gradient(135deg, #7c3aed, #4f46e5);
-        color: #fff;
-        box-shadow: 0 6px 16px rgba(124, 58, 237, 0.3);
-    }
-
-    /* Modal header gradient */
-    .vp-modal-header {
-        background: linear-gradient(135deg, #7c3aed, #4f46e5);
-        border-radius: 0;
-        padding: 20px 24px;
-    }
-
-    .vp-modal-header .modal-title {
-        color: #fff;
-        font-weight: 800;
-        font-size: 16px;
-    }
-
-    .vp-modal-header .btn-close {
-        filter: brightness(0) invert(1);
-    }
-
-    .vp-modal-header .modal-subtitle {
-        color: rgba(255, 255, 255, 0.7);
-        font-size: 12px;
-        margin-top: 2px;
-    }
-
-    /* Toast notification */
-    .vp-toast {
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        z-index: 99999;
-        padding: 14px 22px;
-        border-radius: 12px;
-        color: #fff;
-        font-size: 13px;
-        font-weight: 700;
-        transform: translateY(100px);
-        opacity: 0;
-        transition: all 0.35s ease;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-    }
-
-    .vp-toast.show {
-        transform: translateY(0);
-        opacity: 1;
-    }
-
-    .vp-toast-success {
-        background: linear-gradient(135deg, #059669, #10B981);
-    }
-
-    .vp-toast-error {
-        background: linear-gradient(135deg, #DC2626, #EF4444);
-    }
-
-    /* Empty state */
-    .vp-empty-state {
-        text-align: center;
-        padding: 48px 16px;
-    }
-
-    /* Card border radius */
-    .vp-card {
-        border-radius: 16px;
-        border: 1px solid #e2e8f0;
-        overflow: hidden;
-    }
-
-    /* Animations */
-    @keyframes vpFadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(12px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .vp-fade-in {
-        animation: vpFadeIn 0.4s ease forwards;
-    }
-
-    .vp-fade-in-1 {
-        animation-delay: 0.05s;
-        opacity: 0;
-    }
-
-    .vp-fade-in-2 {
-        animation-delay: 0.1s;
-        opacity: 0;
-    }
-
-    .vp-fade-in-3 {
-        animation-delay: 0.15s;
-        opacity: 0;
-    }
-
-    .vp-fade-in-4 {
-        animation-delay: 0.2s;
-        opacity: 0;
-    }
-
-    /* Primary gradient button */
-    .vp-btn-primary {
-        background: linear-gradient(135deg, #7c3aed, #4f46e5);
-        border: none;
-        color: #fff;
-        font-weight: 700;
-        padding: 10px 22px;
-        border-radius: 12px;
-        box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);
-        transition: all 0.2s ease;
-    }
-
-    .vp-btn-primary:hover {
-        background: linear-gradient(135deg, #6d28d9, #4338ca);
-        color: #fff;
-        box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
-        transform: translateY(-1px);
-    }
-
-    .vp-btn-primary:active {
-        transform: scale(0.97);
-    }
-
-    /* Form inputs */
-    .vp-form-control {
-        border-radius: 10px;
-        border: 1px solid #e2e8f0;
-        padding: 10px 14px;
-        font-size: 14px;
-        transition: all 0.2s ease;
-    }
-
-    .vp-form-control:focus {
-        border-color: #7c3aed;
-        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
-    }
-
-    /* Amount styling */
-    .vp-amount {
-        font-weight: 800;
-        color: #1e293b;
-    }
-
-    .vp-amount-unit {
-        font-size: 11px;
-        font-weight: 400;
-        color: #94a3b8;
-    }
-
-    /* Shop name */
-    .vp-shop-name {
-        font-weight: 700;
-        color: #1e293b;
-    }
-
-    /* Row number */
-    .vp-row-num {
-        font-weight: 800;
-        color: #cbd5e1;
-        font-size: 12px;
-    }
-
-    /* Requested by */
-    .vp-requested-by {
-        font-size: 12px;
-        color: #94a3b8;
-    }
-
-    /* Mobile & Laptop Optimizations */
-    @media (min-width: 768px) and (max-width: 1400px) {
-        #vendor-pay-app .table>thead>tr>th,
-        #vendor-pay-app .table>tbody>tr>td {
-            padding: 8px 10px;
-            font-size: 11px;
-        }
-
-        .vp-amount {
-            font-size: 12px;
-        }
-
-        .vp-order-code {
-            padding: 2px 5px;
-            font-size: 11px;
-        }
-    }
-
-    /* Custom Scrollbar for better Laptop experience */
-    .table-responsive::-webkit-scrollbar {
-        height: 8px;
-    }
-
-    .table-responsive::-webkit-scrollbar-track {
-        background: #f1f5f9;
-        border-radius: 10px;
-    }
-
-    .table-responsive::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 10px;
-        border: 2px solid #f1f5f9;
-    }
-
-    .table-responsive::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-    }
-
-    @media (max-width: 767.98px) {
-        /* Stats Cards - Make them more compact */
+    /* 📱 Mobile */
+    @media (max-width: 576px) {
         .vp-stat-card {
-            padding: 12px 14px;
+            padding: 12px;
         }
+
         .vp-stat-card .stat-value {
             font-size: 1.1rem;
         }
-        .vp-stat-card .stat-icon {
-            font-size: 20px;
-        }
 
-        /* Filter buttons - center them */
         .vp-filter-btn {
-            padding: 6px 12px;
+            flex: 1;
             font-size: 11px;
-            flex-grow: 1;
-            text-align: center;
         }
 
-        .vp-filter-scroll-container {
-            overflow-x: auto;
-            white-space: nowrap;
-            padding-bottom: 5px;
-            -webkit-overflow-scrolling: touch;
+        .modal-dialog {
+            margin: 10px;
         }
+    }
 
-        /* Card layout for table on mobile */
-        #vendor-pay-app .table-responsive {
-            border: none;
-        }
-        #vendor-pay-app .table thead {
-            display: none; /* Hide headers */
-        }
-        #vendor-pay-app .table, 
-        #vendor-pay-app .table tbody, 
-        #vendor-pay-app .table tr, 
+    /* 📲 Tablet */
+    @media (min-width: 768px) and (max-width: 1024px) {
+
+        #vendor-pay-app .table th,
         #vendor-pay-app .table td {
-            display: block;
-            width: 100%;
-        }
-        #vendor-pay-app .table tr {
-            margin-bottom: 20px;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            background: #fff;
+            font-size: 12px;
             padding: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
-        #vendor-pay-app .table td {
-            text-align: right;
-            padding: 8px 10px;
-            position: relative;
-            border-bottom: 1px solid #f1f5f9;
+
+        .vp-stat-card {
+            padding: 14px;
         }
-        #vendor-pay-app .table td:last-child {
-            border-bottom: none;
-            text-align: center;
-            margin-top: 10px;
-            background: #f8fafc;
-            border-radius: 0 0 10px 10px;
+
+        .vp-stat-card .stat-value {
+            font-size: 1.3rem;
         }
-        #vendor-pay-app .table td::before {
-            content: attr(data-label);
-            position: absolute;
-            left: 10px;
-            width: 120px;
-            text-align: left;
-            font-size: 10px;
-            font-weight: 800;
-            text-transform: uppercase;
-            color: #64748b;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-        #vendor-pay-app .vp-row-num {
-            display: none !important;
-        }
-        #vendor-pay-app .vp-shop-name {
-            font-size: 16px;
-            color: #1e293b;
-            border-bottom: 2px solid #7c3aed !important;
-            margin-bottom: 5px;
-        }
-        #vendor-pay-app .vp-shop-name::before {
-            display: none;
-        }
-        #vendor-pay-app .vp-shop-name {
-            text-align: left !important;
-            padding-left: 10px !important;
-        }
-        
-        /* Adjust action buttons container for mobile */
-        .vp-action-btn {
-            width: 100%;
-            justify-content: center;
-            padding: 8px;
+
+        .vp-btn-primary {
+            padding: 8px 16px;
             font-size: 12px;
         }
+    }
+
+    /* 💻 Medium screens */
+    @media (max-width: 991px) {
+        .vp-filter-scroll-container {
+            display: flex;
+            overflow-x: auto;
+        }
+
+        .vp-action-btn {
+            font-size: 10px;
+            padding: 4px 8px;
+        }
+
+        #vendor-pay-app .table th,
+        #vendor-pay-app .table td {
+            font-size: 11px;
+            padding: 8px;
+        }
+    }
+
+    /* 🖥 Large screens */
+    @media (min-width: 1400px) {
+        #vendor-pay-app {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+    }
+
+    /* =========================
+   Stats Grid Fix
+========================= */
+    @media (max-width: 991px) {
+        .row.g-3>div {
+            flex: 0 0 50%;
+            max-width: 50%;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .row.g-3>div {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+    }
+
+    /* =========================
+   Smooth Scroll
+========================= */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 </style>
 
@@ -586,7 +324,8 @@ require_once "includes/header.php";
 
     <!-- Filter Bar -->
     <div class="d-flex flex-column gap-3 mb-4 vp-fade-in vp-fade-in-3">
-        <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-3">
+        <div
+            class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-3">
             <div class="d-flex flex-wrap gap-2 vp-filter-scroll-container">
                 <button data-filter="all" class="vp-filter-btn active">All</button>
                 <button data-filter="pending" class="vp-filter-btn">Pending</button>
@@ -607,7 +346,8 @@ require_once "includes/header.php";
                             class="fas fa-undo fa-xs"></i></button>
                 </div>
                 <div class="position-relative w-100">
-                    <i class="fas fa-search position-absolute text-muted" style="left: 10px; top: 50%; transform: translateY(-50%); font-size: 10px; z-index: 5;"></i>
+                    <i class="fas fa-search position-absolute text-muted"
+                        style="left: 10px; top: 50%; transform: translateY(-50%); font-size: 10px; z-index: 5;"></i>
                     <input id="search-input" type="text" class="form-control form-control-sm vp-form-control"
                         placeholder="Search Shop, Order..." style="font-size: 11px; padding-left: 28px;">
                 </div>
@@ -783,7 +523,7 @@ require_once "includes/header.php";
             document.querySelector('#newRequestModal .modal-title').innerHTML = '<i class="fas fa-money-check-alt me-2"></i>New Payment Request';
             document.querySelector('#newRequestModal .modal-subtitle').textContent = 'Fill in the vendor payment details';
             btnAddOrder.style.display = 'block';
-            
+
             document.getElementById('request-form').reset();
             const rows = ordersContainer.querySelectorAll('.order-row');
             rows.forEach((row, i) => { if (i > 0) row.remove(); });
@@ -1027,7 +767,7 @@ require_once "includes/header.php";
                     actions = `<button class="vp-action-btn vp-btn-paid" onclick="vpUpdateStatus(${r.id}, 'mark_paid')"><i class="fas fa-money-bill fa-xs"></i> Mark Paid</button>`;
                 }
                 actions += `<button class="vp-action-btn vp-btn-delete ms-1" onclick="vpDeleteRequest(${r.id})" title="Delete"><i class="fas fa-trash fa-xs"></i></button>`;
-                
+
                 if (r.status !== 'paid') {
                     actions = `<button class="vp-action-btn btn-light border ms-1" onclick="vpEditRequest(${r.id})" title="Edit"><i class="fas fa-edit fa-xs"></i> Edit</button>` + actions;
                 }
@@ -1058,13 +798,13 @@ require_once "includes/header.php";
         }
 
         // Edit
-        window.vpEditRequest = function(id) {
+        window.vpEditRequest = function (id) {
             const r = allRequests.find(req => req.id == id);
             if (!r) return;
 
             resetModal();
             editingId = id;
-            
+
             // UI adjustments for edit mode
             document.querySelector('#newRequestModal .modal-title').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Payment Request';
             document.querySelector('#newRequestModal .modal-subtitle').textContent = 'Correct the payment details for this order';
@@ -1073,7 +813,7 @@ require_once "includes/header.php";
             // Populate form
             document.getElementById('form-shop-name').value = r.shop_name;
             document.getElementById('form-notes').value = r.notes || '';
-            
+
             const firstRow = ordersContainer.querySelector('.order-row');
             firstRow.querySelector('.form-order-id').value = r.order_id;
             firstRow.querySelector('.form-order-amount').value = r.order_amount;
