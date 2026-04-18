@@ -1,0 +1,10 @@
+# Ignore all uploaded images
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+
+# But keep this directory
+!.gitignore
+!README.md
