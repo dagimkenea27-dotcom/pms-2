@@ -385,10 +385,106 @@ require_once "includes/header.php";
         color: #94a3b8;
     }
 
-    /* Date */
-    .vp-date {
-        font-size: 12px;
-        color: #94a3b8;
+    /* Mobile Responsiveness */
+    @media (max-width: 767.98px) {
+        /* Stats Cards - Make them more compact */
+        .vp-stat-card {
+            padding: 12px 14px;
+        }
+        .vp-stat-card .stat-value {
+            font-size: 1.1rem;
+        }
+        .vp-stat-card .stat-icon {
+            font-size: 20px;
+        }
+
+        /* Filter buttons - center them */
+        .vp-filter-btn {
+            padding: 6px 12px;
+            font-size: 11px;
+            flex-grow: 1;
+            text-align: center;
+        }
+
+        .vp-filter-scroll-container {
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 5px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Card layout for table on mobile */
+        #vendor-pay-app .table-responsive {
+            border: none;
+        }
+        #vendor-pay-app .table thead {
+            display: none; /* Hide headers */
+        }
+        #vendor-pay-app .table, 
+        #vendor-pay-app .table tbody, 
+        #vendor-pay-app .table tr, 
+        #vendor-pay-app .table td {
+            display: block;
+            width: 100%;
+        }
+        #vendor-pay-app .table tr {
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #fff;
+            padding: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        #vendor-pay-app .table td {
+            text-align: right;
+            padding: 8px 10px;
+            position: relative;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        #vendor-pay-app .table td:last-child {
+            border-bottom: none;
+            text-align: center;
+            margin-top: 10px;
+            background: #f8fafc;
+            border-radius: 0 0 10px 10px;
+        }
+        #vendor-pay-app .table td::before {
+            content: attr(data-label);
+            position: absolute;
+            left: 10px;
+            width: 120px;
+            text-align: left;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #64748b;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        #vendor-pay-app .vp-row-num {
+            display: none !important;
+        }
+        #vendor-pay-app .vp-shop-name {
+            font-size: 16px;
+            color: #1e293b;
+            border-bottom: 2px solid #7c3aed !important;
+            margin-bottom: 5px;
+        }
+        #vendor-pay-app .vp-shop-name::before {
+            display: none;
+        }
+        #vendor-pay-app .vp-shop-name {
+            text-align: left !important;
+            padding-left: 10px !important;
+        }
+        
+        /* Adjust action buttons container for mobile */
+        .vp-action-btn {
+            width: 100%;
+            justify-content: center;
+            padding: 8px;
+            font-size: 12px;
+        }
     }
 </style>
 
@@ -453,29 +549,31 @@ require_once "includes/header.php";
 
     <!-- Filter Bar -->
     <div class="d-flex flex-column gap-3 mb-4 vp-fade-in vp-fade-in-3">
-        <div
-            class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
-            <div class="d-flex flex-wrap gap-2">
+        <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-3">
+            <div class="d-flex flex-wrap gap-2 vp-filter-scroll-container">
                 <button data-filter="all" class="vp-filter-btn active">All</button>
                 <button data-filter="pending" class="vp-filter-btn">Pending</button>
                 <button data-filter="approved" class="vp-filter-btn">Approved</button>
                 <button data-filter="rejected" class="vp-filter-btn">Rejected</button>
                 <button data-filter="paid" class="vp-filter-btn">Paid</button>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <div class="input-group input-group-sm" style="width: auto;">
+            <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-md-center gap-2">
+                <div class="input-group input-group-sm w-100" style="min-width: 250px;">
                     <span class="input-group-text bg-white border-end-0"><i
                             class="fas fa-calendar-alt text-muted fa-xs"></i></span>
                     <input type="date" id="filter-from" class="form-control vp-form-control border-start-0"
-                        title="From Date" style="font-size: 11px; width: 125px;">
-                    <span class="input-group-text bg-white">to</span>
+                        title="From Date" style="font-size: 11px;">
+                    <span class="input-group-text bg-white px-1">to</span>
                     <input type="date" id="filter-to" class="form-control vp-form-control" title="To Date"
-                        style="font-size: 11px; width: 125px;">
+                        style="font-size: 11px;">
                     <button id="btn-reset-filters" class="btn btn-outline-secondary" title="Reset Filters"><i
                             class="fas fa-undo fa-xs"></i></button>
                 </div>
-                <input id="search-input" type="text" class="form-control form-control-sm vp-form-control"
-                    placeholder="Search..." style="width: 150px; font-size: 11px;">
+                <div class="position-relative w-100">
+                    <i class="fas fa-search position-absolute text-muted" style="left: 10px; top: 50%; transform: translateY(-50%); font-size: 10px; z-index: 5;"></i>
+                    <input id="search-input" type="text" class="form-control form-control-sm vp-form-control"
+                        placeholder="Search Shop, Order..." style="font-size: 11px; padding-left: 28px;">
+                </div>
             </div>
         </div>
     </div>
@@ -897,19 +995,19 @@ require_once "includes/header.php";
                     actions = `<button class="vp-action-btn btn-light border ms-1" onclick="vpEditRequest(${r.id})" title="Edit"><i class="fas fa-edit fa-xs"></i> Edit</button>` + actions;
                 }
 
-                return `<tr>
+                return `<tr class="vp-request-row">
                 <td class="vp-row-num">${i + 1}</td>
-                <td class="vp-shop-name">${escHtml(r.shop_name)}</td>
-                <td><span class="vp-order-code">${escHtml(r.order_id)}</span></td>
-                <td class="vp-amount text-muted" style="font-size:11px;">${gross}</td>
-                <td>${commHtml}</td>
-                <td class="vp-amount">${net} <span class="vp-amount-unit">ETB</span></td>
-                <td><span class="vp-badge vp-badge-${r.status}">${dots[r.status] || ''} ${r.status}</span></td>
-                <td class="vp-requested-by">${escHtml(r.requested_by_name || 'N/A')}</td>
-                <td class="small text-muted" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escHtml(r.notes || '')}">
+                <td class="vp-shop-name" data-label="Shop">${escHtml(r.shop_name)}</td>
+                <td data-label="Order ID"><span class="vp-order-code">${escHtml(r.order_id)}</span></td>
+                <td class="vp-amount text-muted" data-label="Gross Amt" style="font-size:11px;">${gross}</td>
+                <td data-label="Commission">${commHtml}</td>
+                <td class="vp-amount" data-label="Net Payout">${net} <span class="vp-amount-unit">ETB</span></td>
+                <td data-label="Status"><span class="vp-badge vp-badge-${r.status}">${dots[r.status] || ''} ${r.status}</span></td>
+                <td class="vp-requested-by" data-label="By">${escHtml(r.requested_by_name || 'N/A')}</td>
+                <td class="small text-muted" data-label="Notes" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escHtml(r.notes || '')}">
                     ${escHtml(r.notes || '-')}
                 </td>
-                <td class="vp-date">${date}</td>
+                <td class="vp-date" data-label="Date">${date}</td>
                 <td class="text-center"><div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">${actions}</div></td>
             </tr>`;
             }).join('');
