@@ -599,6 +599,7 @@ require_once "includes/header.php";
         const searchInput = document.getElementById('search-input');
         const modalEl = document.getElementById('newRequestModal');
         let bsModal = null;
+        let editingId = null;
 
         function getModal() {
             if (!bsModal && typeof bootstrap !== 'undefined' && modalEl) {
@@ -643,12 +644,20 @@ require_once "includes/header.php";
         });
 
         const resetModal = () => {
+            editingId = null;
+            document.querySelector('#newRequestModal .modal-title').innerHTML = '<i class="fas fa-money-check-alt me-2"></i>New Payment Request';
+            document.querySelector('#newRequestModal .modal-subtitle').textContent = 'Fill in the vendor payment details';
+            btnAddOrder.style.display = 'block';
+            
             document.getElementById('request-form').reset();
             const rows = ordersContainer.querySelectorAll('.order-row');
             rows.forEach((row, i) => { if (i > 0) row.remove(); });
             ordersContainer.querySelectorAll('.form-pays-comm').forEach(chk => chk.checked = false);
             updateRemoveButtons();
         };
+
+        // Reset state when modal is hidden
+        modalEl.addEventListener('hidden.bs.modal', resetModal);
 
         const filterFrom = document.getElementById('filter-from');
         const filterTo = document.getElementById('filter-to');
@@ -883,6 +892,10 @@ require_once "includes/header.php";
                     actions = `<button class="vp-action-btn vp-btn-paid" onclick="vpUpdateStatus(${r.id}, 'mark_paid')"><i class="fas fa-money-bill fa-xs"></i> Mark Paid</button>`;
                 }
                 actions += `<button class="vp-action-btn vp-btn-delete ms-1" onclick="vpDeleteRequest(${r.id})" title="Delete"><i class="fas fa-trash fa-xs"></i></button>`;
+                
+                if (r.status !== 'paid') {
+                    actions = `<button class="vp-action-btn btn-light border ms-1" onclick="vpEditRequest(${r.id})" title="Edit"><i class="fas fa-edit fa-xs"></i> Edit</button>` + actions;
+                }
 
                 return `<tr>
                 <td class="vp-row-num">${i + 1}</td>
@@ -909,6 +922,32 @@ require_once "includes/header.php";
             return d.innerHTML;
         }
 
+        // Edit
+        window.vpEditRequest = function(id) {
+            const r = allRequests.find(req => req.id == id);
+            if (!r) return;
+
+            resetModal();
+            editingId = id;
+            
+            // UI adjustments for edit mode
+            document.querySelector('#newRequestModal .modal-title').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Payment Request';
+            document.querySelector('#newRequestModal .modal-subtitle').textContent = 'Correct the payment details for this order';
+            btnAddOrder.style.display = 'none'; // Editing is per-row
+
+            // Populate form
+            document.getElementById('form-shop-name').value = r.shop_name;
+            document.getElementById('form-notes').value = r.notes || '';
+            
+            const firstRow = ordersContainer.querySelector('.order-row');
+            firstRow.querySelector('.form-order-id').value = r.order_id;
+            firstRow.querySelector('.form-order-amount').value = r.order_amount;
+            firstRow.querySelector('.form-pays-comm').checked = (r.pays_commission == 1);
+
+            const modal = getModal();
+            if (modal) modal.show();
+        };
+
         // Submit
         document.getElementById('btn-submit').addEventListener('click', async () => {
             const shopName = document.getElementById('form-shop-name').value.trim();
@@ -934,14 +973,36 @@ require_once "includes/header.php";
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Submitting...';
 
             try {
-                const res = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ shop_name: shopName, orders: orders, notes: notes })
-                });
+                let res, body;
+                if (editingId) {
+                    // Update flow (Single order)
+                    body = {
+                        _method: 'PUT',
+                        id: editingId,
+                        action: 'update',
+                        shop_name: shopName,
+                        order_id: orders[0].order_id,
+                        order_amount: orders[0].order_amount,
+                        pays_commission: orders[0].pays_commission,
+                        notes: notes
+                    };
+                    res = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+                } else {
+                    // Create flow (Batch support)
+                    res = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ shop_name: shopName, orders: orders, notes: notes })
+                    });
+                }
+
                 const data = await res.json();
                 if (data.isOk) {
-                    showToast(data.message || 'Payment request created!');
+                    showToast(data.message || (editingId ? 'Request updated!' : 'Payment request created!'));
                     const modal = getModal();
                     if (modal) modal.hide();
                     resetModal();
@@ -950,10 +1011,10 @@ require_once "includes/header.php";
                     showToast(data.message, 'error');
                 }
             } catch (err) {
-                showToast('Failed to create request', 'error');
+                showToast(editingId ? 'Failed to update request' : 'Failed to create request', 'error');
             }
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Submit Request';
+            btn.innerHTML = editingId ? '<i class="fas fa-save me-1"></i> Save Changes' : '<i class="fas fa-paper-plane me-1"></i> Submit Request';
         });
 
         // Update status

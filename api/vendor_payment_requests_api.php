@@ -166,20 +166,12 @@ try {
             $id = intval($input['id']);
             $action = $input['action'] ?? '';
 
-            $validActions = ['approve', 'reject', 'mark_paid'];
+            $validActions = ['approve', 'reject', 'mark_paid', 'update'];
             if (!in_array($action, $validActions)) {
                 throw new Exception("Invalid action. Must be: " . implode(', ', $validActions));
             }
 
-            // Map action to status
-            $statusMap = [
-                'approve' => 'approved',
-                'reject' => 'rejected',
-                'mark_paid' => 'paid'
-            ];
-            $newStatus = $statusMap[$action];
-
-            // Get old record for audit
+            // Get old record for audit and validation
             $oldStmt = $db->prepare("SELECT * FROM vendor_payment_requests WHERE id = :id");
             $oldStmt->execute([':id' => $id]);
             $oldRecord = $oldStmt->fetch(PDO::FETCH_ASSOC);
@@ -187,37 +179,134 @@ try {
             if (!$oldRecord)
                 throw new Exception("Payment request not found.");
 
-            $query = "UPDATE vendor_payment_requests SET status = :status WHERE id = :id";
-            $stmt = $db->prepare($query);
-            $result = $stmt->execute([
-                ':status' => $newStatus,
-                ':id' => $id
-            ]);
+            if ($action === 'update') {
+                if ($oldRecord['status'] === 'paid') {
+                    throw new Exception("Forbidden: Cannot edit a request that has already been marked as 'paid'.");
+                }
 
-            if (!$result)
-                throw new Exception("Failed to update payment request.");
+                $shop_name = trim($input['shop_name'] ?? '');
+                $order_id = trim($input['order_id'] ?? '');
+                $order_amount = floatval($input['order_amount'] ?? 0);
+                $pays_comm = !empty($input['pays_commission']) ? 1 : 0;
+                $notes = trim($input['notes'] ?? '');
 
-            // Audit log
-            $auditQuery = "INSERT INTO audit_logs (user_id, action, table_name, record_id, details, ip_address) 
-                           VALUES (:user_id, :action, :table_name, :record_id, :details, :ip_address)";
-            $auditStmt = $db->prepare($auditQuery);
-            $auditStmt->execute([
-                ':user_id' => $currentUser['id'],
-                ':action' => 'UPDATE_STATUS',
-                ':table_name' => 'vendor_payment_requests',
-                ':record_id' => $id,
-                ':details' => json_encode([
-                    'old_status' => $oldRecord['status'],
-                    'new_status' => $newStatus,
-                    'action' => $action,
-                    'shop_name' => $oldRecord['shop_name'],
-                    'order_id' => $oldRecord['order_id'],
-                    'order_amount' => $oldRecord['order_amount']
-                ]),
-                ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
-            ]);
+                if (empty($shop_name)) throw new Exception("Shop name is required.");
+                if (empty($order_id)) throw new Exception("Order ID is required.");
+                if ($order_amount <= 0) throw new Exception("Order amount must be greater than 0.");
 
-            echo json_encode(["isOk" => true, "message" => "Status updated to '$newStatus'."]);
+                // Check for order ID redundancy (excluding current record)
+                $checkStmt = $db->prepare("SELECT COUNT(*) FROM vendor_payment_requests WHERE order_id = :oid AND id != :id");
+                $checkStmt->execute([':oid' => $order_id, ':id' => $id]);
+                if ($checkStmt->fetchColumn() > 0) {
+                    throw new Exception("Redundancy Error: Order ID '$order_id' already exists in the system.");
+                }
+
+                // Calculate commission logic
+                $comm_rate = 0;
+                $comm_amt = 0;
+                $net_amt = $order_amount;
+
+                if ($pays_comm) {
+                    if ($order_amount <= 2500) {
+                        $comm_rate = 8.00;
+                    } elseif ($order_amount <= 6000) {
+                        $comm_rate = 6.00;
+                    } else {
+                        $comm_rate = 5.00;
+                    }
+                    $comm_amt = round($order_amount * ($comm_rate / 100), 2);
+                    $net_amt = $order_amount - $comm_amt;
+                }
+
+                $query = "UPDATE vendor_payment_requests SET 
+                            shop_name = :shop_name,
+                            order_id = :order_id,
+                            order_amount = :order_amount,
+                            notes = :notes,
+                            pays_commission = :pays_comm,
+                            commission_rate = :comm_rate,
+                            commission_amount = :comm_amt,
+                            net_amount = :net_amt
+                          WHERE id = :id";
+                $stmt = $db->prepare($query);
+                $result = $stmt->execute([
+                    ':shop_name' => $shop_name,
+                    ':order_id' => $order_id,
+                    ':order_amount' => $order_amount,
+                    ':notes' => $notes,
+                    ':pays_comm' => $pays_comm,
+                    ':comm_rate' => $comm_rate,
+                    ':comm_amt' => $comm_amt,
+                    ':net_amt' => $net_amt,
+                    ':id' => $id
+                ]);
+
+                if (!$result) throw new Exception("Failed to update payment request.");
+
+                // Audit log for update
+                $auditQuery = "INSERT INTO audit_logs (user_id, action, table_name, record_id, details, ip_address) 
+                               VALUES (:user_id, :action, :table_name, :record_id, :details, :ip_address)";
+                $auditStmt = $db->prepare($auditQuery);
+                $auditStmt->execute([
+                    ':user_id' => $currentUser['id'],
+                    ':action' => 'UPDATE_DATA',
+                    ':table_name' => 'vendor_payment_requests',
+                    ':record_id' => $id,
+                    ':details' => json_encode([
+                        'old' => $oldRecord,
+                        'new' => [
+                            'shop_name' => $shop_name,
+                            'order_id' => $order_id,
+                            'order_amount' => $order_amount,
+                            'pays_commission' => $pays_comm,
+                            'notes' => $notes
+                        ]
+                    ]),
+                    ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
+                ]);
+
+                echo json_encode(["isOk" => true, "message" => "Payment request updated successfully."]);
+            } else {
+                // Map status update actions
+                $statusMap = [
+                    'approve' => 'approved',
+                    'reject' => 'rejected',
+                    'mark_paid' => 'paid'
+                ];
+                $newStatus = $statusMap[$action];
+
+                $query = "UPDATE vendor_payment_requests SET status = :status WHERE id = :id";
+                $stmt = $db->prepare($query);
+                $result = $stmt->execute([
+                    ':status' => $newStatus,
+                    ':id' => $id
+                ]);
+
+                if (!$result)
+                    throw new Exception("Failed to update payment request status.");
+
+                // Audit log for status change
+                $auditQuery = "INSERT INTO audit_logs (user_id, action, table_name, record_id, details, ip_address) 
+                               VALUES (:user_id, :action, :table_name, :record_id, :details, :ip_address)";
+                $auditStmt = $db->prepare($auditQuery);
+                $auditStmt->execute([
+                    ':user_id' => $currentUser['id'],
+                    ':action' => 'UPDATE_STATUS',
+                    ':table_name' => 'vendor_payment_requests',
+                    ':record_id' => $id,
+                    ':details' => json_encode([
+                        'old_status' => $oldRecord['status'],
+                        'new_status' => $newStatus,
+                        'action' => $action,
+                        'shop_name' => $oldRecord['shop_name'],
+                        'order_id' => $oldRecord['order_id'],
+                        'order_amount' => $oldRecord['order_amount']
+                    ]),
+                    ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
+                ]);
+
+                echo json_encode(["isOk" => true, "message" => "Status updated to '$newStatus'."]);
+            }
             break;
 
         case 'DELETE':
