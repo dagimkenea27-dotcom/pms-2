@@ -385,7 +385,44 @@ require_once "includes/header.php";
         color: #94a3b8;
     }
 
-    /* Mobile Responsiveness */
+    /* Mobile & Laptop Optimizations */
+    @media (min-width: 768px) and (max-width: 1400px) {
+        #vendor-pay-app .table>thead>tr>th,
+        #vendor-pay-app .table>tbody>tr>td {
+            padding: 8px 10px;
+            font-size: 11px;
+        }
+
+        .vp-amount {
+            font-size: 12px;
+        }
+
+        .vp-order-code {
+            padding: 2px 5px;
+            font-size: 11px;
+        }
+    }
+
+    /* Custom Scrollbar for better Laptop experience */
+    .table-responsive::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .table-responsive::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 10px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+        border: 2px solid #f1f5f9;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
     @media (max-width: 767.98px) {
         /* Stats Cards - Make them more compact */
         .vp-stat-card {
