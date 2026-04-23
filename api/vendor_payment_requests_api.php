@@ -12,6 +12,7 @@ try {
 
     require_once $dbConfig;
     require_once $authConfig;
+    require_once dirname(__DIR__) . "/config/security.php";
 
     Auth::startSession();
     if (!Auth::isLoggedIn()) {
@@ -41,16 +42,128 @@ try {
         $method = strtoupper($input['_method']);
     }
 
+    // CSRF Validation for state-changing methods
+    if ($method !== 'GET') {
+        if (!Security::validateRequest()) {
+            echo json_encode(["isOk" => false, "message" => "CSRF token validation failed."]);
+            exit;
+        }
+    }
+
     switch ($method) {
         case 'GET':
+            $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+            $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 30;
+            $offset = ($page - 1) * $limit;
+
+            $status = $_GET['status'] ?? 'all';
+            $search = $_GET['search'] ?? '';
+            $from_date = $_GET['from_date'] ?? '';
+            $to_date = $_GET['to_date'] ?? '';
+
+            $whereConditions = [];
+            $params = [];
+
+            if ($status !== 'all') {
+                $whereConditions[] = "vpr.status = :status";
+                $params[':status'] = $status;
+            }
+
+            if (!empty($search)) {
+                $whereConditions[] = "(vpr.shop_name LIKE :search OR vpr.order_id LIKE :search OR vpr.notes LIKE :search)";
+                $params[':search'] = "%$search%";
+            }
+
+            if (!empty($from_date)) {
+                $whereConditions[] = "vpr.created_at >= :from_date";
+                $params[':from_date'] = $from_date . " 00:00:00";
+            }
+
+            if (!empty($to_date)) {
+                $whereConditions[] = "vpr.created_at <= :to_date";
+                $params[':to_date'] = $to_date . " 23:59:59";
+            }
+
+            $whereSql = count($whereConditions) > 0 ? "WHERE " . implode(" AND ", $whereConditions) : "";
+
+            // 1. Get stats for the filtered set (across all pages)
+            $statsQuery = "SELECT 
+                            COUNT(*) as total_count,
+                            SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count,
+                            SUM(CASE WHEN status = 'pending' THEN order_amount ELSE 0 END) as pending_gross,
+                            SUM(CASE WHEN status = 'pending' THEN net_amount ELSE 0 END) as pending_net,
+                            SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved_count,
+                            SUM(CASE WHEN status = 'approved' THEN order_amount ELSE 0 END) as approved_gross,
+                            SUM(CASE WHEN status = 'approved' THEN net_amount ELSE 0 END) as approved_net,
+                            SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) as paid_count,
+                            SUM(CASE WHEN status = 'paid' THEN order_amount ELSE 0 END) as paid_gross,
+                            SUM(CASE WHEN status = 'paid' THEN net_amount ELSE 0 END) as paid_net,
+                            SUM(order_amount) as total_gross,
+                            SUM(commission_amount) as total_commission,
+                            SUM(CASE WHEN status = 'paid' THEN commission_amount ELSE 0 END) as collected_commission
+                          FROM vendor_payment_requests vpr
+                          $whereSql";
+            
+            $statsStmt = $db->prepare($statsQuery);
+            foreach ($params as $key => $val) {
+                $statsStmt->bindValue($key, $val);
+            }
+            $statsStmt->execute();
+            $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
+
+            // 2. Get paginated data
             $query = "SELECT vpr.*, u.username as requested_by_name 
                       FROM vendor_payment_requests vpr 
                       LEFT JOIN users u ON vpr.requested_by = u.id 
-                      ORDER BY vpr.created_at DESC";
+                      $whereSql
+                      ORDER BY vpr.created_at DESC 
+                      LIMIT :limit OFFSET :offset";
+            
             $stmt = $db->prepare($query);
+            foreach ($params as $key => $val) {
+                $stmt->bindValue($key, $val);
+            }
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
             $stmt->execute();
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode(["isOk" => true, "data" => $results]);
+
+            $totalRecords = (int)($stats['total_count'] ?? 0);
+            $totalPages = ceil($totalRecords / $limit);
+
+            echo json_encode([
+                "isOk" => true, 
+                "data" => $results,
+                "pagination" => [
+                    "total_records" => $totalRecords,
+                    "total_pages" => $totalPages,
+                    "current_page" => $page,
+                    "limit" => $limit
+                ],
+                "stats" => [
+                    "pending" => [
+                        "count" => (int)($stats['pending_count'] ?? 0),
+                        "gross" => (float)($stats['pending_gross'] ?? 0),
+                        "net" => (float)($stats['pending_net'] ?? 0)
+                    ],
+                    "approved" => [
+                        "count" => (int)($stats['approved_count'] ?? 0),
+                        "gross" => (float)($stats['approved_gross'] ?? 0),
+                        "net" => (float)($stats['approved_net'] ?? 0)
+                    ],
+                    "paid" => [
+                        "count" => (int)($stats['paid_count'] ?? 0),
+                        "gross" => (float)($stats['paid_gross'] ?? 0),
+                        "net" => (float)($stats['paid_net'] ?? 0)
+                    ],
+                    "total" => [
+                        "count" => $totalRecords,
+                        "gross" => (float)($stats['total_gross'] ?? 0),
+                        "commission" => (float)($stats['total_commission'] ?? 0),
+                        "collected_commission" => (float)($stats['collected_commission'] ?? 0)
+                    ]
+                ]
+            ]);
             break;
 
         case 'POST':

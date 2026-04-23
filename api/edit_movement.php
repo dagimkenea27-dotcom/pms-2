@@ -71,7 +71,9 @@ try {
             ->execute([$adjustment, $product_id]);
 
         // Validate product qty doesn't go negative
-        $new_prod_qty = $db->query("SELECT quantity FROM products WHERE id = $product_id")->fetchColumn();
+        $prod_stmt = $db->prepare("SELECT quantity FROM products WHERE id = ?");
+        $prod_stmt->execute([$product_id]);
+        $new_prod_qty = $prod_stmt->fetchColumn();
         if ($new_prod_qty < 0) {
             throw new Exception("Correction would make product stock negative (current stock too low).");
         }
@@ -81,7 +83,9 @@ try {
             $db->prepare("UPDATE product_variants SET quantity = quantity + ? WHERE id = ?")
                 ->execute([$adjustment, $variant_id]);
 
-            $new_var_qty = $db->query("SELECT quantity FROM product_variants WHERE id = $variant_id")->fetchColumn();
+            $var_stmt = $db->prepare("SELECT quantity FROM product_variants WHERE id = ?");
+            $var_stmt->execute([$variant_id]);
+            $new_var_qty = $var_stmt->fetchColumn();
             if ($new_var_qty < 0) {
                 throw new Exception("Correction would make variant stock negative.");
             }

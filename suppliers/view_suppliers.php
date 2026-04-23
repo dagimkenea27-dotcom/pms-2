@@ -78,6 +78,87 @@ if (isset($_GET['delete_id'])) {
 require_once "../includes/header.php";
 ?>
 
+<style>
+    /* Mobile & Laptop Optimizations */
+    @media (min-width: 768px) and (max-width: 1400px) {
+        #suppliersTable>thead>tr>th,
+        #suppliersTable>tbody>tr>td {
+            padding: 10px 12px;
+            font-size: 13px;
+        }
+    }
+
+    /* Custom Scrollbar */
+    .table-responsive::-webkit-scrollbar {
+        height: 8px;
+    }
+    .table-responsive::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 10px;
+    }
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+        border: 2px solid #f1f5f9;
+    }
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    @media (max-width: 767.98px) {
+        .card-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 5px;
+        }
+
+        #suppliersTable thead {
+            display: none;
+        }
+        #suppliersTable, #suppliersTable tbody, #suppliersTable tr, #suppliersTable td {
+            display: block;
+            width: 100%;
+        }
+        #suppliersTable tr {
+            margin-bottom: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        #suppliersTable td {
+            text-align: right;
+            padding: 8px 10px;
+            position: relative;
+            border-bottom: 1px solid #f1f5f9;
+            min-height: 40px;
+        }
+        #suppliersTable td:last-child {
+            border-bottom: none;
+            text-align: center;
+            background: #f8fafc;
+            margin-top: 10px;
+            border-radius: 0 0 8px 8px;
+        }
+        #suppliersTable td::before {
+            content: attr(data-label);
+            position: absolute;
+            left: 10px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #64748b;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        #suppliersTable .btn-group {
+            width: 100%;
+        }
+        #suppliersTable .btn-group .btn {
+            flex-grow: 1;
+        }
+    }
+</style>
+
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2"><i class="fas fa-truck"></i> Supplier Management</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
@@ -152,22 +233,22 @@ endif; ?>
                             $product_count = $supplier['product_count'];
                         ?>
                         <tr>
-                            <td>
+                            <td data-label="Name">
                                 <strong><?php echo htmlspecialchars($supplier['name']); ?></strong>
                                 <?php if ($supplier['website']): ?>
                                     <br><small class="text-muted"><?php echo htmlspecialchars($supplier['website']); ?></small>
                                 <?php endif; ?>
                             </td>
-                            <td><?php echo htmlspecialchars($supplier['contact_person']); ?></td>
-                            <td>
+                            <td data-label="Contact"><?php echo htmlspecialchars($supplier['contact_person']); ?></td>
+                            <td data-label="Email">
                                 <?php if ($supplier['email']): ?>
                                     <a href="mailto:<?php echo $supplier['email']; ?>">
                                         <?php echo htmlspecialchars($supplier['email']); ?>
                                     </a>
                                 <?php endif; ?>
                             </td>
-                            <td><?php echo htmlspecialchars($supplier['phone']); ?></td>
-                            <td>
+                            <td data-label="Phone"><?php echo htmlspecialchars($supplier['phone']); ?></td>
+                            <td data-label="Products">
                                 <span class="badge bg-info"><?php echo $product_count; ?> products</span>
                             </td>
                             <td>

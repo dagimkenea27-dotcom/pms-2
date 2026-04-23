@@ -73,36 +73,47 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['backup_file'])) {
                     throw new Exception("SQL backup file not found in the ZIP archive.");
                 }
 
-                // 2. Restore Uploads
+            // 2. Restore Uploads
                 if (is_dir($uploads_zip_path)) {
                     $target_uploads = dirname(__DIR__) . '/uploads';
                     
-                    // Recursive function to copy directory
-                    function recurse_copy($src,$dst) {
+                    // Allowed extensions for uploads
+                    $allowed_upload_exts = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'zip', 'txt', 'csv', 'svg', 'webp'];
+
+                    // Recursive function to copy directory with security checks
+                    function recurse_copy($src, $dst, $allowed_exts) {
                         $dir = opendir($src);
-                        if (!is_dir($dst)) mkdir($dst, 0777, true);
+                        if (!is_dir($dst)) mkdir($dst, 0755, true);
                         while(false !== ( $file = readdir($dir)) ) {
                             if (( $file != '.' ) && ( $file != '..' )) {
                                 if ( is_dir($src . '/' . $file) ) {
-                                    recurse_copy($src . '/' . $file,$dst . '/' . $file);
+                                    recurse_copy($src . '/' . $file, $dst . '/' . $file, $allowed_exts);
                                 }
                                 else {
-                                    copy($src . '/' . $file,$dst . '/' . $file);
+                                    $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                                    // Skip malicious or suspicious files
+                                    if (in_array($ext, $allowed_exts)) {
+                                        copy($src . '/' . $file, $dst . '/' . $file);
+                                    }
                                 }
                             }
                         }
                         closedir($dir);
                     }
 
-                    recurse_copy($uploads_zip_path, $target_uploads);
+                    recurse_copy($uploads_zip_path, $target_uploads, $allowed_upload_exts);
                 }
 
                 $status = "success";
                 $message = "System restored successfully!";
 
-                // Clean up
+                // Clean up with safety check
                 function rrmdir($dir) {
                     if (is_dir($dir)) {
+                        // Safety: Ensure we only delete within sys_get_temp_dir()
+                        if (strpos(realpath($dir), realpath(sys_get_temp_dir())) !== 0) {
+                            return;
+                        }
                         $objects = scandir($dir);
                         foreach ($objects as $object) {
                             if ($object != "." && $object != "..") {

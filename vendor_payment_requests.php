@@ -237,9 +237,6 @@ require_once "includes/header.php";
         }
     }
 
-    /* =========================
-   Stats Grid Fix
-========================= */
     @media (max-width: 991px) {
         .row.g-3>div {
             flex: 0 0 50%;
@@ -254,12 +251,175 @@ require_once "includes/header.php";
         }
     }
 
-    /* =========================
-   Smooth Scroll
-========================= */
     .table-responsive {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+    }
+
+    .vp-toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #1e293b;
+        color: #fff;
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 700;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        transform: translateY(100px);
+        opacity: 0;
+        transition: all 0.3s ease;
+        z-index: 9999;
+    }
+
+    .vp-toast.show {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    .vp-toast-success {
+        border-left: 4px solid #10b981;
+    }
+
+    .vp-toast-error {
+        border-left: 4px solid #ef4444;
+    }
+
+    /* =========================
+   New Missing Styles
+========================= */
+    .vp-btn-primary {
+        background: #1e293b;
+        color: #fff;
+        font-weight: 700;
+        border-radius: 10px;
+        padding: 8px 18px;
+        transition: all 0.2s ease;
+    }
+
+    .vp-btn-primary:hover {
+        background: #334155;
+        color: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .vp-header-icon {
+        background: #fff;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        font-size: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .vp-fade-in {
+        animation: fadeIn 0.5s ease forwards;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .vp-fade-in-1 { animation-delay: 0.1s; }
+    .vp-fade-in-2 { animation-delay: 0.2s; }
+    .vp-fade-in-3 { animation-delay: 0.3s; }
+    .vp-fade-in-4 { animation-delay: 0.4s; }
+
+    .vp-card {
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .vp-modal-header {
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 20px 24px;
+    }
+
+    .modal-subtitle {
+        font-size: 11px;
+        color: #64748b;
+        margin-top: 2px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .vp-form-control {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 14px;
+        transition: all 0.2s ease;
+    }
+
+    .vp-form-control:focus {
+        border-color: #1e293b;
+        box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.05);
+    }
+
+    .vp-empty-state {
+        padding: 60px 20px;
+        text-align: center;
+        background: #fff;
+    }
+
+    .vp-request-row {
+        transition: background 0.2s ease;
+    }
+
+    .vp-request-row:hover {
+        background: #f8fafc !important;
+    }
+
+    .vp-row-num {
+        font-weight: 800;
+        color: #94a3b8;
+        font-size: 11px;
+    }
+
+    .vp-shop-name {
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .vp-order-code {
+        background: #f1f5f9;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-family: 'Monaco', 'Consolas', monospace;
+        font-size: 11px;
+        color: #475569;
+        font-weight: 700;
+    }
+
+    .vp-amount {
+        font-weight: 800;
+        color: #1e293b;
+    }
+
+    .vp-amount-unit {
+        font-size: 9px;
+        color: #94a3b8;
+        margin-left: 2px;
+    }
+
+    .vp-requested-by {
+        font-weight: 600;
+        color: #64748b;
+    }
+
+    .vp-date {
+        color: #94a3b8;
+        font-size: 11px;
+        font-weight: 600;
     }
 </style>
 
@@ -376,7 +536,7 @@ require_once "includes/header.php";
                 </thead>
                 <tbody id="requests-tbody">
                     <tr>
-                        <td colspan="8">
+                        <td colspan="11">
                             <div class="vp-empty-state">
                                 <div class="spinner-border text-secondary spinner-border-sm mb-2" role="status"></div>
                                 <div class="text-muted small">Loading requests...</div>
@@ -385,6 +545,19 @@ require_once "includes/header.php";
                     </tr>
                 </tbody>
             </table>
+        </div>
+        <!-- Pagination UI -->
+        <div class="card-footer bg-white border-top-0 px-4 py-3">
+            <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
+                <div class="small text-muted" id="pagination-info">
+                    Showing 0 to 0 of 0 entries
+                </div>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-sm mb-0" id="pagination-controls">
+                        <!-- Pagination buttons will be injected here -->
+                    </ul>
+                </nav>
+            </div>
         </div>
     </div>
 
@@ -468,11 +641,17 @@ require_once "includes/header.php";
         const API_URL = '<?php echo BASE_URL; ?>api/vendor_payment_requests_api.php';
         let allRequests = [];
         let currentFilter = 'all';
+        let currentPage = 1;
+        let totalPages = 1;
+        let limit = 30;
 
         const tbody = document.getElementById('requests-tbody');
         const toastEl = document.getElementById('vp-toast');
         const searchInput = document.getElementById('search-input');
         const modalEl = document.getElementById('newRequestModal');
+        const paginationControls = document.getElementById('pagination-controls');
+        const paginationInfo = document.getElementById('pagination-info');
+
         let bsModal = null;
         let editingId = null;
 
@@ -497,7 +676,7 @@ require_once "includes/header.php";
         btnAddOrder.addEventListener('click', () => {
             const firstRow = ordersContainer.querySelector('.order-row');
             const newRow = firstRow.cloneNode(true);
-            newRow.classList.remove('vp-fade-in'); // Avoid re-triggering animation if any
+            newRow.classList.remove('vp-fade-in');
             newRow.querySelectorAll('input').forEach(input => {
                 input.value = '';
                 input.classList.remove('is-invalid');
@@ -531,7 +710,6 @@ require_once "includes/header.php";
             updateRemoveButtons();
         };
 
-        // Reset state when modal is hidden
         modalEl.addEventListener('hidden.bs.modal', resetModal);
 
         const filterFrom = document.getElementById('filter-from');
@@ -551,17 +729,13 @@ require_once "includes/header.php";
                     return;
                 }
 
-                // Check against other entries in the same modal
                 const isDuplicateInModal = enteredValues.filter((v, i) => v === val && i !== index).length > 0;
-
-                // Check against all existing requests in the system
-                const isDuplicateInSystem = allRequests.some(r => (r.order_id || '').toLowerCase() === val);
+                const isDuplicateInSystem = allRequests.some(r => r.id != editingId && (r.order_id || '').toLowerCase() === val);
 
                 if (isDuplicateInModal || isDuplicateInSystem) {
                     input.classList.add('is-invalid');
                     isAnyDuplicate = true;
 
-                    // Add tooltip or label if not exists
                     let feedback = input.parentNode.querySelector('.invalid-feedback');
                     if (!feedback) {
                         feedback = document.createElement('div');
@@ -569,7 +743,7 @@ require_once "includes/header.php";
                         feedback.style.fontSize = '10px';
                         input.parentNode.appendChild(feedback);
                     }
-                    feedback.textContent = isDuplicateInSystem ? 'Order ID already exists in the system' : 'Duplicate Order ID in this request';
+                    feedback.textContent = isDuplicateInSystem ? 'Order ID already exists (Check global records if not on this page)' : 'Duplicate Order ID in this request';
                 } else {
                     input.classList.remove('is-invalid');
                 }
@@ -579,7 +753,7 @@ require_once "includes/header.php";
             if (isAnyDuplicate) {
                 btnSubmit.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Resolve Duplicates';
             } else {
-                btnSubmit.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Submit Request';
+                btnSubmit.innerHTML = '<i class="fas fa-paper-plane me-1"></i> ' + (editingId ? 'Save Changes' : 'Submit Request');
             }
         }
 
@@ -596,8 +770,6 @@ require_once "includes/header.php";
             const name = shopNameInput.value.trim().toLowerCase();
             if (!name) return;
 
-            // Try to find the MOST RECENT and NON-EMPTY note for this shop
-            // allRequests is already sorted by date DESC from API
             const previousRequest = allRequests.find(r =>
                 (r.shop_name || '').trim().toLowerCase() === name &&
                 (r.notes || '').trim() !== ''
@@ -618,14 +790,18 @@ require_once "includes/header.php";
                 document.querySelectorAll('.vp-filter-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentFilter = btn.dataset.filter;
-                renderTable();
+                fetchRequests(1);
             });
         });
 
         // Search & Date
-        searchInput.addEventListener('input', () => renderTable());
-        filterFrom.addEventListener('change', () => renderTable());
-        filterTo.addEventListener('change', () => renderTable());
+        let searchTimeout;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => fetchRequests(1), 300);
+        });
+        filterFrom.addEventListener('change', () => fetchRequests(1));
+        filterTo.addEventListener('change', () => fetchRequests(1));
 
         // Reset
         btnReset.addEventListener('click', () => {
@@ -635,7 +811,7 @@ require_once "includes/header.php";
             document.querySelectorAll('.vp-filter-btn').forEach(b => b.classList.remove('active'));
             document.querySelector('[data-filter="all"]').classList.add('active');
             currentFilter = 'all';
-            renderTable();
+            fetchRequests(1);
         });
 
         // Toast
@@ -645,54 +821,56 @@ require_once "includes/header.php";
             setTimeout(() => toastEl.classList.remove('show'), 3000);
         }
 
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
         // Fetch
-        async function fetchRequests() {
+        async function fetchRequests(page = 1) {
+            currentPage = page;
+            const status = currentFilter;
+            const search = searchInput.value;
+            const from = filterFrom.value;
+            const to = filterTo.value;
+
+            const url = new URL(API_URL, window.location.origin);
+            url.searchParams.append('page', page);
+            url.searchParams.append('limit', limit);
+            url.searchParams.append('status', status);
+            url.searchParams.append('search', search);
+            url.searchParams.append('from_date', from);
+            url.searchParams.append('to_date', to);
+
+            tbody.innerHTML = `<tr><td colspan="11">
+                <div class="vp-empty-state">
+                    <div class="spinner-border text-secondary spinner-border-sm mb-2" role="status"></div>
+                    <div class="text-muted small">Loading requests...</div>
+                </div>
+            </td></tr>`;
+
             try {
-                const res = await fetch(API_URL);
+                const res = await fetch(url, {
+                    headers: { 'X-CSRF-TOKEN': csrfToken }
+                });
                 const data = await res.json();
                 if (data.isOk) {
                     allRequests = data.data || [];
-                    updateStats();
-                    renderTable();
+                    totalPages = data.pagination.total_pages;
+                    updateStats(data.stats);
+                    renderTable(data.pagination);
                 } else {
                     showToast(data.message, 'error');
                     allRequests = [];
-                    updateStats();
                     renderTable();
                 }
             } catch (err) {
                 showToast('Failed to load data', 'error');
                 allRequests = [];
-                updateStats();
                 renderTable();
             }
         }
 
         // Stats
-        function updateStats(data = allRequests) {
-            const stats = {
-                pending: { gross: 0, net: 0, count: 0 },
-                approved: { gross: 0, net: 0, count: 0 },
-                paid: { gross: 0, net: 0, count: 0 },
-                total: { gross: 0, net: 0, comm: 0, paidComm: 0, count: data.length }
-            };
-
-            data.forEach(r => {
-                const gross = parseFloat(r.order_amount || 0);
-                const net = parseFloat(r.net_amount || 0);
-                const comm = parseFloat(r.commission_amount || 0);
-
-                stats.total.gross += gross;
-                stats.total.net += net;
-                stats.total.comm += comm;
-                if (r.status === 'paid') stats.total.paidComm += comm;
-
-                if (stats[r.status]) {
-                    stats[r.status].gross += gross;
-                    stats[r.status].net += net;
-                    stats[r.status].count++;
-                }
-            });
+        function updateStats(stats) {
+            if (!stats) return;
 
             const fmt = (v) => v.toLocaleString('en', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
@@ -705,48 +883,26 @@ require_once "includes/header.php";
             document.getElementById('stat-paid-amt').textContent = fmt(stats.paid.net) + ' ETB';
             document.getElementById('stat-paid-count').textContent = stats.paid.count + ' req (' + fmt(stats.paid.gross) + ' Gross)';
 
-            document.getElementById('stat-total-amt').textContent = fmt(stats.total.paidComm) + ' ETB';
+            document.getElementById('stat-total-amt').textContent = fmt(stats.total.collected_commission) + ' ETB';
             document.getElementById('stat-total-count').textContent = 'Actual Commission | Gross: ' + fmt(stats.total.gross);
         }
 
-        // Render
-        function renderTable() {
-            const search = searchInput.value.toLowerCase();
-            const from = filterFrom.value;
-            const to = filterTo.value;
-            let filtered = allRequests;
-
-            if (currentFilter !== 'all') {
-                filtered = filtered.filter(r => r.status === currentFilter);
-            }
-            if (search) {
-                filtered = filtered.filter(r =>
-                    (r.shop_name || '').toLowerCase().includes(search) ||
-                    (r.order_id || '').toLowerCase().includes(search) ||
-                    (r.notes || '').toLowerCase().includes(search)
-                );
-            }
-            if (from) {
-                filtered = filtered.filter(r => r.created_at >= from + ' 00:00:00');
-            }
-            if (to) {
-                filtered = filtered.filter(r => r.created_at <= to + ' 23:59:59');
-            }
-
-            updateStats(filtered);
-
-            if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8">
-                <div class="vp-empty-state">
-                    <div style="font-size: 40px;" class="mb-2">📭</div>
-                    <div class="fw-bold text-muted">No payment requests found</div>
-                    <div class="text-muted small mt-1">Click "New Request" to create one</div>
-                </div>
-            </td></tr>`;
+        // Render Table and Pagination
+        function renderTable(pagination = null) {
+            if (allRequests.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11">
+                    <div class="vp-empty-state">
+                        <div style="font-size: 40px;" class="mb-2">📭</div>
+                        <div class="fw-bold text-muted">No payment requests found</div>
+                        <div class="text-muted small mt-1">Try adjusting your filters or click "New Request"</div>
+                    </div>
+                </td></tr>`;
+                paginationControls.innerHTML = '';
+                paginationInfo.textContent = 'Showing 0 to 0 of 0 entries';
                 return;
             }
 
-            tbody.innerHTML = filtered.map((r, i) => {
+            tbody.innerHTML = allRequests.map((r, i) => {
                 const date = new Date(r.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
                 const gross = parseFloat(r.order_amount).toLocaleString('en', { minimumFractionDigits: 2 });
                 const net = parseFloat(r.net_amount).toLocaleString('en', { minimumFractionDigits: 2 });
@@ -773,21 +929,62 @@ require_once "includes/header.php";
                 }
 
                 return `<tr class="vp-request-row">
-                <td class="vp-row-num">${i + 1}</td>
-                <td class="vp-shop-name" data-label="Shop">${escHtml(r.shop_name)}</td>
-                <td data-label="Order ID"><span class="vp-order-code">${escHtml(r.order_id)}</span></td>
-                <td class="vp-amount text-muted" data-label="Gross Amt" style="font-size:11px;">${gross}</td>
-                <td data-label="Commission">${commHtml}</td>
-                <td class="vp-amount" data-label="Net Payout">${net} <span class="vp-amount-unit">ETB</span></td>
-                <td data-label="Status"><span class="vp-badge vp-badge-${r.status}">${dots[r.status] || ''} ${r.status}</span></td>
-                <td class="vp-requested-by" data-label="By">${escHtml(r.requested_by_name || 'N/A')}</td>
-                <td class="small text-muted" data-label="Notes" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escHtml(r.notes || '')}">
-                    ${escHtml(r.notes || '-')}
-                </td>
-                <td class="vp-date" data-label="Date">${date}</td>
-                <td class="text-center"><div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">${actions}</div></td>
-            </tr>`;
+                    <td class="vp-row-num">${(currentPage - 1) * limit + i + 1}</td>
+                    <td class="vp-shop-name" data-label="Shop">${escHtml(r.shop_name)}</td>
+                    <td data-label="Order ID"><span class="vp-order-code">${escHtml(r.order_id)}</span></td>
+                    <td class="vp-amount text-muted" data-label="Gross Amt" style="font-size:11px;">${gross}</td>
+                    <td data-label="Commission">${commHtml}</td>
+                    <td class="vp-amount" data-label="Net Payout">${net} <span class="vp-amount-unit">ETB</span></td>
+                    <td data-label="Status"><span class="vp-badge vp-badge-${r.status}">${dots[r.status] || ''} ${r.status}</span></td>
+                    <td class="vp-requested-by" data-label="By">${escHtml(r.requested_by_name || 'N/A')}</td>
+                    <td class="small text-muted" data-label="Notes" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escHtml(r.notes || '')}">
+                        ${escHtml(r.notes || '-')}
+                    </td>
+                    <td class="vp-date" data-label="Date">${date}</td>
+                    <td class="text-center"><div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">${actions}</div></td>
+                </tr>`;
             }).join('');
+
+            // Pagination Controls
+            if (pagination) {
+                const { total_records, total_pages, current_page } = pagination;
+                const start = (current_page - 1) * limit + 1;
+                const end = Math.min(current_page * limit, total_records);
+                paginationInfo.textContent = `Showing ${start} to ${end} of ${total_records} entries`;
+
+                let html = '';
+                // Prev
+                html += `<li class="page-item ${current_page <= 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="event.preventDefault(); if(${current_page > 1}) fetchRequests(${current_page - 1})"><i class="fas fa-chevron-left"></i></a>
+                </li>`;
+
+                // Page numbers (simplified)
+                const startPage = Math.max(1, current_page - 2);
+                const endPage = Math.min(total_pages, current_page + 2);
+
+                if (startPage > 1) {
+                    html += `<li class="page-item"><a class="page-link" href="#" onclick="event.preventDefault(); fetchRequests(1)">1</a></li>`;
+                    if (startPage > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+
+                for (let p = startPage; p <= endPage; p++) {
+                    html += `<li class="page-item ${p === current_page ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="event.preventDefault(); fetchRequests(${p})">${p}</a>
+                    </li>`;
+                }
+
+                if (endPage < total_pages) {
+                    if (endPage < total_pages - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                    html += `<li class="page-item"><a class="page-link" href="#" onclick="event.preventDefault(); fetchRequests(${total_pages})">${total_pages}</a></li>`;
+                }
+
+                // Next
+                html += `<li class="page-item ${current_page >= total_pages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="event.preventDefault(); if(${current_page < total_pages}) fetchRequests(${current_page + 1})"><i class="fas fa-chevron-right"></i></a>
+                </li>`;
+
+                paginationControls.innerHTML = html;
+            }
         }
 
         function escHtml(str) {
@@ -805,12 +1002,10 @@ require_once "includes/header.php";
             resetModal();
             editingId = id;
 
-            // UI adjustments for edit mode
             document.querySelector('#newRequestModal .modal-title').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Payment Request';
             document.querySelector('#newRequestModal .modal-subtitle').textContent = 'Correct the payment details for this order';
-            btnAddOrder.style.display = 'none'; // Editing is per-row
+            btnAddOrder.style.display = 'none';
 
-            // Populate form
             document.getElementById('form-shop-name').value = r.shop_name;
             document.getElementById('form-notes').value = r.notes || '';
 
@@ -850,7 +1045,6 @@ require_once "includes/header.php";
             try {
                 let res, body;
                 if (editingId) {
-                    // Update flow (Single order)
                     body = {
                         _method: 'PUT',
                         id: editingId,
@@ -863,14 +1057,19 @@ require_once "includes/header.php";
                     };
                     res = await fetch(API_URL, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken
+                        },
                         body: JSON.stringify(body)
                     });
                 } else {
-                    // Create flow (Batch support)
                     res = await fetch(API_URL, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken
+                        },
                         body: JSON.stringify({ shop_name: shopName, orders: orders, notes: notes })
                     });
                 }
@@ -881,7 +1080,7 @@ require_once "includes/header.php";
                     const modal = getModal();
                     if (modal) modal.hide();
                     resetModal();
-                    fetchRequests();
+                    fetchRequests(editingId ? currentPage : 1);
                 } else {
                     showToast(data.message, 'error');
                 }
@@ -900,13 +1099,16 @@ require_once "includes/header.php";
             try {
                 const res = await fetch(API_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
                     body: JSON.stringify({ _method: 'PUT', id, action })
                 });
                 const data = await res.json();
                 if (data.isOk) {
                     showToast(data.message);
-                    fetchRequests();
+                    fetchRequests(currentPage);
                 } else {
                     showToast(data.message, 'error');
                 }
@@ -922,13 +1124,21 @@ require_once "includes/header.php";
             try {
                 const res = await fetch(API_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
                     body: JSON.stringify({ _method: 'DELETE', id })
                 });
                 const data = await res.json();
                 if (data.isOk) {
                     showToast('Request deleted.');
-                    fetchRequests();
+                    // If last item on page, go back one page
+                    if (allRequests.length === 1 && currentPage > 1) {
+                        fetchRequests(currentPage - 1);
+                    } else {
+                        fetchRequests(currentPage);
+                    }
                 } else {
                     showToast(data.message, 'error');
                 }
@@ -937,8 +1147,12 @@ require_once "includes/header.php";
             }
         };
 
-        // Init
-        fetchRequests();
+        // Initial fetch
+        fetchRequests(1);
+
+        // Expose fetchRequests globally for pagination buttons if needed (though we use onclick handlers now)
+        window.fetchRequests = fetchRequests;
+
     })();
 </script>
 
