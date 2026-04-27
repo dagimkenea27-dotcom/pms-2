@@ -212,10 +212,13 @@ class BranchOrder {
         return $result['total'];
     }
     
-    public function updateStatus($id, $status, $reason = null) {
+    public function updateStatus($id, $status, $reason = null, $delivery_person = null) {
         $sql = "UPDATE {$this->table} SET status = :status";
         if ($status === 'cancelled' && $reason !== null) {
             $sql .= ", cancellation_reason = :reason";
+        }
+        if (($status === 'processing' || $status === 'shipped') && $delivery_person !== null) {
+            $sql .= ", delivery_person = :delivery_person";
         }
         $sql .= " WHERE id = :id";
         
@@ -224,6 +227,9 @@ class BranchOrder {
         $stmt->bindParam(':status', $status);
         if ($status === 'cancelled' && $reason !== null) {
             $stmt->bindParam(':reason', $reason);
+        }
+        if (($status === 'processing' || $status === 'shipped') && $delivery_person !== null) {
+            $stmt->bindParam(':delivery_person', $delivery_person);
         }
         return $stmt->execute();
     }

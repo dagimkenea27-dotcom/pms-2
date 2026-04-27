@@ -123,6 +123,9 @@ $company_email = "admin@gojo.org.et";
                 <div class="info-content">
                     <strong style="color: var(--primary); text-transform: uppercase;"><?php echo $order['status']; ?></strong>
                     <p>Processed by: <?php echo htmlspecialchars($order['created_by_username']); ?></p>
+                    <?php if (!empty($order['delivery_person'])): ?>
+                        <p><i class="fas fa-truck"></i> Delivery: <?php echo htmlspecialchars($order['delivery_person']); ?></p>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

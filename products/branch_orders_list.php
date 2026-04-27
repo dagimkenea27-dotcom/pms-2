@@ -43,8 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
         $order_id = $_POST['order_id'];
         $new_status = $_POST['new_status'];
         $cancellation_reason = $_POST['cancellation_reason'] ?? null;
+        $delivery_person = $_POST['delivery_person'] ?? null;
         
-        if ($branchOrder->updateStatus($order_id, $new_status, $cancellation_reason)) {
+        if ($branchOrder->updateStatus($order_id, $new_status, $cancellation_reason, $delivery_person)) {
             $_SESSION['message'] = "Order status updated successfully!";
             $_SESSION['message_type'] = "success";
         } else {
@@ -111,29 +112,27 @@ if ($message): ?>
                     COUNT(*) as total,
                     SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
                     SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing,
+                    SUM(CASE WHEN status = 'shipped' THEN 1 ELSE 0 END) as shipped,
                     SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
                     FROM branch_orders";
     $stats_stmt = $db->prepare($stats_query);
     $stats_stmt->execute();
     $stats = $stats_stmt->fetch(PDO::FETCH_ASSOC);
     ?>
-    <div class="col-xl-3 col-md-6 mb-4">
+    <div class="col-xl-2 col-md-6 mb-4">
         <div class="card border-left-primary shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Orders</div>
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total</div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['total']; ?></div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="col-xl-3 col-md-6 mb-4">
+    <div class="col-xl-2 col-md-6 mb-4">
         <div class="card border-left-warning shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
@@ -141,15 +140,12 @@ if ($message): ?>
                         <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Pending</div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['pending']; ?></div>
                     </div>
-                    <div class="col-auto">
-                        <i class="fas fa-clock fa-2x text-gray-300"></i>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="col-xl-3 col-md-6 mb-4">
+    <div class="col-xl-2 col-md-6 mb-4">
         <div class="card border-left-info shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
@@ -157,24 +153,31 @@ if ($message): ?>
                         <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Processing</div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['processing']; ?></div>
                     </div>
-                    <div class="col-auto">
-                        <i class="fas fa-spinner fa-2x text-gray-300"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-2 col-md-6 mb-4">
+        <div class="card border-left-secondary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">Shipped</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['shipped']; ?></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="col-xl-3 col-md-6 mb-4">
+    <div class="col-xl-2 col-md-6 mb-4">
         <div class="card border-left-success shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Completed</div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['completed']; ?></div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
                     </div>
                 </div>
             </div>
@@ -195,6 +198,7 @@ if ($message): ?>
                     <option value=""><?php echo __('all_statuses'); ?></option>
                     <option value="pending" <?php echo $filters['status'] === 'pending' ? 'selected' : ''; ?>><?php echo __('pending'); ?></option>
                     <option value="processing" <?php echo $filters['status'] === 'processing' ? 'selected' : ''; ?>><?php echo __('processing'); ?></option>
+                    <option value="shipped" <?php echo $filters['status'] === 'shipped' ? 'selected' : ''; ?>>Shipped</option>
                     <option value="completed" <?php echo $filters['status'] === 'completed' ? 'selected' : ''; ?>><?php echo __('completed'); ?></option>
                     <option value="cancelled" <?php echo $filters['status'] === 'cancelled' ? 'selected' : ''; ?>><?php echo __('cancelled'); ?></option>
                 </select>
@@ -265,10 +269,17 @@ if ($message): ?>
                                 <span class="badge bg-<?php 
                                     echo $order['status'] === 'completed' ? 'success' : 
                                         ($order['status'] === 'processing' ? 'warning' : 
-                                        ($order['status'] === 'cancelled' ? 'danger' : 'info')); 
-                                ?>" <?php echo ($order['status'] === 'cancelled' && !empty($order['cancellation_reason'])) ? 'title="' . htmlspecialchars($order['cancellation_reason']) . '" data-bs-toggle="tooltip"' : ''; ?>>
+                                        ($order['status'] === 'shipped' ? 'secondary' : 
+                                        ($order['status'] === 'cancelled' ? 'danger' : 'info'))); 
+                                ?>" <?php echo ($order['status'] === 'cancelled' && !empty($order['cancellation_reason'])) ? 'title="Reason: ' . htmlspecialchars($order['cancellation_reason']) . '" data-bs-toggle="tooltip"' : ''; ?>
+                                    <?php echo (($order['status'] === 'processing' || $order['status'] === 'shipped' || $order['status'] === 'completed') && !empty($order['delivery_person'])) ? 'title="Delivery: ' . htmlspecialchars($order['delivery_person']) . '" data-bs-toggle="tooltip"' : ''; ?>>
                                     <?php echo ucfirst($order['status']); ?>
                                 </span>
+                                <?php if (!empty($order['delivery_person'])): ?>
+                                    <div class="small text-muted mt-1" style="font-size: 0.75rem;">
+                                        <i class="fas fa-truck fa-xs"></i> <?php echo htmlspecialchars($order['delivery_person']); ?>
+                                    </div>
+                                <?php endif; ?>
                             </td>
                             <td><?php echo date('M d, Y', strtotime($order['created_at'])); ?></td>
                             <td>
@@ -312,6 +323,7 @@ if ($message): ?>
                                                     <option value="" disabled selected><?php echo __('change_status'); ?></option>
                                                     <option value="pending"><?php echo __('pending'); ?></option>
                                                     <option value="processing"><?php echo __('processing'); ?></option>
+                                                    <option value="shipped">Shipped</option>
                                                     <option value="completed"><?php echo __('completed'); ?></option>
                                                     <option value="cancelled"><?php echo __('cancelled'); ?></option>
                                                 </select>
@@ -377,7 +389,71 @@ if ($message): ?>
     </div>
 </div>
 
+<!-- Select Delivery Person Modal -->
+<div class="modal fade" id="deliveryPersonModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title small text-uppercase font-weight-bold">Select Delivery Person</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="cancelStatusChange()"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="list-group list-group-flush">
+                    <button type="button" class="list-group-item list-group-item-action py-3" onclick="setDeliveryPerson('Abinet Mathewos')">
+                        <i class="fas fa-user-circle text-primary me-2"></i> Abinet Mathewos
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action py-3" onclick="setDeliveryPerson('Abebe Ayiza')">
+                        <i class="fas fa-user-circle text-primary me-2"></i> Abebe Ayiza
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action py-3" onclick="setDeliveryPerson('Tamirat Bekalu')">
+                        <i class="fas fa-user-circle text-primary me-2"></i> Tamirat Bekalu
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action py-3 bg-light text-primary" onclick="customDeliveryPerson()">
+                        <i class="fas fa-plus-circle me-2"></i> Other Person...
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal" onclick="cancelStatusChange()">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+let currentStatusSelect = null;
+
+function cancelStatusChange() {
+    if (currentStatusSelect) {
+        currentStatusSelect.selectedIndex = 0;
+    }
+}
+
+function setDeliveryPerson(name) {
+    if (!currentStatusSelect) return;
+    
+    let personInput = currentStatusSelect.form.querySelector('input[name="delivery_person"]');
+    if (!personInput) {
+        personInput = document.createElement('input');
+        personInput.type = 'hidden';
+        personInput.name = 'delivery_person';
+        currentStatusSelect.form.appendChild(personInput);
+    }
+    personInput.value = name;
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('deliveryPersonModal'));
+    if (modal) modal.hide();
+    currentStatusSelect.form.submit();
+}
+
+function customDeliveryPerson() {
+    const person = prompt("Please enter the Delivery Person's Name:");
+    if (person) {
+        setDeliveryPerson(person);
+    } else {
+        cancelStatusChange();
+    }
+}
 document.addEventListener('DOMContentLoaded', function() {
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -403,6 +479,11 @@ function handleStatusChange(selectElement) {
             selectElement.form.appendChild(reasonInput);
         }
         reasonInput.value = reason;
+    } else if (status === 'processing' || status === 'shipped') {
+        currentStatusSelect = selectElement;
+        const deliveryModal = new bootstrap.Modal(document.getElementById('deliveryPersonModal'));
+        deliveryModal.show();
+        return; // Don't submit yet
     }
     selectElement.form.submit();
 }
@@ -427,6 +508,7 @@ function viewOrder(element) {
             let statusClass = 'info';
             if(order.status === 'completed') statusClass = 'success';
             else if(order.status === 'processing') statusClass = 'warning';
+            else if(order.status === 'shipped') statusClass = 'secondary';
             else if(order.status === 'cancelled') statusClass = 'danger';
             
             const formattedDate = new Date(order.created_at).toLocaleDateString();
@@ -477,6 +559,7 @@ function viewOrder(element) {
                     <div class="col-md-6">
                         <p class="mb-1"><strong>${order.order_number}</strong></p>
                         <span class="badge bg-${statusClass} text-uppercase">${order.status}</span>
+                        ${order.delivery_person ? `<br><small class="text-muted"><i class="fas fa-truck"></i> ${order.delivery_person}</small>` : ''}
                     </div>
                     <div class="col-md-6 text-md-end">
                         <small class="text-muted">Date: ${formattedDate}</small>
@@ -487,6 +570,13 @@ function viewOrder(element) {
                 <div class="alert alert-danger mb-4">
                     <h6 class="alert-heading font-weight-bold small text-uppercase"><i class="fas fa-exclamation-circle"></i> Cancellation Reason</h6>
                     <p class="mb-0 small">${order.cancellation_reason}</p>
+                </div>
+                ` : ''}
+
+                ${(order.status === 'processing' || order.status === 'shipped' || order.status === 'completed') && order.delivery_person ? `
+                <div class="alert alert-info mb-4">
+                    <h6 class="alert-heading font-weight-bold small text-uppercase"><i class="fas fa-truck"></i> Delivery Information</h6>
+                    <p class="mb-0 small"><strong>Delivery Person:</strong> ${order.delivery_person}</p>
                 </div>
                 ` : ''}
 
