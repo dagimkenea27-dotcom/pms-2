@@ -374,9 +374,9 @@ if ($message): ?>
 <div class="modal fade" id="viewOrderModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><?php echo __('order_details'); ?></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-gradient-primary text-white border-0 py-3">
+                <h5 class="modal-title font-weight-bold"><i class="fas fa-file-invoice me-2"></i> <?php echo __('order_details'); ?></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="orderDetailsContent">
                 <!-- Content will be loaded dynamically -->
@@ -555,54 +555,81 @@ function viewOrder(element) {
             });
 
             modalContent.innerHTML = `
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <p class="mb-1"><strong>${order.order_number}</strong></p>
-                        <span class="badge bg-${statusClass} text-uppercase">${order.status}</span>
-                        ${order.delivery_person ? `<br><small class="text-muted"><i class="fas fa-truck"></i> ${order.delivery_person}</small>` : ''}
+                <div class="row align-items-center mb-4">
+                    <div class="col-md-7">
+                        <h4 class="font-weight-bold text-primary mb-1">${order.order_number}</h4>
+                        <div class="d-flex align-items-center flex-wrap">
+                            <span class="badge bg-${statusClass} px-3 py-2 text-uppercase shadow-sm mb-1 me-2" style="font-size: 0.7rem; border-radius: 50px;">${order.status}</span>
+                            ${order.source ? `<span class="badge bg-light text-primary border px-3 py-2 shadow-sm mb-1 me-2" style="font-size: 0.7rem; border-radius: 50px;"><i class="fas fa-bullhorn me-1"></i> ${order.source}</span>` : ''}
+                            ${order.delivery_person ? `<span class="text-muted small mb-1"><i class="fas fa-truck me-1"></i> ${order.delivery_person}</span>` : ''}
+                        </div>
                     </div>
-                    <div class="col-md-6 text-md-end">
-                        <small class="text-muted">Date: ${formattedDate}</small>
+                    <div class="col-md-5 text-md-end">
+                        <div class="text-xs text-uppercase text-muted font-weight-bold mb-0">Order Date</div>
+                        <div class="font-weight-bold text-gray-800">${formattedDate}</div>
                     </div>
                 </div>
                 
                 ${order.status === 'cancelled' && order.cancellation_reason ? `
-                <div class="alert alert-danger mb-4">
-                    <h6 class="alert-heading font-weight-bold small text-uppercase"><i class="fas fa-exclamation-circle"></i> Cancellation Reason</h6>
-                    <p class="mb-0 small">${order.cancellation_reason}</p>
+                <div class="card border-left-danger shadow-sm mb-4">
+                    <div class="card-body py-3">
+                        <div class="d-flex align-items-center text-danger mb-1">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            <h6 class="mb-0 font-weight-bold text-uppercase small">Cancellation Reason</h6>
+                        </div>
+                        <p class="mb-0 text-gray-800 small">${order.cancellation_reason}</p>
+                    </div>
                 </div>
                 ` : ''}
 
                 ${(order.status === 'processing' || order.status === 'shipped' || order.status === 'completed') && order.delivery_person ? `
-                <div class="alert alert-info mb-4">
-                    <h6 class="alert-heading font-weight-bold small text-uppercase"><i class="fas fa-truck"></i> Delivery Information</h6>
-                    <p class="mb-0 small"><strong>Delivery Person:</strong> ${order.delivery_person}</p>
+                <div class="card border-left-info shadow-sm mb-4 bg-light">
+                    <div class="card-body py-3">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <div class="bg-info text-white rounded-circle p-2 shadow-sm">
+                                    <i class="fas fa-truck fa-sm"></i>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="text-xs text-uppercase text-info font-weight-bold mb-0">Delivery Partner</div>
+                                <div class="font-weight-bold text-gray-800">${order.delivery_person}</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 ` : ''}
 
-                <div class="card mb-4 bg-light border-0 shadow-none">
-                    <div class="card-body py-3">
-                        <div class="row">
-                            <div class="col-md-6 border-right">
-                                <label class="text-xs text-uppercase text-muted font-weight-bold mb-1">Customer</label>
-                                <p class="mb-0 font-weight-bold">${order.customer_name}</p>
-                                <p class="mb-0 small"><i class="fas fa-phone fa-xs"></i> ${order.phone_number}</p>
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 bg-light shadow-none">
+                            <div class="card-body p-3">
+                                <div class="text-xs text-uppercase text-muted font-weight-bold mb-2"><i class="fas fa-user me-1 text-primary"></i> Customer</div>
+                                <h6 class="font-weight-bold mb-1 text-gray-800">${order.customer_name}</h6>
+                                <p class="mb-0 small text-muted"><i class="fas fa-phone fa-xs me-1"></i> ${order.phone_number}</p>
                             </div>
-                            <div class="col-md-6 ps-md-4">
-                                <label class="text-xs text-uppercase text-muted font-weight-bold mb-1">Shipping Address</label>
-                                <p class="mb-0 small">${order.address || 'No address provided'}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 bg-light shadow-none">
+                            <div class="card-body p-3">
+                                <div class="text-xs text-uppercase text-muted font-weight-bold mb-2"><i class="fas fa-map-marker-alt me-1 text-primary"></i> Shipping Address</div>
+                                <p class="mb-0 small text-gray-800">${order.address || 'No address provided'}</p>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <h6 class="font-weight-bold text-primary mb-3">Products & Images</h6>
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h6 class="font-weight-bold text-primary mb-0">Products & Inventory</h6>
+                    <span class="badge bg-light text-dark border small">${order.products.length} Products</span>
+                </div>
                 ${productsHtml}
 
                 ${order.notes ? `
-                <div class="mt-4">
-                    <label class="text-xs text-uppercase text-muted font-weight-bold mb-1">Order Notes</label>
-                    <div class="p-3 bg-light rounded text-dark small">${order.notes.replace(/\n/g, '<br>')}</div>
+                <div class="mt-4 p-3 bg-light rounded border-left-secondary shadow-sm">
+                    <div class="text-xs text-uppercase text-muted font-weight-bold mb-2">Order Notes</div>
+                    <div class="text-gray-800 small italic" style="font-style: italic;">"${order.notes.replace(/\n/g, '<br>')}"</div>
                 </div>` : ''}
             `;
         })

@@ -159,6 +159,9 @@ $isBranchActive = strpos($_SERVER['REQUEST_URI'], 'jimma/') !== false || strpos(
                     <div class="py-2 collapse-inner rounded">
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'products/branch_order_receive.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>products/branch_order_receive.php"><?php echo __('branch_order_receiving'); ?></a>
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'products/branch_orders_list.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>products/branch_orders_list.php"><?php echo __('view_orders'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'reports/branch_order_analytics.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>reports/branch_order_analytics.php">
+                            <i class="fas fa-chart-line fa-sm text-info"></i> Branch Analytics
+                        </a>
                         <hr class="sidebar-divider">
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'jimma/sales_request.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>jimma/sales_request.php">Jimma Stock Request</a>
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'jimma/view_requests.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>jimma/view_requests.php">View All Requests</a>
@@ -260,6 +263,7 @@ $isRouteActive = strpos($_SERVER['REQUEST_URI'], 'routes/') !== false;
                     <span>Sales Follow-up</span>
                 </a>
             </li>
+
 
             <!-- Nav Item - Daily Sales -->
             <?php

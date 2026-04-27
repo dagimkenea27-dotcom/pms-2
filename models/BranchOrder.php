@@ -51,9 +51,9 @@ class BranchOrder {
 
             // 1. Insert Parent Order
             $sql = "INSERT INTO {$this->table} 
-                    (order_number, customer_name, address, phone_number, status, notes, created_by)
+                    (order_number, customer_name, address, phone_number, status, notes, source, created_by)
                     VALUES 
-                    (:order_number, :customer_name, :address, :phone_number, :status, :notes, :created_by)";
+                    (:order_number, :customer_name, :address, :phone_number, :status, :notes, :source, :created_by)";
             
             $stmt = $this->conn->prepare($sql);
             $stmt->bindParam(':order_number', $data['order_number']);
@@ -62,6 +62,7 @@ class BranchOrder {
             $stmt->bindParam(':phone_number', $data['phone_number']);
             $stmt->bindParam(':status', $data['status']);
             $stmt->bindParam(':notes', $data['notes']);
+            $stmt->bindParam(':source', $data['source']);
             $stmt->bindParam(':created_by', $data['created_by']);
             
             if (!$stmt->execute()) {
@@ -280,6 +281,7 @@ class BranchOrder {
                     address = :address,
                     phone_number = :phone_number,
                     notes = :notes,
+                    source = :source,
                     status = :status
                     WHERE id = :id";
             
@@ -289,6 +291,7 @@ class BranchOrder {
             $stmt->bindParam(':address', $data['address']);
             $stmt->bindParam(':phone_number', $data['phone_number']);
             $stmt->bindParam(':notes', $data['notes']);
+            $stmt->bindParam(':source', $data['source']);
             $stmt->bindParam(':status', $data['status']);
             
             $stmt->execute();

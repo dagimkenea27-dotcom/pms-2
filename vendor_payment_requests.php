@@ -180,6 +180,7 @@ require_once "includes/header.php";
         .vp-filter-btn {
             flex: 1;
             font-size: 11px;
+            padding: 6px 10px;
         }
 
         .modal-dialog {
