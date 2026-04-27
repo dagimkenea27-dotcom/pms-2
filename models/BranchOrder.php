@@ -212,11 +212,19 @@ class BranchOrder {
         return $result['total'];
     }
     
-    public function updateStatus($id, $status) {
-        $sql = "UPDATE {$this->table} SET status = :status WHERE id = :id";
+    public function updateStatus($id, $status, $reason = null) {
+        $sql = "UPDATE {$this->table} SET status = :status";
+        if ($status === 'cancelled' && $reason !== null) {
+            $sql .= ", cancellation_reason = :reason";
+        }
+        $sql .= " WHERE id = :id";
+        
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam(':id', $id);
         $stmt->bindParam(':status', $status);
+        if ($status === 'cancelled' && $reason !== null) {
+            $stmt->bindParam(':reason', $reason);
+        }
         return $stmt->execute();
     }
     

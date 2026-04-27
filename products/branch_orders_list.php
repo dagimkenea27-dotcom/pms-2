@@ -42,8 +42,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     } else {
         $order_id = $_POST['order_id'];
         $new_status = $_POST['new_status'];
+        $cancellation_reason = $_POST['cancellation_reason'] ?? null;
         
-        if ($branchOrder->updateStatus($order_id, $new_status)) {
+        if ($branchOrder->updateStatus($order_id, $new_status, $cancellation_reason)) {
             $_SESSION['message'] = "Order status updated successfully!";
             $_SESSION['message_type'] = "success";
         } else {
@@ -265,7 +266,7 @@ if ($message): ?>
                                     echo $order['status'] === 'completed' ? 'success' : 
                                         ($order['status'] === 'processing' ? 'warning' : 
                                         ($order['status'] === 'cancelled' ? 'danger' : 'info')); 
-                                ?>">
+                                ?>" <?php echo ($order['status'] === 'cancelled' && !empty($order['cancellation_reason'])) ? 'title="' . htmlspecialchars($order['cancellation_reason']) . '" data-bs-toggle="tooltip"' : ''; ?>>
                                     <?php echo ucfirst($order['status']); ?>
                                 </span>
                             </td>
@@ -307,7 +308,7 @@ if ($message): ?>
                                                 <input type="hidden" name="csrf_token" value="<?php echo Auth::generateCSRF(); ?>">
                                                 <input type="hidden" name="update_status" value="1">
                                                 <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
-                                                <select name="new_status" class="form-select form-select-sm" onchange="this.form.submit()">
+                                                <select name="new_status" class="form-select form-select-sm" onchange="handleStatusChange(this)">
                                                     <option value="" disabled selected><?php echo __('change_status'); ?></option>
                                                     <option value="pending"><?php echo __('pending'); ?></option>
                                                     <option value="processing"><?php echo __('processing'); ?></option>
@@ -377,6 +378,35 @@ if ($message): ?>
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+});
+
+function handleStatusChange(selectElement) {
+    const status = selectElement.value;
+    if (status === 'cancelled') {
+        const reason = prompt("Please enter the reason for cancellation:");
+        if (reason === null) {
+            selectElement.selectedIndex = 0; // Reset
+            return;
+        }
+        
+        // Add reason to a hidden input
+        let reasonInput = selectElement.form.querySelector('input[name="cancellation_reason"]');
+        if (!reasonInput) {
+            reasonInput = document.createElement('input');
+            reasonInput.type = 'hidden';
+            reasonInput.name = 'cancellation_reason';
+            selectElement.form.appendChild(reasonInput);
+        }
+        reasonInput.value = reason;
+    }
+    selectElement.form.submit();
+}
+
 function viewOrder(element) {
     const orderId = element.getAttribute('data-id');
     const modalContent = document.getElementById('orderDetailsContent');
@@ -452,6 +482,14 @@ function viewOrder(element) {
                         <small class="text-muted">Date: ${formattedDate}</small>
                     </div>
                 </div>
+                
+                ${order.status === 'cancelled' && order.cancellation_reason ? `
+                <div class="alert alert-danger mb-4">
+                    <h6 class="alert-heading font-weight-bold small text-uppercase"><i class="fas fa-exclamation-circle"></i> Cancellation Reason</h6>
+                    <p class="mb-0 small">${order.cancellation_reason}</p>
+                </div>
+                ` : ''}
+
                 <div class="card mb-4 bg-light border-0 shadow-none">
                     <div class="card-body py-3">
                         <div class="row">
