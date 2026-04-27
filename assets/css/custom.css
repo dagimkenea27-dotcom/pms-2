@@ -766,9 +766,10 @@ footer.sticky-footer .copyright {
     position: relative;
 }
 
-/* Fix dropdown clipping in responsive tables */
+/* Fix dropdown clipping in responsive tables - allowing horizontal scroll while managing overflow */
 .table-responsive {
-    overflow: visible !important;
+    overflow-x: auto;
+    overflow-y: visible;
 }
 
 /* Ensure share buttons look good and are centered */
