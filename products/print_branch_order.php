@@ -87,11 +87,7 @@ $company_email = "admin@gojo.org.et";
         tr:last-child td { border-bottom: none; }
         .qty-cell { font-weight: 700; color: var(--primary); }
 
-        /* Notes & Footer */
-        .notes-box { background: #fffcf5; border: 1px solid #f8e6bc; border-radius: 6px; padding: 15px; margin-top: 30px; }
-        .notes-box h3 { margin: 0 0 8px 0; font-size: 10px; color: #856404; text-transform: uppercase; }
-        .notes-content { font-size: 11px; color: #664d03; line-height: 1.6; font-style: italic; }
-
+        /* Footer */
         .footer { margin-top: 50px; display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid var(--border); padding-top: 20px; }
         .metadata { font-size: 9px; color: var(--secondary); }
         .signature-area { display: flex; gap: 40px; }
@@ -199,14 +195,7 @@ $company_email = "admin@gojo.org.et";
             <?php endforeach; ?>
         </div>
 
-        <?php if ($order['notes']): ?>
-            <div class="notes-box">
-                <h3>Special Instructions</h3>
-                <div class="notes-content">
-                    "<?php echo nl2br(htmlspecialchars($order['notes'])); ?>"
-                </div>
-            </div>
-        <?php endif; ?>
+
 
         <div class="footer">
             <div class="metadata">

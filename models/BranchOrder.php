@@ -218,7 +218,7 @@ class BranchOrder {
         if ($status === 'cancelled' && $reason !== null) {
             $sql .= ", cancellation_reason = :reason";
         }
-        if (($status === 'processing' || $status === 'shipped') && $delivery_person !== null) {
+        if (($status === 'shipped') && $delivery_person !== null) {
             $sql .= ", delivery_person = :delivery_person";
         }
         $sql .= " WHERE id = :id";
@@ -229,7 +229,7 @@ class BranchOrder {
         if ($status === 'cancelled' && $reason !== null) {
             $stmt->bindParam(':reason', $reason);
         }
-        if (($status === 'processing' || $status === 'shipped') && $delivery_person !== null) {
+        if (($status === 'shipped') && $delivery_person !== null) {
             $stmt->bindParam(':delivery_person', $delivery_person);
         }
         return $stmt->execute();

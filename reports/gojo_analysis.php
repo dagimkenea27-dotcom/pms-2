@@ -572,11 +572,17 @@ require_once "../includes/header.php";
             csv += `${name},${phone},${ordered},${interested},${r.dormant},${incentive},${lastTouch}\n`;
         });
         const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.setAttribute('href', url);
-        a.setAttribute('download', 'GojoShop_Analysis.csv');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'GojoShop_Analysis.csv';
+        document.body.appendChild(a);
         a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
     }
 
     function editRecord(id) {

@@ -272,7 +272,7 @@ if ($message): ?>
                                         ($order['status'] === 'shipped' ? 'secondary' : 
                                         ($order['status'] === 'cancelled' ? 'danger' : 'info'))); 
                                 ?>" <?php echo ($order['status'] === 'cancelled' && !empty($order['cancellation_reason'])) ? 'title="Reason: ' . htmlspecialchars($order['cancellation_reason']) . '" data-bs-toggle="tooltip"' : ''; ?>
-                                    <?php echo (($order['status'] === 'processing' || $order['status'] === 'shipped' || $order['status'] === 'completed') && !empty($order['delivery_person'])) ? 'title="Delivery: ' . htmlspecialchars($order['delivery_person']) . '" data-bs-toggle="tooltip"' : ''; ?>>
+                                    <?php echo (($order['status'] === 'shipped' || $order['status'] === 'completed') && !empty($order['delivery_person'])) ? 'title="Delivery: ' . htmlspecialchars($order['delivery_person']) . '" data-bs-toggle="tooltip"' : ''; ?>>
                                     <?php echo ucfirst($order['status']); ?>
                                 </span>
                                 <?php if (!empty($order['delivery_person'])): ?>
@@ -479,7 +479,7 @@ function handleStatusChange(selectElement) {
             selectElement.form.appendChild(reasonInput);
         }
         reasonInput.value = reason;
-    } else if (status === 'processing' || status === 'shipped') {
+    } else if (status === 'shipped') {
         currentStatusSelect = selectElement;
         const deliveryModal = new bootstrap.Modal(document.getElementById('deliveryPersonModal'));
         deliveryModal.show();
@@ -582,7 +582,7 @@ function viewOrder(element) {
                 </div>
                 ` : ''}
 
-                ${(order.status === 'processing' || order.status === 'shipped' || order.status === 'completed') && order.delivery_person ? `
+                ${(order.status === 'shipped' || order.status === 'completed') && order.delivery_person ? `
                 <div class="card border-left-info shadow-sm mb-4 bg-light">
                     <div class="card-body py-3">
                         <div class="row align-items-center">
