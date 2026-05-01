@@ -168,6 +168,7 @@ class BranchOrder {
         if (!empty($filters['customer_name'])) $conditions[] = "(bo.customer_name LIKE :customer_name OR bo.order_number LIKE :customer_name)";
         if (!empty($filters['date_from'])) $conditions[] = "DATE(bo.created_at) >= :date_from";
         if (!empty($filters['date_to'])) $conditions[] = "DATE(bo.created_at) <= :date_to";
+        if (!empty($filters['created_by'])) $conditions[] = "bo.created_by = :created_by";
         
         if (!empty($conditions)) $sql .= " AND " . implode(" AND ", $conditions);
         
@@ -181,6 +182,7 @@ class BranchOrder {
         }
         if (!empty($filters['date_from'])) $stmt->bindParam(':date_from', $filters['date_from']);
         if (!empty($filters['date_to'])) $stmt->bindParam(':date_to', $filters['date_to']);
+        if (!empty($filters['created_by'])) $stmt->bindParam(':created_by', $filters['created_by']);
         
         $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
@@ -196,6 +198,7 @@ class BranchOrder {
         if (!empty($filters['customer_name'])) $conditions[] = "(customer_name LIKE :customer_name OR order_number LIKE :customer_name)";
         if (!empty($filters['date_from'])) $conditions[] = "DATE(created_at) >= :date_from";
         if (!empty($filters['date_to'])) $conditions[] = "DATE(created_at) <= :date_to";
+        if (!empty($filters['created_by'])) $conditions[] = "created_by = :created_by";
         
         if (!empty($conditions)) $sql .= " AND " . implode(" AND ", $conditions);
         
@@ -207,6 +210,7 @@ class BranchOrder {
         }
         if (!empty($filters['date_from'])) $stmt->bindParam(':date_from', $filters['date_from']);
         if (!empty($filters['date_to'])) $stmt->bindParam(':date_to', $filters['date_to']);
+        if (!empty($filters['created_by'])) $stmt->bindParam(':created_by', $filters['created_by']);
         
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);

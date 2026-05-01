@@ -6,11 +6,16 @@ error_reporting(E_ALL);
 require_once "../config/auth_check.php";
 require_once "../config/database.php";
 require_once "../models/BranchOrder.php";
+require_once "../models/User.php";
 require_once "../config/auth.php";
 
 $database = new Database();
 $db = $database->getConnection();
 $branchOrder = new BranchOrder($db);
+
+$userModel = new User($db);
+$users_stmt = $userModel->read();
+$all_users = $users_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $message = '';
 $message_type = '';
@@ -26,7 +31,8 @@ $filters = [
     'customer_name' => $_GET['customer_name'] ?? '',
     'product_name' => $_GET['product_name'] ?? '',
     'date_from' => $_GET['date_from'] ?? '',
-    'date_to' => $_GET['date_to'] ?? ''
+    'date_to' => $_GET['date_to'] ?? '',
+    'created_by' => $_GET['created_by'] ?? ''
 ];
 
 // Get orders and total count
@@ -216,7 +222,19 @@ if ($message): ?>
                        placeholder="<?php echo __('search_product'); ?>" value="<?php echo htmlspecialchars($filters['product_name']); ?>">
             </div>
             
-            <div class="col-md-3 d-flex align-items-end">
+            <div class="col-md-3">
+                <label for="created_by" class="form-label">Received By</label>
+                <select class="form-select" id="created_by" name="created_by">
+                    <option value="">All Users</option>
+                    <?php foreach($all_users as $u): ?>
+                        <option value="<?php echo $u['id']; ?>" <?php echo $filters['created_by'] == $u['id'] ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($u['first_name'] . ' ' . $u['last_name']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            
+            <div class="col-md-3 d-flex align-items-end mt-3">
                 <button type="submit" class="btn btn-primary me-2">
                     <i class="fas fa-search"></i> <?php echo __('filter'); ?>
                 </button>
@@ -281,7 +299,14 @@ if ($message): ?>
                                     </div>
                                 <?php endif; ?>
                             </td>
-                            <td><?php echo date('M d, Y', strtotime($order['created_at'])); ?></td>
+                            <td>
+                                <?php echo date('M d, Y', strtotime($order['created_at'])); ?>
+                                <?php if (!empty($order['created_by_username'])): ?>
+                                    <div class="small text-muted mt-1" style="font-size: 0.75rem;">
+                                        <i class="fas fa-user-edit fa-xs"></i> <?php echo htmlspecialchars($order['created_by_username']); ?>
+                                    </div>
+                                <?php endif; ?>
+                            </td>
                             <td>
                                 <div class="dropdown">
                                     <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" 
@@ -348,13 +373,13 @@ if ($message): ?>
         <nav aria-label="Page navigation">
             <ul class="pagination justify-content-center">
                 <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
-                    <a class="page-link" href="?page=<?php echo $page - 1; ?>&status=<?php echo urlencode($filters['status']); ?>&customer_name=<?php echo urlencode($filters['customer_name']); ?>&product_name=<?php echo urlencode($filters['product_name']); ?>"><?php echo __('previous'); ?></a>
+                    <a class="page-link" href="?page=<?php echo $page - 1; ?>&<?php echo http_build_query($filters); ?>"><?php echo __('previous'); ?></a>
                 </li>
                 
                 <?php for ($i = 1; $i <= $total_pages; $i++): ?>
                     <?php if ($i == 1 || $i == $total_pages || ($i >= $page - 2 && $i <= $page + 2)): ?>
                     <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
-                        <a class="page-link" href="?page=<?php echo $i; ?>&status=<?php echo urlencode($filters['status']); ?>&customer_name=<?php echo urlencode($filters['customer_name']); ?>&product_name=<?php echo urlencode($filters['product_name']); ?>"><?php echo $i; ?></a>
+                        <a class="page-link" href="?page=<?php echo $i; ?>&<?php echo http_build_query($filters); ?>"><?php echo $i; ?></a>
                     </li>
                     <?php elseif ($i == $page - 3 || $i == $page + 3): ?>
                     <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -362,7 +387,7 @@ if ($message): ?>
                 <?php endfor; ?>
                 
                 <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
-                    <a class="page-link" href="?page=<?php echo $page + 1; ?>&status=<?php echo urlencode($filters['status']); ?>&customer_name=<?php echo urlencode($filters['customer_name']); ?>&product_name=<?php echo urlencode($filters['product_name']); ?>"><?php echo __('next'); ?></a>
+                    <a class="page-link" href="?page=<?php echo $page + 1; ?>&<?php echo http_build_query($filters); ?>"><?php echo __('next'); ?></a>
                 </li>
             </ul>
         </nav>
