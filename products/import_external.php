@@ -13,11 +13,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $importData = [];
     
     // Check if it's a JSON post (from the frontend XLSX parser)
-    if (isset($_POST['import_json'])) {
+    if (!empty($_POST['import_json'])) {
         $importData = json_decode($_POST['import_json'], true);
     } 
     // Otherwise check for CSV file upload
-    elseif (isset($_FILES['external_csv'])) {
+    elseif (isset($_FILES['external_csv']) && $_FILES['external_csv']['error'] !== UPLOAD_ERR_NO_FILE) {
         $file = $_FILES['external_csv'];
         $fileType = pathinfo($file['name'], PATHINFO_EXTENSION);
         
@@ -45,11 +45,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
                 fclose($handle);
             }
+        } else {
+            // It's an Excel file but JS parsing didn't happen (maybe JS disabled)
+            $_SESSION['message'] = "Excel parsing failed. Please open your file, click 'Save As', choose 'CSV (Comma delimited)', and upload the CSV file.";
+            $_SESSION['message_type'] = "danger";
+            header("Location: view_products.php");
+            exit();
         }
     }
 
     if (empty($importData)) {
-        $_SESSION['message'] = "No data found to import.";
+        $_SESSION['message'] = "No data found to import. The file might be empty or incorrectly formatted.";
         $_SESSION['message_type'] = "danger";
         header("Location: view_products.php");
         exit();
@@ -62,14 +68,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     try {
         $db->beginTransaction();
 
-        $checkStmt = $db->prepare("SELECT id, sku FROM products WHERE name = :name");
+        $checkStmt = $db->prepare("SELECT id, sku, barcode FROM products WHERE name = :name");
         
         $insertStmt = $db->prepare("INSERT INTO products 
-            (sku, name, description, category, price, image, category_id, brand_id, status) 
-            VALUES (:sku, :name, :description, :category, :price, :image, :category_id, :brand_id, :status)");
+            (sku, barcode, name, description, category, price, image, category_id, brand_id, status) 
+            VALUES (:sku, :barcode, :name, :description, :category, :price, :image, :category_id, :brand_id, :status)");
         
         $updateStmt = $db->prepare("UPDATE products SET 
             sku = :sku, 
+            barcode = :barcode, 
             description = :description, 
             category = :category, 
             price = :price, 
@@ -174,7 +181,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 continue;
             }
 
-            $sku = $findValue(['product sku', 'sku', 'product_sku', 'code', 'barcode', 'art', 'article', 'model']) ?? '';
+            $sku = $findValue(['product sku', 'sku', 'product_sku', 'code', 'art', 'article', 'model']) ?? '';
+            $barcode = $findValue(['barcode', 'upc', 'ean', 'isbn']) ?? '';
             $description = $findValue(['description', 'desc', 'product description', 'details', 'summary', 'about']) ?? '';
             $categoryName = $findValue(['category name', 'category', 'category_name', 'dept', 'group', 'collection', 'type']) ?? 'Uncategorized';
             $brandName = $findValue(['brand', 'brand name', 'manufacturer', 'make', 'vendor', 'supplier']) ?? 'No Brand';
@@ -197,11 +205,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $finalSku = !empty($sku) ? (string)$sku : $exists['sku'];
                 if (empty($finalSku)) $finalSku = generateSKU($db, $batchExcludes);
                 
+                $finalBarcode = !empty($barcode) ? (string)$barcode : (!empty($exists['barcode']) ? $exists['barcode'] : $finalSku);
+                
                 // Determine if we should update the image (only if we found a new one)
                 $finalImage = !empty($image) ? (string)$image : $exists['image'];
                 
                 $params = [
                     ':sku' => (string)$finalSku,
+                    ':barcode' => (string)$finalBarcode,
                     ':description' => (string)$description,
                     ':category' => (string)$categoryName,
                     ':price' => $price,
@@ -226,9 +237,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     }
                 }
                 $batchExcludes[] = $finalSku;
+                
+                $finalBarcode = !empty($barcode) ? (string)$barcode : $finalSku;
 
                 $params = [
                     ':sku' => (string)$finalSku,
+                    ':barcode' => (string)$finalBarcode,
                     ':name' => (string)$name,
                     ':description' => (string)$description,
                     ':category' => (string)$categoryName,
