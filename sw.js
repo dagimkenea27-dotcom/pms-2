@@ -41,8 +41,9 @@ self.addEventListener('fetch', (e) => {
 
     const url = new URL(e.request.url);
 
-    // 1. HTML/PHP Navigation requests (Network-first with offline fallback)
-    if (e.request.mode === 'navigate' || url.pathname.endsWith('.php') || url.pathname === '/') {
+    // 1. HTML Navigation requests (Network-first with offline fallback)
+    // Only apply offline fallback to actual page navigations (top-level)
+    if (e.request.mode === 'navigate') {
         e.respondWith(
             fetch(e.request)
                 .catch(() => {
@@ -57,8 +58,10 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
         caches.match(e.request).then((cachedResponse) => {
             const fetchPromise = fetch(e.request).then((networkResponse) => {
+                // IMPORTANT: Clone the response BEFORE returning it
+                const responseToCache = networkResponse.clone();
                 caches.open(CACHE_NAME).then((cache) => {
-                    cache.put(e.request, networkResponse.clone());
+                    cache.put(e.request, responseToCache);
                 });
                 return networkResponse;
             }).catch(() => {

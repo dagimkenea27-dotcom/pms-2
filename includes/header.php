@@ -529,18 +529,18 @@ endif; ?>
                                             return response.json();
                                         })
                                         .then(data => {
+                                            if (!data) return;
+                                            
                                             // Update Badge
                                             const badge = document.getElementById('alertBadge');
-                                            if (data && data.count > 0) {
-                                                badge.style.display = 'inline-block';
+                                            if (data.count !== undefined) {
+                                                badge.style.display = data.count > 0 ? 'inline-block' : 'none';
                                                 badge.textContent = data.count > 9 ? '9+' : data.count;
-                                            } else {
-                                                badge.style.display = 'none';
                                             }
 
                                             // Update List contents if needed
                                             const list = document.getElementById('alertList');
-                                            if (data && data.notifications && data.notifications.length > 0) {
+                                            if (data.notifications && data.notifications.length > 0) {
                                                 let html = '';
                                                 data.notifications.forEach(notif => {
                                                     const bgClass = notif.is_read == 1 ? '' : 'bg-light';
@@ -569,12 +569,7 @@ endif; ?>
                                             }
                                         })
                                         .catch(err => {
-                                            console.error('Error fetching notifications:', err);
-                                            // If there's a network error or parsing error, it might be due to session timeout
-                                            // Redirect to login page to handle re-authentication
-                                            if (err instanceof TypeError || err.message.includes('JSON')) {
-                                                window.location.href = '<?php echo BASE_URL; ?>login.php';
-                                            }
+                                            console.warn('Silent notification update failure:', err);
                                         });
                                 }
 

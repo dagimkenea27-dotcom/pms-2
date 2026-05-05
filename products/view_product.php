@@ -179,7 +179,8 @@ endif; ?>
                     <?php
     $img_src = (strpos($product['image'], 'http') === 0) ? $product['image'] : '../' . $product['image'];
 ?>
-                    <img src="<?php echo htmlspecialchars($img_src); ?>" alt="Product Image" class="img-fluid rounded" onerror="this.src='../assets/img/noproduct.png'">
+                    <img src="<?php echo htmlspecialchars($img_src); ?>" alt="Product Image" class="img-fluid rounded" 
+                         onerror="if(this.src.includes('/thumbnail/')) { this.src = this.src.replace('/thumbnail/', '/'); } else { this.src='../assets/img/noproduct.png'; }">
                 <?php
 else: ?>
                     <img src="../assets/img/noproduct.png" alt="No Image" class="img-fluid rounded">

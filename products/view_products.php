@@ -368,7 +368,8 @@ endif; ?>
             $is_url = (strpos($product['image'], 'http') === 0);
             $img_src = $is_url ? $product['image'] : "../" . $product['image'];
 ?>
-                                            <img src="<?php echo htmlspecialchars($img_src); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-image-small" onerror="this.src='../assets/img/noproduct.png'">
+                                            <img src="<?php echo htmlspecialchars($img_src); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-image-small" 
+                                                 onerror="if(this.src.includes('/thumbnail/')) { this.src = this.src.replace('/thumbnail/', '/'); } else { this.src='../assets/img/noproduct.png'; }">
                                         <?php
         else: ?>
                                             <img src="../assets/img/noproduct.png" alt="No Image" class="product-image-small">
@@ -1072,13 +1073,17 @@ endif; ?>
             }
 
             matches.forEach(m => {
+                const isUrl = m.image && (m.image.startsWith('http://') || m.image.startsWith('https://'));
+                const imgSrc = isUrl ? m.image : '../' + m.image;
+                
                 const col = document.createElement('div');
                 col.className = 'col-md-6';
                 col.innerHTML = `
                     <div class="card h-100 border-0 shadow-sm hover-elevate">
                         <div class="row g-0">
                             <div class="col-4">
-                                <img src="../${m.image}" class="img-fluid rounded-start h-100 w-100 object-fit-cover" style="min-height: 80px;" onerror="this.src='../assets/img/noproduct.png'">
+                                <img src="${imgSrc}" class="img-fluid rounded-start h-100 w-100 object-fit-cover" style="min-height: 80px;" 
+                                     onerror="if(this.src.includes('/thumbnail/')) { this.src = this.src.replace('/thumbnail/', '/'); } else { this.src='../assets/img/noproduct.png'; }">
                             </div>
                             <div class="col-8">
                                 <div class="card-body p-2">
