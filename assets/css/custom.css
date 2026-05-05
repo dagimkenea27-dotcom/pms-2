@@ -702,62 +702,71 @@ footer.sticky-footer .copyright {
 /* ===== Mobile Sidebar Fixes ===== */
 @media (max-width: 768px) {
     .sidebar {
-        left: -100% !important;
-        /* Start completely off-screen */
-        width: var(--sidebar-width) !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        z-index: 2000 !important;
-        /* Ensure it's above everything */
-        box-shadow: 5px 0 15px rgba(0, 0, 0, 0.1);
-    }
-
-    .sidebar.toggled {
         left: 0 !important;
+        width: var(--sidebar-collapsed) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        z-index: 1040 !important;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
     }
 
-    /* Reset wrappers for mobile */
-    #content-wrapper,
-    body.sidebar-toggled #content-wrapper {
-        margin-left: 0 !important;
-        width: 100% !important;
+    /* Adjust main content to accommodate the permanent slim sidebar */
+    #content-wrapper {
+        margin-left: var(--sidebar-collapsed) !important;
+        width: calc(100% - var(--sidebar-collapsed)) !important;
     }
 
     .topbar {
-        left: 0 !important;
-        z-index: 1000 !important;
+        left: var(--sidebar-collapsed) !important;
+        z-index: 1030 !important;
     }
 
-    /* Dark overlay when sidebar is open */
-    body.sidebar-toggled::after {
-        content: "";
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 1900 !important;
-        backdrop-filter: blur(2px);
+    /* Hide text elements to only show icons */
+    .sidebar .sidebar-brand-text,
+    .sidebar .nav-item .nav-link span,
+    .sidebar .sidebar-heading {
+        display: none !important;
     }
 
-    body.sidebar-toggled {
-        overflow: hidden;
-        /* Prevent background scroll when sidebar is open */
+    /* Ensure brand icon is centered */
+    .sidebar .sidebar-brand {
+        padding: 1.5rem 0 !important;
     }
 
-    /* Ensure brand and links are correctly shown on mobile */
-    .sidebar.toggled .sidebar-brand-text,
-    .sidebar.toggled .nav-item .nav-link span,
-    .sidebar.toggled .sidebar-heading {
-        display: block !important;
-        opacity: 1 !important;
-        visibility: visible !important;
+    /* Center navigation icons and increase touch target */
+    .sidebar .nav-item .nav-link {
+        text-align: center !important;
+        padding: 1rem !important;
+        justify-content: center !important;
     }
 
-    .sidebar.toggled .nav-item .nav-link {
-        text-align: left !important;
-        padding: 0.85rem 1.25rem !important;
+    .sidebar .nav-item .nav-link i {
+        margin-right: 0 !important;
+        font-size: 1.4rem !important; /* Slightly larger for easier tapping */
     }
 
-    .sidebar.toggled .nav-item .nav-link i {
-        margin-right: 0.75rem !important;
+    /* Remove collapse arrow since we only show icons */
+    .sidebar .nav-link[data-bs-toggle="collapse"]:after {
+        display: none !important;
+    }
+
+    /* Make submenus look like tooltips or popouts since they have no room */
+    .sidebar .collapse-inner {
+        margin: 0 !important;
+        border-radius: 0 !important;
+        background-color: rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    .sidebar .collapse-item {
+        padding: 0.5rem 1rem !important;
+        text-align: center !important;
+    }
+    
+    /* Ensure sub-items still show text if they don't have icons, or we can hide them too? 
+       Actually, sub-items usually don't have icons. Let's keep their text but center it. */
+       
+    /* Hide the mobile hamburger toggle as the sidebar is always visible */
+    #sidebarToggleTop {
+        display: none !important;
     }
 }
 

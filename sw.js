@@ -1,10 +1,14 @@
-// sw.js v3 - Production Reliability Update
-const CACHE_NAME = 'ims-store-v3';
+// sw.js v4 - Enhanced PWA & Offline Support
+const CACHE_NAME = 'ims-store-v4';
+const OFFLINE_URL = 'offline.php';
+
 const ASSETS_TO_CACHE = [
     'assets/css/custom.css',
     'assets/js/theme.js',
     'assets/js/sidebar.js',
-    'assets/js/alerts.js'
+    'assets/js/alerts.js',
+    'assets/img/logo.jpg',
+    OFFLINE_URL
 ];
 
 // Install Event
@@ -33,25 +37,35 @@ self.addEventListener('activate', (e) => {
 
 // Fetch Event
 self.addEventListener('fetch', (e) => {
-    // 1. Skip non-GET requests
     if (e.request.method !== 'GET') return;
 
     const url = new URL(e.request.url);
 
-    // 2. EXCLUDE navigation and PHP files from SW caching
-    // This solves the "white screen" or "not loading" issue on mobile 
-    // when the worker state becomes stale or network is spotty.
+    // 1. HTML/PHP Navigation requests (Network-first with offline fallback)
     if (e.request.mode === 'navigate' || url.pathname.endsWith('.php') || url.pathname === '/') {
+        e.respondWith(
+            fetch(e.request)
+                .catch(() => {
+                    // Return the offline page if network fails
+                    return caches.match(OFFLINE_URL);
+                })
+        );
         return;
     }
 
-    // 3. For assets: Cache-First strategy
+    // 2. Static Assets (Stale-While-Revalidate)
     e.respondWith(
-        caches.match(e.request).then((response) => {
-            return response || fetch(e.request).catch(() => {
-                // Fallback for failed asset fetch
+        caches.match(e.request).then((cachedResponse) => {
+            const fetchPromise = fetch(e.request).then((networkResponse) => {
+                caches.open(CACHE_NAME).then((cache) => {
+                    cache.put(e.request, networkResponse.clone());
+                });
+                return networkResponse;
+            }).catch(() => {
+                // Ignore network errors on asset fetches if we have cache
                 return new Response('Not found', { status: 404 });
             });
+            return cachedResponse || fetchPromise;
         })
     );
 });

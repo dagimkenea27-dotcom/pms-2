@@ -358,7 +358,41 @@ endif; ?>
                                 <i class="fas fa-moon" id="darkModeIcon"></i>
                             </a>
                         </li>
-                        
+                        <!-- Install PWA Button (Hidden by default, shown via JS) -->
+                        <li class="nav-item mx-1 d-none" id="installPwaContainer">
+                            <a class="nav-link text-primary" href="#" id="installPwaBtn" title="Install App">
+                                <i class="fas fa-download"></i> <span class="d-none d-sm-inline ms-1 font-weight-bold">Install</span>
+                            </a>
+                        </li>
+                        <script>
+                            let deferredPrompt;
+                            window.addEventListener('beforeinstallprompt', (e) => {
+                                // Prevent the mini-infobar from appearing on mobile
+                                e.preventDefault();
+                                deferredPrompt = e;
+                                // Update UI notify the user they can install the PWA
+                                document.getElementById('installPwaContainer').classList.remove('d-none');
+                            });
+
+                            document.getElementById('installPwaBtn')?.addEventListener('click', async (e) => {
+                                e.preventDefault();
+                                if (deferredPrompt) {
+                                    // Show the install prompt
+                                    deferredPrompt.prompt();
+                                    // Wait for the user to respond to the prompt
+                                    const { outcome } = await deferredPrompt.userChoice;
+                                    if (outcome === 'accepted') {
+                                        console.log('User accepted the install prompt');
+                                        document.getElementById('installPwaContainer').classList.add('d-none');
+                                    }
+                                    deferredPrompt = null;
+                                }
+                            });
+                            window.addEventListener('appinstalled', (evt) => {
+                                document.getElementById('installPwaContainer').classList.add('d-none');
+                            });
+                        </script>
+
                         <!-- Language Switcher -->
                         <li class="nav-item dropdown no-arrow mx-1">
                              <a class="nav-link dropdown-toggle" href="#" id="langDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
