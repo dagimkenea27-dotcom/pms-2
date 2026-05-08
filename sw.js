@@ -40,6 +40,11 @@ self.addEventListener('fetch', (e) => {
     if (e.request.method !== 'GET') return;
 
     const url = new URL(e.request.url);
+    
+    // 0. Skip API requests - always network-only
+    if (url.pathname.includes('/api/')) {
+        return;
+    }
 
     // 1. HTML Navigation requests (Network-first with offline fallback)
     // Only apply offline fallback to actual page navigations (top-level)
