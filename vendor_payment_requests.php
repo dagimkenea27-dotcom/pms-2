@@ -718,11 +718,15 @@ require_once "includes/header.php";
         const btnReset = document.getElementById('btn-reset-filters');
         const btnSubmit = document.getElementById('btn-submit');
 
-        function validateOrderIDs() {
-            let isAnyDuplicate = false;
+        let validationTimeout;
+        async function validateOrderIDs() {
+            clearTimeout(validationTimeout);
+            
             const currentInputs = Array.from(ordersContainer.querySelectorAll('.form-order-id'));
             const enteredValues = currentInputs.map(input => input.value.trim().toLowerCase());
+            let isAnyLocalDuplicate = false;
 
+            // 1. Immediate validation for duplicates WITHIN the modal
             currentInputs.forEach((input, index) => {
                 const val = input.value.trim().toLowerCase();
                 if (!val) {
@@ -731,30 +735,72 @@ require_once "includes/header.php";
                 }
 
                 const isDuplicateInModal = enteredValues.filter((v, i) => v === val && i !== index).length > 0;
-                const isDuplicateInSystem = allRequests.some(r => r.id != editingId && (r.order_id || '').toLowerCase() === val);
-
-                if (isDuplicateInModal || isDuplicateInSystem) {
+                if (isDuplicateInModal) {
                     input.classList.add('is-invalid');
-                    isAnyDuplicate = true;
-
-                    let feedback = input.parentNode.querySelector('.invalid-feedback');
-                    if (!feedback) {
-                        feedback = document.createElement('div');
-                        feedback.className = 'invalid-feedback';
-                        feedback.style.fontSize = '10px';
-                        input.parentNode.appendChild(feedback);
-                    }
-                    feedback.textContent = isDuplicateInSystem ? 'Order ID already exists (Check global records if not on this page)' : 'Duplicate Order ID in this request';
+                    isAnyLocalDuplicate = true;
+                    setInvalidFeedback(input, 'Duplicate Order ID in this request');
                 } else {
                     input.classList.remove('is-invalid');
                 }
             });
 
-            btnSubmit.disabled = isAnyDuplicate;
-            if (isAnyDuplicate) {
+            updateSubmitButton(isAnyLocalDuplicate);
+
+            // 2. Debounced Global Validation
+            validationTimeout = setTimeout(async () => {
+                let isAnyGlobalDuplicate = false;
+
+                for (const input of currentInputs) {
+                    const val = input.value.trim().toLowerCase();
+                    if (!val || input.classList.contains('is-invalid')) continue;
+
+                    // First check current page cache (efficiency)
+                    const isCachedDuplicate = allRequests.some(r => r.id != editingId && (r.order_id || '').toLowerCase() === val);
+                    
+                    if (isCachedDuplicate) {
+                        input.classList.add('is-invalid');
+                        isAnyGlobalDuplicate = true;
+                        setInvalidFeedback(input, 'Order ID already exists (Found on this page)');
+                        continue;
+                    }
+
+                    // Then check global system via API
+                    try {
+                        const res = await fetch(`${API_URL}?exact_order_id=${encodeURIComponent(val)}&limit=1`);
+                        const data = await res.json();
+                        const existsGlobally = data.isOk && data.data.some(r => r.id != editingId);
+
+                        if (existsGlobally) {
+                            input.classList.add('is-invalid');
+                            isAnyGlobalDuplicate = true;
+                            setInvalidFeedback(input, 'Order ID already exists in the system');
+                        }
+                    } catch (err) {
+                        console.error('Global check failed', err);
+                    }
+                }
+
+                if (isAnyGlobalDuplicate) updateSubmitButton(true);
+            }, 400);
+        }
+
+        function setInvalidFeedback(input, msg) {
+            let feedback = input.parentNode.querySelector('.invalid-feedback');
+            if (!feedback) {
+                feedback = document.createElement('div');
+                feedback.className = 'invalid-feedback';
+                feedback.style.fontSize = '10px';
+                input.parentNode.appendChild(feedback);
+            }
+            feedback.textContent = msg;
+        }
+
+        function updateSubmitButton(hasError) {
+            btnSubmit.disabled = hasError;
+            if (hasError) {
                 btnSubmit.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Resolve Duplicates';
             } else {
-                btnSubmit.innerHTML = '<i class="fas fa-paper-plane me-1"></i> ' + (editingId ? 'Save Changes' : 'Submit Request');
+                btnSubmit.innerHTML = (editingId ? '<i class="fas fa-save me-1"></i> Save Changes' : '<i class="fas fa-paper-plane me-1"></i> Submit Request');
             }
         }
 

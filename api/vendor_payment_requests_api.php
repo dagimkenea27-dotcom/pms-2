@@ -60,6 +60,7 @@ try {
             $search = $_GET['search'] ?? '';
             $from_date = $_GET['from_date'] ?? '';
             $to_date = $_GET['to_date'] ?? '';
+            $exact_order_id = $_GET['exact_order_id'] ?? '';
 
             $whereConditions = [];
             $params = [];
@@ -82,6 +83,11 @@ try {
             if (!empty($to_date)) {
                 $whereConditions[] = "vpr.created_at <= :to_date";
                 $params[':to_date'] = $to_date . " 23:59:59";
+            }
+            
+            if (!empty($exact_order_id)) {
+                $whereConditions[] = "vpr.order_id = :exact_oid";
+                $params[':exact_oid'] = $exact_order_id;
             }
 
             $whereSql = count($whereConditions) > 0 ? "WHERE " . implode(" AND ", $whereConditions) : "";
