@@ -705,6 +705,12 @@ require_once "includes/header.php";
             btnAddOrder.style.display = 'block';
 
             document.getElementById('request-form').reset();
+            
+            // Clear validation states
+            document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+            updateSubmitButton(false);
+
             const rows = ordersContainer.querySelectorAll('.order-row');
             rows.forEach((row, i) => { if (i > 0) row.remove(); });
             ordersContainer.querySelectorAll('.form-pays-comm').forEach(chk => chk.checked = false);
@@ -813,23 +819,34 @@ require_once "includes/header.php";
         const shopNameInput = document.getElementById('form-shop-name');
         const notesInput = document.getElementById('form-notes');
 
-        const autoFetchNote = () => {
-            const name = shopNameInput.value.trim().toLowerCase();
-            if (!name) return;
+        let fetchTimeout;
+        const autoFetchNote = async () => {
+            const name = shopNameInput.value.trim();
+            if (!name || editingId) return; // Don't auto-fetch if editing an existing request
 
-            const previousRequest = allRequests.find(r =>
-                (r.shop_name || '').trim().toLowerCase() === name &&
-                (r.notes || '').trim() !== ''
-            );
-
-            if (previousRequest && previousRequest.notes && !notesInput.value.trim()) {
-                notesInput.value = previousRequest.notes;
-                showToast('Auto-fetched previous account details', 'success');
-            }
+            clearTimeout(fetchTimeout);
+            fetchTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`${API_URL}?fetch_account=${encodeURIComponent(name)}`, {
+                        headers: { 'X-CSRF-TOKEN': csrfToken }
+                    });
+                    const data = await res.json();
+                    if (data.isOk && data.notes && !notesInput.value.trim()) {
+                        notesInput.value = data.notes;
+                        showToast('Auto-fetched account details for ' + name, 'success');
+                        
+                        // Highlight the notes field briefly
+                        notesInput.style.transition = 'background-color 0.5s';
+                        notesInput.style.backgroundColor = '#ecfdf5';
+                        setTimeout(() => notesInput.style.backgroundColor = '', 1500);
+                    }
+                } catch (err) {
+                    console.error('Fetch account failed', err);
+                }
+            }, 500);
         };
 
-        shopNameInput.addEventListener('change', autoFetchNote);
-        shopNameInput.addEventListener('blur', autoFetchNote);
+        shopNameInput.addEventListener('input', autoFetchNote);
 
         // Filters
         document.querySelectorAll('.vp-filter-btn').forEach(btn => {

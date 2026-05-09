@@ -61,6 +61,22 @@ try {
             $from_date = $_GET['from_date'] ?? '';
             $to_date = $_GET['to_date'] ?? '';
             $exact_order_id = $_GET['exact_order_id'] ?? '';
+            $fetch_account = $_GET['fetch_account'] ?? '';
+
+            if (!empty($fetch_account)) {
+                $query = "SELECT notes FROM vendor_payment_requests 
+                          WHERE shop_name = :shop_name AND notes IS NOT NULL AND notes != '' 
+                          ORDER BY created_at DESC LIMIT 1";
+                $stmt = $db->prepare($query);
+                $stmt->execute([':shop_name' => $fetch_account]);
+                $accountNotes = $stmt->fetchColumn();
+
+                echo json_encode([
+                    "isOk" => true,
+                    "notes" => $accountNotes ?: ""
+                ]);
+                exit;
+            }
 
             $whereConditions = [];
             $params = [];
