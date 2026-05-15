@@ -78,6 +78,32 @@ try {
                 exit;
             }
 
+            $history_id = $_GET['history_id'] ?? '';
+            if (!empty($history_id)) {
+                $query = "SELECT al.*, u.username as actor_name 
+                          FROM audit_logs al
+                          LEFT JOIN users u ON al.user_id = u.id
+                          WHERE al.table_name = 'vendor_payment_requests' 
+                          AND al.record_id = :id
+                          ORDER BY al.created_at DESC";
+                $stmt = $db->prepare($query);
+                $stmt->execute([':id' => $history_id]);
+                $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Decode details
+                foreach ($history as &$item) {
+                    if ($item['details']) {
+                        $item['details_decoded'] = json_decode($item['details'], true);
+                    }
+                }
+
+                echo json_encode([
+                    "isOk" => true,
+                    "data" => $history
+                ]);
+                exit;
+            }
+
             $whereConditions = [];
             $params = [];
 
@@ -295,26 +321,27 @@ try {
             break;
 
         case 'PUT':
-            if (!$input || !isset($input['id']))
-                throw new Exception("Missing request ID.");
+            if (!$input || (!isset($input['id']) && empty($input['ids'])))
+                throw new Exception("Missing request ID(s).");
 
-            $id = intval($input['id']);
             $action = $input['action'] ?? '';
-
             $validActions = ['approve', 'reject', 'mark_paid', 'update'];
             if (!in_array($action, $validActions)) {
                 throw new Exception("Invalid action. Must be: " . implode(', ', $validActions));
             }
 
-            // Get old record for audit and validation
-            $oldStmt = $db->prepare("SELECT * FROM vendor_payment_requests WHERE id = :id");
-            $oldStmt->execute([':id' => $id]);
-            $oldRecord = $oldStmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$oldRecord)
-                throw new Exception("Payment request not found.");
-
             if ($action === 'update') {
+                if (!isset($input['id'])) throw new Exception("Update action requires a single ID.");
+                $id = intval($input['id']);
+
+                // Get old record for audit and validation
+                $oldStmt = $db->prepare("SELECT * FROM vendor_payment_requests WHERE id = :id");
+                $oldStmt->execute([':id' => $id]);
+                $oldRecord = $oldStmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$oldRecord)
+                    throw new Exception("Payment request not found.");
+
                 if ($oldRecord['status'] === 'paid') {
                     throw new Exception("Forbidden: Cannot edit a request that has already been marked as 'paid'.");
                 }
@@ -402,7 +429,8 @@ try {
 
                 echo json_encode(["isOk" => true, "message" => "Payment request updated successfully."]);
             } else {
-                // Map status update actions
+                // Bulk Status Update
+                $ids = !empty($input['ids']) && is_array($input['ids']) ? $input['ids'] : [$input['id']];
                 $statusMap = [
                     'approve' => 'approved',
                     'reject' => 'rejected',
@@ -410,75 +438,151 @@ try {
                 ];
                 $newStatus = $statusMap[$action];
 
-                $query = "UPDATE vendor_payment_requests SET status = :status WHERE id = :id";
-                $stmt = $db->prepare($query);
-                $result = $stmt->execute([
-                    ':status' => $newStatus,
-                    ':id' => $id
-                ]);
+                $db->beginTransaction();
+                try {
+                    $updatedCount = 0;
+                    $skippedCount = 0;
+                    foreach ($ids as $id) {
+                        $id = intval($id);
+                        $oldStmt = $db->prepare("SELECT * FROM vendor_payment_requests WHERE id = :id");
+                        $oldStmt->execute([':id' => $id]);
+                        $oldRecord = $oldStmt->fetch(PDO::FETCH_ASSOC);
 
-                if (!$result)
-                    throw new Exception("Failed to update payment request status.");
+                        if (!$oldRecord) {
+                            $skippedCount++;
+                            continue;
+                        }
+                        
+                        if ($oldRecord['status'] === $newStatus) {
+                            $skippedCount++;
+                            continue;
+                        }
 
-                // Audit log for status change
-                $auditQuery = "INSERT INTO audit_logs (user_id, action, table_name, record_id, details, ip_address) 
-                               VALUES (:user_id, :action, :table_name, :record_id, :details, :ip_address)";
-                $auditStmt = $db->prepare($auditQuery);
-                $auditStmt->execute([
-                    ':user_id' => $currentUser['id'],
-                    ':action' => 'UPDATE_STATUS',
-                    ':table_name' => 'vendor_payment_requests',
-                    ':record_id' => $id,
-                    ':details' => json_encode([
-                        'old_status' => $oldRecord['status'],
-                        'new_status' => $newStatus,
-                        'action' => $action,
-                        'shop_name' => $oldRecord['shop_name'],
-                        'order_id' => $oldRecord['order_id'],
-                        'order_amount' => $oldRecord['order_amount']
-                    ]),
-                    ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
-                ]);
+                        // Enforce Transition Rules
+                        $isValid = true;
+                        if ($action === 'approve' && $oldRecord['status'] !== 'pending') $isValid = false;
+                        if ($action === 'reject' && $oldRecord['status'] !== 'pending') $isValid = false;
+                        if ($action === 'mark_paid' && $oldRecord['status'] !== 'approved') $isValid = false;
 
-                echo json_encode(["isOk" => true, "message" => "Status updated to '$newStatus'."]);
+                        if (!$isValid) {
+                            $skippedCount++;
+                            continue;
+                        }
+
+                        $query = "UPDATE vendor_payment_requests SET status = :status WHERE id = :id";
+                        $stmt = $db->prepare($query);
+                        $result = $stmt->execute([
+                            ':status' => $newStatus,
+                            ':id' => $id
+                        ]);
+
+                        if ($result) {
+                            $auditQuery = "INSERT INTO audit_logs (user_id, action, table_name, record_id, details, ip_address) 
+                                           VALUES (:user_id, :action, :table_name, :record_id, :details, :ip_address)";
+                            $auditStmt = $db->prepare($auditQuery);
+                            $auditStmt->execute([
+                                ':user_id' => $currentUser['id'],
+                                ':action' => 'UPDATE_STATUS',
+                                ':table_name' => 'vendor_payment_requests',
+                                ':record_id' => $id,
+                                ':details' => json_encode([
+                                    'old_status' => $oldRecord['status'],
+                                    'new_status' => $newStatus,
+                                    'action' => $action,
+                                    'shop_name' => $oldRecord['shop_name'],
+                                    'order_id' => $oldRecord['order_id'],
+                                    'order_amount' => $oldRecord['order_amount'],
+                                    'is_bulk' => count($ids) > 1
+                                ]),
+                                ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
+                            ]);
+                            $updatedCount++;
+                        }
+                    }
+                    $db->commit();
+                    
+                    $msg = "Successfully updated $updatedCount request(s).";
+                    if ($skippedCount > 0) {
+                        $msg .= " $skippedCount were skipped due to status rules.";
+                    }
+                    
+                    echo json_encode([
+                        "isOk" => true, 
+                        "message" => $msg, 
+                        "updatedCount" => $updatedCount, 
+                        "skippedCount" => $skippedCount
+                    ]);
+                } catch (Exception $e) {
+                    $db->rollBack();
+                    throw $e;
+                }
             }
             break;
 
         case 'DELETE':
-            if (!$input || !isset($input['id']))
-                throw new Exception("Missing request ID for delete.");
+            if (!$input || (!isset($input['id']) && empty($input['ids'])))
+                throw new Exception("Missing request ID(s) for delete.");
 
-            $id = intval($input['id']);
+            $ids = !empty($input['ids']) && is_array($input['ids']) ? $input['ids'] : [$input['id']];
 
-            // Get record for audit before deleting
-            $oldStmt = $db->prepare("SELECT * FROM vendor_payment_requests WHERE id = :id");
-            $oldStmt->execute([':id' => $id]);
-            $oldRecord = $oldStmt->fetch(PDO::FETCH_ASSOC);
+            $db->beginTransaction();
+            try {
+                $deletedCount = 0;
+                $skippedCount = 0;
+                foreach ($ids as $id) {
+                    $id = intval($id);
+                    // Get record for audit before deleting
+                    $oldStmt = $db->prepare("SELECT * FROM vendor_payment_requests WHERE id = :id");
+                    $oldStmt->execute([':id' => $id]);
+                    $oldRecord = $oldStmt->fetch(PDO::FETCH_ASSOC);
 
-            if (!$oldRecord)
-                throw new Exception("Payment request not found.");
+                    if (!$oldRecord) {
+                        $skippedCount++;
+                        continue;
+                    }
 
-            $query = "DELETE FROM vendor_payment_requests WHERE id = :id";
-            $stmt = $db->prepare($query);
-            $result = $stmt->execute([':id' => $id]);
+                    // Enforce Deletion Rule: Cannot delete 'paid' requests
+                    if ($oldRecord['status'] === 'paid') {
+                        $skippedCount++;
+                        continue;
+                    }
 
-            if (!$result)
-                throw new Exception("Failed to delete payment request.");
+                    $query = "DELETE FROM vendor_payment_requests WHERE id = :id";
+                    $stmt = $db->prepare($query);
+                    $result = $stmt->execute([':id' => $id]);
 
-            // Audit log
-            $auditQuery = "INSERT INTO audit_logs (user_id, action, table_name, record_id, details, ip_address) 
-                           VALUES (:user_id, :action, :table_name, :record_id, :details, :ip_address)";
-            $auditStmt = $db->prepare($auditQuery);
-            $auditStmt->execute([
-                ':user_id' => $currentUser['id'],
-                ':action' => 'DELETE',
-                ':table_name' => 'vendor_payment_requests',
-                ':record_id' => $id,
-                ':details' => json_encode($oldRecord),
-                ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
-            ]);
-
-            echo json_encode(["isOk" => true, "message" => "Payment request deleted."]);
+                    if ($result) {
+                        // Audit log
+                        $auditQuery = "INSERT INTO audit_logs (user_id, action, table_name, record_id, details, ip_address) 
+                                       VALUES (:user_id, :action, :table_name, :record_id, :details, :ip_address)";
+                        $auditStmt = $db->prepare($auditQuery);
+                        $auditStmt->execute([
+                            ':user_id' => $currentUser['id'],
+                            ':action' => 'DELETE',
+                            ':table_name' => 'vendor_payment_requests',
+                            ':record_id' => $id,
+                            ':details' => json_encode($oldRecord),
+                            ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
+                        ]);
+                        $deletedCount++;
+                    }
+                }
+                $db->commit();
+                
+                $msg = "Successfully deleted $deletedCount request(s).";
+                if ($skippedCount > 0) {
+                    $msg .= " $skippedCount were skipped (either not found or already paid).";
+                }
+                echo json_encode([
+                    "isOk" => true, 
+                    "message" => $msg, 
+                    "updatedCount" => $deletedCount, 
+                    "skippedCount" => $skippedCount
+                ]);
+            } catch (Exception $e) {
+                $db->rollBack();
+                throw $e;
+            }
             break;
 
         default:

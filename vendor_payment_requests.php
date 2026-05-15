@@ -287,6 +287,10 @@ require_once "includes/header.php";
         border-left: 4px solid #ef4444;
     }
 
+    .vp-toast-warning {
+        border-left: 4px solid #f59e0b;
+    }
+
     /* =========================
    New Missing Styles
 ========================= */
@@ -422,6 +426,135 @@ require_once "includes/header.php";
         font-size: 11px;
         font-weight: 600;
     }
+
+    /* Bulk Actions Bar */
+    .vp-bulk-bar {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 10px 20px;
+        display: none; /* hidden by default */
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .vp-bulk-bar.show {
+        display: flex;
+        animation: slideDown 0.3s ease forwards;
+    }
+
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Result Modal Professional Styling */
+    .result-modal-content {
+        border: none;
+        border-radius: 24px !important;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+    }
+    .result-icon-circle {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 10px auto 20px;
+        font-size: 28px;
+        transition: all 0.3s ease;
+    }
+    .bg-res-success { background-color: #ecfdf5; color: #10b981; border: 4px solid #d1fae5; }
+    .bg-res-warning { background-color: #fffbeb; color: #f59e0b; border: 4px solid #fef3c7; }
+    .bg-res-error { background-color: #fef2f2; color: #ef4444; border: 4px solid #fee2e2; }
+
+    /* Timeline Styles */
+    .vp-timeline {
+        position: relative;
+        padding-left: 30px;
+        margin-top: 10px;
+    }
+
+    .vp-timeline::before {
+        content: '';
+        position: absolute;
+        left: 4px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e2e8f0;
+    }
+
+    .vp-timeline-item {
+        position: relative;
+        margin-bottom: 25px;
+    }
+
+    .vp-timeline-dot {
+        position: absolute;
+        left: -30px;
+        top: 4px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #94a3b8;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 2px #e2e8f0;
+        z-index: 1;
+    }
+
+    .vp-timeline-dot.status-change { background: #3b82f6; box-shadow: 0 0 0 2px #dbeafe; }
+    .vp-timeline-dot.create { background: #10b981; box-shadow: 0 0 0 2px #d1fae5; }
+    .vp-timeline-dot.delete { background: #ef4444; box-shadow: 0 0 0 2px #fee2e2; }
+
+    .vp-timeline-content {
+        background: #f8fafc;
+        padding: 12px 16px;
+        border-radius: 10px;
+        font-size: 13px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .vp-timeline-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+    }
+
+    .vp-timeline-actor {
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .vp-timeline-time {
+        font-size: 10px;
+        color: #94a3b8;
+        font-weight: 600;
+    }
+
+    .vp-timeline-action {
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 3px;
+    }
+
+    .vp-timeline-details {
+        font-size: 12px;
+        color: #64748b;
+        background: #fff;
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px dashed #e2e8f0;
+        margin-top: 5px;
+    }
+
+    .vp-btn-history {
+        background: #f1f5f9;
+        color: #475569;
+    }
 </style>
 
 <div id="vendor-pay-app">
@@ -516,12 +649,41 @@ require_once "includes/header.php";
         </div>
     </div>
 
+    <!-- Bulk Actions Bar -->
+    <div id="bulk-actions-bar" class="vp-bulk-bar vp-fade-in">
+        <div class="d-flex align-items-center gap-2">
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 10px;">
+                <span id="selected-count">0</span>
+            </div>
+            <span class="small fw-bold text-muted">Selected</span>
+        </div>
+        <div class="vr mx-1"></div>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="vp-action-btn vp-btn-approve" onclick="vpBulkAction('approve')">
+                <i class="fas fa-check"></i> Approve
+            </button>
+            <button class="vp-action-btn vp-btn-reject" onclick="vpBulkAction('reject')">
+                <i class="fas fa-times"></i> Reject
+            </button>
+            <button class="vp-action-btn vp-btn-paid" onclick="vpBulkAction('mark_paid')">
+                <i class="fas fa-money-bill"></i> Mark Paid
+            </button>
+            <button class="vp-action-btn vp-btn-delete" onclick="vpBulkAction('delete')">
+                <i class="fas fa-trash"></i> Delete
+            </button>
+        </div>
+        <button class="btn btn-link btn-sm text-muted ms-auto p-0" onclick="vpClearSelection()">Clear</button>
+    </div>
+
     <!-- Table Card -->
     <div class="card vp-card shadow-sm vp-fade-in vp-fade-in-4">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
+                        <th style="width: 40px;">
+                            <input class="form-check-input" type="checkbox" id="selectAll">
+                        </th>
                         <th>#</th>
                         <th>Shop Name</th>
                         <th>Order ID</th>
@@ -537,7 +699,7 @@ require_once "includes/header.php";
                 </thead>
                 <tbody id="requests-tbody">
                     <tr>
-                        <td colspan="11">
+                        <td colspan="12">
                             <div class="vp-empty-state">
                                 <div class="spinner-border text-secondary spinner-border-sm mb-2" role="status"></div>
                                 <div class="text-muted small">Loading requests...</div>
@@ -563,13 +725,13 @@ require_once "includes/header.php";
     </div>
 
     <!-- New Request Modal -->
-    <div class="modal fade" id="newRequestModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="newRequestModal" tabindex="-1" aria-labelledby="newRequestModalLabel">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content" style="border: none; border-radius: 16px; overflow: hidden;">
                 <div class="vp-modal-header">
                     <div class="d-flex justify-content-between align-items-start w-100">
                         <div>
-                            <h5 class="modal-title"><i class="fas fa-money-check-alt me-2"></i>New Payment Request</h5>
+                            <h5 class="modal-title" id="newRequestModalLabel"><i class="fas fa-money-check-alt me-2"></i>New Payment Request</h5>
                             <div class="modal-subtitle">Fill in the vendor payment details</div>
                         </div>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -633,6 +795,50 @@ require_once "includes/header.php";
         </div>
     </div>
 
+    <!-- Result Modal -->
+    <div class="modal fade" id="resultModal" tabindex="-1" aria-labelledby="resultModalLabel">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content result-modal-content p-4 text-center">
+                <div id="result-icon-container" class="result-icon-circle">
+                    <i id="result-fa-icon" class="fas"></i>
+                </div>
+                <h5 id="resultModalLabel" class="fw-bold mb-2" style="color: #1e293b; letter-spacing: -0.5px;"></h5>
+                <p id="result-message" class="text-muted small mb-4 px-2" style="line-height: 1.5;"></p>
+                <button type="button" class="btn vp-btn-primary w-100 py-2 fw-bold" data-bs-dismiss="modal" style="border-radius: 12px; font-size: 13px;">
+                    Dismiss
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div class="modal fade" id="historyModal" tabindex="-1" aria-labelledby="historyModalLabel">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border: none; border-radius: 20px; overflow: hidden;">
+                <div class="vp-modal-header">
+                    <div class="d-flex justify-content-between align-items-start w-100">
+                        <div>
+                            <h5 class="modal-title" id="historyModalLabel"><i class="fas fa-history me-2"></i>Status History</h5>
+                            <div class="modal-subtitle" id="history-modal-subtitle">Tracking changes for request</div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                </div>
+                <div class="modal-body p-4" style="max-height: 500px; overflow-y: auto;">
+                    <div id="history-timeline" class="vp-timeline">
+                        <!-- History items will be injected here -->
+                    </div>
+                    <div id="history-empty" class="text-center py-4 d-none">
+                        <div class="text-muted small">No history found for this request.</div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 pt-0">
+                    <button type="button" class="btn btn-light fw-bold w-100" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div id="vp-toast" class="vp-toast"></div>
 </div>
@@ -652,6 +858,11 @@ require_once "includes/header.php";
         const modalEl = document.getElementById('newRequestModal');
         const paginationControls = document.getElementById('pagination-controls');
         const paginationInfo = document.getElementById('pagination-info');
+
+        // Bulk Operation Elements
+        const bulkBar = document.getElementById('bulk-actions-bar');
+        const selectAllCb = document.getElementById('selectAll');
+        const selectedCountLabel = document.getElementById('selected-count');
 
         let bsModal = null;
         let editingId = null;
@@ -885,6 +1096,37 @@ require_once "includes/header.php";
             setTimeout(() => toastEl.classList.remove('show'), 3000);
         }
 
+        function showResultModal(title, message, type = 'success') {
+            const containerEl = document.getElementById('result-icon-container');
+            const iconEl = document.getElementById('result-fa-icon');
+            const titleEl = document.getElementById('resultModalLabel');
+            const msgEl = document.getElementById('result-message');
+            
+            // Reset classes
+            containerEl.className = 'result-icon-circle';
+            iconEl.className = 'fas';
+
+            if (type === 'success') {
+                containerEl.classList.add('bg-res-success');
+                iconEl.classList.add('fa-check-circle');
+            } else if (type === 'warning') {
+                containerEl.classList.add('bg-res-warning');
+                iconEl.classList.add('fa-exclamation-circle');
+            } else {
+                containerEl.classList.add('bg-res-error');
+                iconEl.classList.add('fa-times-circle');
+            }
+            
+            titleEl.textContent = title;
+            msgEl.textContent = message;
+            
+            const modalEl = document.getElementById('resultModal');
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+        }
+
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
         // Fetch
@@ -903,7 +1145,7 @@ require_once "includes/header.php";
             url.searchParams.append('from_date', from);
             url.searchParams.append('to_date', to);
 
-            tbody.innerHTML = `<tr><td colspan="11">
+            tbody.innerHTML = `<tr><td colspan="12">
                 <div class="vp-empty-state">
                     <div class="spinner-border text-secondary spinner-border-sm mb-2" role="status"></div>
                     <div class="text-muted small">Loading requests...</div>
@@ -953,8 +1195,9 @@ require_once "includes/header.php";
 
         // Render Table and Pagination
         function renderTable(pagination = null) {
+            if (window.vpClearSelection) window.vpClearSelection();
             if (allRequests.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="11">
+                tbody.innerHTML = `<tr><td colspan="12">
                     <div class="vp-empty-state">
                         <div style="font-size: 40px;" class="mb-2">📭</div>
                         <div class="fw-bold text-muted">No payment requests found</div>
@@ -990,8 +1233,12 @@ require_once "includes/header.php";
                     actions += `<button class="vp-action-btn vp-btn-delete ms-1" onclick="vpDeleteRequest(${r.id})" title="Delete"><i class="fas fa-trash fa-xs"></i></button>`;
                     actions = `<button class="vp-action-btn btn-light border ms-1" onclick="vpEditRequest(${r.id})" title="Edit"><i class="fas fa-edit fa-xs"></i> Edit</button>` + actions;
                 }
+                actions += `<button class="vp-action-btn vp-btn-history ms-1" onclick="vpShowHistory(${r.id})" title="View History"><i class="fas fa-history fa-xs"></i></button>`;
 
                 return `<tr class="vp-request-row">
+                    <td class="text-center">
+                        <input class="form-check-input row-checkbox" type="checkbox" value="${r.id}">
+                    </td>
                     <td class="vp-row-num">${(currentPage - 1) * limit + i + 1}</td>
                     <td class="vp-shop-name" data-label="Shop">${escHtml(r.shop_name)}</td>
                     <td data-label="Order ID"><span class="vp-order-code">${escHtml(r.order_id)}</span></td>
@@ -1170,7 +1417,11 @@ require_once "includes/header.php";
                 });
                 const data = await res.json();
                 if (data.isOk) {
-                    showToast(data.message);
+                    const type = data.updatedCount > 0 ? 'success' : (data.skippedCount > 0 ? 'warning' : 'success');
+                    showToast(data.message, type);
+                    if (data.skippedCount > 0) {
+                        showResultModal('Update Result', data.message, type);
+                    }
                     fetchRequests(currentPage);
                 } else {
                     showToast(data.message, 'error');
@@ -1195,7 +1446,11 @@ require_once "includes/header.php";
                 });
                 const data = await res.json();
                 if (data.isOk) {
-                    showToast('Request deleted.');
+                    const type = data.updatedCount > 0 ? 'success' : (data.skippedCount > 0 ? 'warning' : 'success');
+                    showToast(data.message || 'Request deleted.', type);
+                    if (data.skippedCount > 0) {
+                        showResultModal('Delete Result', data.message, type);
+                    }
                     // If last item on page, go back one page
                     if (allRequests.length === 1 && currentPage > 1) {
                         fetchRequests(currentPage - 1);
@@ -1210,10 +1465,170 @@ require_once "includes/header.php";
             }
         };
 
+        // History
+        window.vpShowHistory = async function (id) {
+            const r = allRequests.find(req => req.id == id);
+            const timeline = document.getElementById('history-timeline');
+            const empty = document.getElementById('history-empty');
+            const subtitle = document.getElementById('history-modal-subtitle');
+            
+            subtitle.textContent = `Tracking changes for order ${r ? r.order_id : '#' + id}`;
+            timeline.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-secondary"></div></div>';
+            empty.classList.add('d-none');
+            
+            const historyModal = new bootstrap.Modal(document.getElementById('historyModal'));
+            historyModal.show();
+
+            try {
+                const res = await fetch(`${API_URL}?history_id=${id}`, {
+                    headers: { 'X-CSRF-TOKEN': csrfToken }
+                });
+                const data = await res.json();
+                
+                if (data.isOk && data.data && data.data.length > 0) {
+                    timeline.innerHTML = data.data.map(item => {
+                        let dotClass = '';
+                        let actionText = item.action;
+                        let detailsHtml = '';
+
+                        if (item.action === 'UPDATE_STATUS') {
+                            dotClass = 'status-change';
+                            const d = item.details_decoded || {};
+                            actionText = `Status updated to <span class="badge bg-light text-dark border">${d.new_status || 'N/A'}</span>`;
+                            if (d.old_status) {
+                                detailsHtml = `<div class="vp-timeline-details">Changed from <b>${d.old_status}</b> to <b>${d.new_status}</b></div>`;
+                            }
+                        } else if (item.action === 'CREATE_BATCH' || item.action === 'CREATE') {
+                            dotClass = 'create';
+                            actionText = 'Request Created';
+                        } else if (item.action === 'DELETE') {
+                            dotClass = 'delete';
+                            actionText = 'Request Deleted';
+                        } else if (item.action === 'UPDATE_DATA') {
+                            actionText = 'Data Updated';
+                        }
+
+                        const time = new Date(item.created_at).toLocaleString('en-GB', { 
+                            day: '2-digit', month: 'short', year: 'numeric', 
+                            hour: '2-digit', minute: '2-digit' 
+                        });
+
+                        return `
+                        <div class="vp-timeline-item">
+                            <div class="vp-timeline-dot ${dotClass}"></div>
+                            <div class="vp-timeline-content">
+                                <div class="vp-timeline-header">
+                                    <span class="vp-timeline-actor">${escHtml(item.actor_name || 'System')}</span>
+                                    <span class="vp-timeline-time">${time}</span>
+                                </div>
+                                <div class="vp-timeline-action">${actionText}</div>
+                                ${detailsHtml}
+                            </div>
+                        </div>`;
+                    }).join('');
+                } else {
+                    timeline.innerHTML = '';
+                    empty.classList.remove('d-none');
+                }
+            } catch (err) {
+                timeline.innerHTML = '<div class="text-danger small text-center">Failed to load history.</div>';
+            }
+        };
+
         // Initial fetch
         fetchRequests(1);
 
-        // Expose fetchRequests globally for pagination buttons if needed (though we use onclick handlers now)
+        // --- Bulk Operations Logic ---
+        
+        function updateBulkUI() {
+            const checked = document.querySelectorAll('.row-checkbox:checked');
+            const count = checked.length;
+            selectedCountLabel.textContent = count;
+            
+            if (count > 0) {
+                bulkBar.classList.add('show');
+            } else {
+                bulkBar.classList.remove('show');
+                if (selectAllCb) selectAllCb.checked = false;
+            }
+        }
+
+        if (selectAllCb) {
+            selectAllCb.addEventListener('change', () => {
+                const isChecked = selectAllCb.checked;
+                document.querySelectorAll('.row-checkbox').forEach(cb => {
+                    cb.checked = isChecked;
+                });
+                updateBulkUI();
+            });
+        }
+
+        tbody.addEventListener('change', (e) => {
+            if (e.target.classList.contains('row-checkbox')) {
+                updateBulkUI();
+                
+                // Update selectAll state
+                const total = document.querySelectorAll('.row-checkbox').length;
+                const checked = document.querySelectorAll('.row-checkbox:checked').length;
+                if (selectAllCb) selectAllCb.checked = (total > 0 && total === checked);
+            }
+        });
+
+        window.vpClearSelection = function() {
+            document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+            if (selectAllCb) selectAllCb.checked = false;
+            updateBulkUI();
+        };
+
+        window.vpBulkAction = async function(action) {
+            const checked = document.querySelectorAll('.row-checkbox:checked');
+            const ids = Array.from(checked).map(cb => cb.value);
+            
+            if (ids.length === 0) return;
+
+            const labels = { approve: 'Approve', reject: 'Reject', mark_paid: 'Mark as Paid', delete: 'Delete' };
+            let msg = `Are you sure you want to ${labels[action]} ${ids.length} selected request(s)?`;
+            if (action === 'delete') msg += " This action cannot be undone.";
+            
+            if (!confirm(msg)) return;
+
+            try {
+                let payload = { action: action, ids: ids };
+                if (action === 'delete') {
+                    payload = { _method: 'DELETE', ids: ids };
+                } else {
+                    payload._method = 'PUT';
+                }
+
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await res.json();
+                if (data.isOk) {
+                    let type = 'success';
+                    if (data.updatedCount === 0) type = 'error';
+                    else if (data.skippedCount > 0) type = 'warning';
+                    
+                    showToast(data.message, type);
+                    showResultModal('Bulk Operation Summary', data.message, type);
+                    
+                    vpClearSelection();
+                    fetchRequests(currentPage);
+                } else {
+                    showToast(data.message, 'error');
+                }
+            } catch (err) {
+                showToast('Bulk operation failed', 'error');
+            }
+        };
+
+        // Expose fetchRequests globally
         window.fetchRequests = fetchRequests;
 
     })();

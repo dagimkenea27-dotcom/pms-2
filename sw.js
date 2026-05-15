@@ -1,5 +1,5 @@
 // sw.js v4 - Enhanced PWA & Offline Support
-const CACHE_NAME = 'ims-store-v4';
+const CACHE_NAME = 'ims-store-v5';
 const OFFLINE_URL = 'offline.php';
 
 const ASSETS_TO_CACHE = [
