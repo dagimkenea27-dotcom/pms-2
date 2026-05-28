@@ -89,7 +89,7 @@ require_once "../includes/header.php";
 ?>
 
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-clipboard-list text-primary"></i> <?php echo __('branch_orders'); ?></h1>
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-clipboard-list text-primary"></i> <?php echo __('Meta Order Management'); ?></h1>
     <div>
         <a href="branch_order_receive.php" class="btn btn-sm btn-primary shadow-sm">
             <i class="fas fa-plus fa-sm text-white-50"></i> <?php echo __('new_order'); ?>

@@ -59,7 +59,7 @@ Auth::startSession();
             </div>
 
             <!-- Nav Item - Pricing -->
-            <?php
+            <!-- <?php
 $isPricingActive = strpos($_SERVER['REQUEST_URI'], 'price') !== false;
 ?>
             <li class="nav-item <?php echo $isPricingActive ? 'active' : ''; ?>">
@@ -74,7 +74,7 @@ $isPricingActive = strpos($_SERVER['REQUEST_URI'], 'price') !== false;
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'price_analytics.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>price_analytics.php"><?php echo __('price_analytics'); ?></a>
                     </div>
                 </div>
-            </li>
+            </li> -->
 
             <!-- Nav Item - Catalog -->
             <?php
@@ -152,19 +152,17 @@ $isBranchActive = strpos($_SERVER['REQUEST_URI'], 'jimma/') !== false || strpos(
             <li class="nav-item <?php echo $isBranchActive ? 'active' : ''; ?>">
                 <a class="nav-link <?php echo $isBranchActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseBranch"
                     aria-expanded="<?php echo $isBranchActive ? 'true' : 'false'; ?>" aria-controls="collapseBranch">
-                    <i class="fas fa-fw fa-store"></i>
-                    <span><?php echo __('branch_activities'); ?></span>
+                    <i class="fa-brands fa-meta"></i>
+                    <span><?php echo __('Meta Operations'); ?></span>
                 </a>
                 <div id="collapseBranch" class="collapse <?php echo $isBranchActive ? 'show' : ''; ?>" aria-labelledby="headingBranch" data-parent="#accordionSidebar">
                     <div class="py-2 collapse-inner rounded">
-                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'products/branch_order_receive.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>products/branch_order_receive.php"><?php echo __('branch_order_receiving'); ?></a>
-                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'products/branch_orders_list.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>products/branch_orders_list.php"><?php echo __('view_orders'); ?></a>
-                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'reports/branch_order_analytics.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>reports/branch_order_analytics.php">
-                            <i class="fas fa-chart-line fa-sm text-info"></i> Branch Analytics
-                        </a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'products/branch_order_receive.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>products/branch_order_receive.php"><?php echo __('Add New Order'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'products/branch_orders_list.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>products/branch_orders_list.php"><?php echo __('View All Orders'); ?></a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'reports/branch_order_analytics.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>reports/branch_order_analytics.php"><?php echo __('Meta Analytics'); ?></a>
                         <hr class="sidebar-divider">
-                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'jimma/sales_request.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>jimma/sales_request.php">Jimma Stock Request</a>
-                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'jimma/view_requests.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>jimma/view_requests.php">View All Requests</a>
+                        <!-- <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'jimma/sales_request.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>jimma/sales_request.php">Jimma Stock Request</a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'jimma/view_requests.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>jimma/view_requests.php">View All Requests</a> -->
                     </div>
                 </div>
             </li>
@@ -250,7 +248,7 @@ $isRouteActive = strpos($_SERVER['REQUEST_URI'], 'routes/') !== false;
                 </a>
             </li>
 
-            <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'reports/gojo_analysis.php') !== false ? 'active' : ''; ?>">
+            <!-- <li class="nav-item <?php echo strpos($_SERVER['REQUEST_URI'], 'reports/gojo_analysis.php') !== false ? 'active' : ''; ?>">
                 <a class="nav-link" href="<?php echo BASE_URL; ?>reports/gojo_analysis.php">
                     <i class="fas fa-fw fa-chart-bar"></i>
                     <span>Gojo Analysis</span>
@@ -262,13 +260,13 @@ $isRouteActive = strpos($_SERVER['REQUEST_URI'], 'routes/') !== false;
                     <i class="fas fa-fw fa-headset"></i>
                     <span>Sales Follow-up</span>
                 </a>
-            </li>
+            </li> -->
 
 
             <!-- Nav Item - Daily Sales -->
-            <?php
-$isDailySalesActive = strpos($_SERVER['REQUEST_URI'], 'daily_sales.php') !== false || strpos($_SERVER['REQUEST_URI'], 'reports/daily_sales_report.php') !== false;
-?>
+           <!-- <?php
+            $isDailySalesActive = strpos($_SERVER['REQUEST_URI'], 'daily_sales.php') !== false || strpos($_SERVER['REQUEST_URI'], 'reports/daily_sales_report.php') !== false;
+            ?>
             <li class="nav-item <?php echo $isDailySalesActive ? 'active' : ''; ?>">
                 <a class="nav-link <?php echo $isDailySalesActive ? '' : 'collapsed'; ?>" href="javascript:void(0);" data-bs-toggle="collapse" data-bs-target="#collapseDailySales"
                     aria-expanded="<?php echo $isDailySalesActive ? 'true' : 'false'; ?>" aria-controls="collapseDailySales">
@@ -281,7 +279,7 @@ $isDailySalesActive = strpos($_SERVER['REQUEST_URI'], 'daily_sales.php') !== fal
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'reports/daily_sales_report.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>reports/daily_sales_report.php">Performance Report</a>
                     </div>
                 </div>
-            </li>
+            </li> -->
 
             <!-- Divider -->
             <hr class="sidebar-divider">

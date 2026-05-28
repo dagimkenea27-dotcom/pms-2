@@ -739,6 +739,16 @@ require_once "includes/header.php";
                 </div>
                 <div class="modal-body p-4">
                     <form id="request-form">
+                        <!-- Draft Recovery Alert -->
+                        <div id="draft-alert" class="alert alert-info py-2 px-3 mb-3 small d-none" style="border-radius: 10px;">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span><i class="fas fa-edit me-1"></i> You have an unsaved draft.</span>
+                                <div>
+                                    <button type="button" class="btn btn-link text-decoration-none p-0 fw-bold me-2 btn-load-draft" style="font-size: 11px;">Load</button>
+                                    <button type="button" class="btn btn-link text-decoration-none p-0 text-danger fw-bold btn-discard-draft" style="font-size: 11px;">Discard</button>
+                                </div>
+                            </div>
+                        </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold small">Shop Name <span class="text-danger">*</span></label>
                             <input type="text" id="form-shop-name" required placeholder="e.g. Zara, H&M, AliExpress..."
@@ -877,6 +887,98 @@ require_once "includes/header.php";
         const ordersContainer = document.getElementById('orders-container');
         const btnAddOrder = document.getElementById('btn-add-order');
 
+        // Draft Auto-Save Functions
+        function saveFormDraft() {
+            if (editingId) return; // Do not auto-save when editing existing records
+            if (!modalEl.classList.contains('show')) return; // Guard against events during modal hide/reset
+
+            const shopName = document.getElementById('form-shop-name').value.trim();
+            const notes = document.getElementById('form-notes').value.trim();
+
+            const orders = [];
+            ordersContainer.querySelectorAll('.order-row').forEach(row => {
+                const id = row.querySelector('.form-order-id').value.trim();
+                const amt = row.querySelector('.form-order-amount').value;
+                const paysComm = row.querySelector('.form-pays-comm').checked;
+                orders.push({ order_id: id, order_amount: amt, pays_commission: paysComm });
+            });
+
+            // Only save if some content exists
+            const hasContent = shopName || notes || orders.some(o => o.order_id || o.order_amount);
+            if (hasContent) {
+                const draft = { shopName, notes, orders };
+                localStorage.setItem('vp_request_draft', JSON.stringify(draft));
+            } else {
+                localStorage.removeItem('vp_request_draft');
+            }
+        }
+
+        function loadFormDraft() {
+            const raw = localStorage.getItem('vp_request_draft');
+            if (!raw) return;
+
+            try {
+                const draft = JSON.parse(raw);
+
+                // Restore basic inputs
+                document.getElementById('form-shop-name').value = draft.shopName || '';
+                document.getElementById('form-notes').value = draft.notes || '';
+
+                // Clear extra rows
+                const firstRow = ordersContainer.querySelector('.order-row');
+                const rows = ordersContainer.querySelectorAll('.order-row');
+                rows.forEach((row, i) => { if (i > 0) row.remove(); });
+
+                // Restore rows
+                draft.orders.forEach((ord, index) => {
+                    let row;
+                    if (index === 0) {
+                        row = firstRow;
+                    } else {
+                        row = firstRow.cloneNode(true);
+                        row.classList.remove('vp-fade-in');
+                        row.querySelectorAll('input').forEach(input => {
+                            input.classList.remove('is-invalid');
+                        });
+                        ordersContainer.appendChild(row);
+                    }
+                    row.querySelector('.form-order-id').value = ord.order_id || '';
+                    row.querySelector('.form-order-amount').value = ord.order_amount || '';
+                    row.querySelector('.form-pays-comm').checked = !!ord.pays_commission;
+                });
+
+                updateRemoveButtons();
+                validateOrderIDs();
+                document.getElementById('draft-alert').classList.add('d-none');
+                showToast('Draft restored successfully', 'success');
+            } catch (e) {
+                console.error('Failed to restore draft', e);
+            }
+        }
+
+        function discardFormDraft() {
+            localStorage.removeItem('vp_request_draft');
+            document.getElementById('draft-alert').classList.add('d-none');
+            showToast('Draft discarded', 'info');
+        }
+
+        // Register draft load/discard button actions via event delegation
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-load-draft')) {
+                loadFormDraft();
+            }
+            if (e.target.classList.contains('btn-discard-draft')) {
+                discardFormDraft();
+            }
+        });
+
+        // Listen for input and change events to trigger save
+        const requestForm = document.getElementById('request-form');
+        if (requestForm) {
+            requestForm.addEventListener('input', saveFormDraft);
+            requestForm.addEventListener('change', saveFormDraft);
+        }
+
         function updateRemoveButtons() {
             const rows = ordersContainer.querySelectorAll('.order-row');
             rows.forEach(row => {
@@ -896,6 +998,7 @@ require_once "includes/header.php";
             ordersContainer.appendChild(newRow);
             updateRemoveButtons();
             validateOrderIDs();
+            saveFormDraft(); // Auto-save after row addition
         });
 
         ordersContainer.addEventListener('click', (e) => {
@@ -905,6 +1008,7 @@ require_once "includes/header.php";
                     e.target.closest('.order-row').remove();
                     updateRemoveButtons();
                     validateOrderIDs();
+                    saveFormDraft(); // Auto-save after row removal
                 }
             }
         });
@@ -928,7 +1032,23 @@ require_once "includes/header.php";
             updateRemoveButtons();
         };
 
-        modalEl.addEventListener('hidden.bs.modal', resetModal);
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            resetModal();
+            document.getElementById('draft-alert').classList.add('d-none');
+        });
+
+        modalEl.addEventListener('show.bs.modal', () => {
+            if (!editingId) {
+                const draft = localStorage.getItem('vp_request_draft');
+                if (draft) {
+                    document.getElementById('draft-alert').classList.remove('d-none');
+                } else {
+                    document.getElementById('draft-alert').classList.add('d-none');
+                }
+            } else {
+                document.getElementById('draft-alert').classList.add('d-none');
+            }
+        });
 
         const filterFrom = document.getElementById('filter-from');
         const filterTo = document.getElementById('filter-to');
@@ -1390,6 +1510,9 @@ require_once "includes/header.php";
                     const modal = getModal();
                     if (modal) modal.hide();
                     resetModal();
+                    if (!editingId) {
+                        localStorage.removeItem('vp_request_draft'); // Clear draft on successful submit
+                    }
                     fetchRequests(editingId ? currentPage : 1);
                 } else {
                     showToast(data.message, 'error');

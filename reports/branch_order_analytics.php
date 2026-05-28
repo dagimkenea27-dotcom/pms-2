@@ -4,7 +4,7 @@ require_once "../config/database.php";
 
 Auth::requireLogin();
 
-$page_title = "Branch Order Analytics";
+$page_title = "Meta Orders Analytics";
 require_once "../includes/header.php";
 ?>
 
@@ -12,7 +12,7 @@ require_once "../includes/header.php";
     <!-- Header & Filters -->
     <div class="row align-items-center mb-4">
         <div class="col-md-6">
-            <h1 class="h3 mb-1 text-gray-800"><i class="fas fa-chart-line text-info me-2"></i> Branch Analytics</h1>
+            <h1 class="h3 mb-1 text-gray-800"><i class="fas fa-chart-line text-info me-2"></i> Meta Orders Analytics</h1>
             <p class="text-muted small">Marketing insights and operational performance for branch orders.</p>
         </div>
         <div class="col-md-6 text-md-end">
