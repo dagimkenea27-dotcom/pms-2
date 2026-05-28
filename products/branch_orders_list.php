@@ -119,7 +119,9 @@ if ($message): ?>
                     SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
                     SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing,
                     SUM(CASE WHEN status = 'shipped' THEN 1 ELSE 0 END) as shipped,
-                    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
+                    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+                    SUM(CASE WHEN status = 'returned' THEN 1 ELSE 0 END) as returned,
+                    SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled
                     FROM branch_orders";
     $stats_stmt = $db->prepare($stats_query);
     $stats_stmt->execute();
@@ -189,6 +191,20 @@ if ($message): ?>
             </div>
         </div>
     </div>
+
+    <div class="col-xl-2 col-md-6 mb-4">
+        <div class="card border-left-secondary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">Returned</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['returned']; ?></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- Filters -->
@@ -207,6 +223,7 @@ if ($message): ?>
                     <option value="shipped" <?php echo $filters['status'] === 'shipped' ? 'selected' : ''; ?>>Shipped</option>
                     <option value="completed" <?php echo $filters['status'] === 'completed' ? 'selected' : ''; ?>><?php echo __('completed'); ?></option>
                     <option value="cancelled" <?php echo $filters['status'] === 'cancelled' ? 'selected' : ''; ?>><?php echo __('cancelled'); ?></option>
+                    <option value="returned" <?php echo $filters['status'] === 'returned' ? 'selected' : ''; ?>>Returned</option>
                 </select>
             </div>
             
@@ -287,8 +304,9 @@ if ($message): ?>
                                 <span class="badge bg-<?php 
                                     echo $order['status'] === 'completed' ? 'success' : 
                                         ($order['status'] === 'processing' ? 'warning' : 
+                                        ($order['status'] === 'returned' ? 'danger' : 
                                         ($order['status'] === 'shipped' ? 'secondary' : 
-                                        ($order['status'] === 'cancelled' ? 'danger' : 'info'))); 
+                                        ($order['status'] === 'cancelled' ? 'danger' : 'info')))); 
                                 ?>" <?php echo ($order['status'] === 'cancelled' && !empty($order['cancellation_reason'])) ? 'title="Reason: ' . htmlspecialchars($order['cancellation_reason']) . '" data-bs-toggle="tooltip"' : ''; ?>
                                     <?php echo (($order['status'] === 'shipped' || $order['status'] === 'completed') && !empty($order['delivery_person'])) ? 'title="Delivery: ' . htmlspecialchars($order['delivery_person']) . '" data-bs-toggle="tooltip"' : ''; ?>>
                                     <?php echo ucfirst($order['status']); ?>
@@ -351,6 +369,7 @@ if ($message): ?>
                                                     <option value="shipped">Shipped</option>
                                                     <option value="completed"><?php echo __('completed'); ?></option>
                                                     <option value="cancelled"><?php echo __('cancelled'); ?></option>
+                                                    <option value="returned"><?php echo __('returned'); ?></option>
                                                 </select>
                                             </form>
                                         </li>
@@ -535,6 +554,7 @@ function viewOrder(element) {
             else if(order.status === 'processing') statusClass = 'warning';
             else if(order.status === 'shipped') statusClass = 'secondary';
             else if(order.status === 'cancelled') statusClass = 'danger';
+            else if(order.status === 'returned') statusClass = 'danger';
             
             const formattedDate = new Date(order.created_at).toLocaleDateString();
 

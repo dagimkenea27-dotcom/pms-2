@@ -158,6 +158,7 @@ require_once "../includes/header.php";
                                 <option value="processing" <?php echo $order['status'] == 'processing' ? 'selected' : ''; ?>>Processing</option>
                                 <option value="completed" <?php echo $order['status'] == 'completed' ? 'selected' : ''; ?>>Completed</option>
                                 <option value="cancelled" <?php echo $order['status'] == 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                                <option value="returned" <?php echo $order['status'] == 'returned' ? 'selected' : ''; ?>>Returned</option>
                             </select>
                         </div>
                         <div class="col-md-3 mb-3">
