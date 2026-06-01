@@ -1038,9 +1038,11 @@ $prepayCsrfToken = Security::getCSRFToken();
             return data.data || [];
         }
 
-        // Use jsDelivr for OCR language data (allowed by CSP; default host tessdata.projectnaptha.com is blocked on live)
+        // OCR: pin paths to avoid CSP/CDN surprises on live servers
         const TESSERACT_OCR_OPTIONS = {
-            langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@4.0.0'
+            langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@4.0.0',
+            workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@2.1.5/dist/worker.min.js',
+            corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@2.2.0/tesseract-core.wasm.js'
         };
 
         function loadTesseract() {
@@ -1058,6 +1060,23 @@ $prepayCsrfToken = Security::getCSRFToken();
                 });
             }
             return tesseractLoadPromise;
+        }
+
+        let ocrWorkerPromise = null;
+        async function getOcrWorker() {
+            if (ocrWorkerPromise) return ocrWorkerPromise;
+            ocrWorkerPromise = (async () => {
+                const Tesseract = await loadTesseract();
+                const worker = await Tesseract.createWorker({
+                    langPath: TESSERACT_OCR_OPTIONS.langPath,
+                    workerPath: TESSERACT_OCR_OPTIONS.workerPath,
+                    corePath: TESSERACT_OCR_OPTIONS.corePath
+                });
+                await worker.loadLanguage('eng');
+                await worker.initialize('eng');
+                return worker;
+            })();
+            return ocrWorkerPromise;
         }
 
         /* ── Bootstrap modal instances ── */
@@ -2201,10 +2220,10 @@ $prepayCsrfToken = Security::getCSRFToken();
             scanButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Extracting...';
 
             try {
-                const Tesseract = await loadTesseract();
+                const worker = await getOcrWorker();
                 let allRows = [];
                 for (const imageSrc of images) {
-                    const ocrResult = await Tesseract.recognize(imageSrc, 'eng', TESSERACT_OCR_OPTIONS);
+                    const ocrResult = await worker.recognize(imageSrc);
                     const text = ocrResult?.data?.text || '';
                     const rows = parsePendingOrdersFromText(text);
                     allRows = allRows.concat(rows);
