@@ -1072,6 +1072,7 @@ $prepayCsrfToken = Security::getCSRFToken();
                     workerPath: TESSERACT_OCR_OPTIONS.workerPath,
                     corePath: TESSERACT_OCR_OPTIONS.corePath
                 });
+                await worker.load();
                 await worker.loadLanguage('eng');
                 await worker.initialize('eng');
                 return worker;
