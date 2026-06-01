@@ -1,8 +1,16 @@
 <?php
 require_once "config/auth.php";
 require_once "config/database.php";
-Auth::requireRole('admin, manager');
+require_once "config/security.php";
+Auth::requireRole('manager');
 require_once "includes/header.php";
+
+$prepayApiUrl = rtrim(BASE_URL, '/') . '/api/customer_prepayments_api.php';
+if (!empty($_SERVER['HTTP_HOST'])) {
+    $prepayScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $prepayApiUrl = $prepayScheme . '://' . $_SERVER['HTTP_HOST'] . $prepayApiUrl;
+}
+$prepayCsrfToken = Security::getCSRFToken();
 ?>
 
 <style>
@@ -973,18 +981,31 @@ require_once "includes/header.php";
 ════════════════════════════════════════════ -->
 <script>
     (function () {
-        const API_URL = '<?php echo BASE_URL; ?>api/customer_prepayments_api.php';
+        const API_URL = <?php echo json_encode($prepayApiUrl); ?>;
         const PREPAY_RATE = 0.3;
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = <?php echo json_encode($prepayCsrfToken); ?> || (csrfMeta ? csrfMeta.getAttribute('content') : '');
         let tesseractLoadPromise = null;
+
+        if (!csrfToken) {
+            console.error('CSRF token is missing. Reload the page or log in again.');
+        }
+
+        function withCsrf(payload) {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+                return payload;
+            }
+            return { ...payload, csrf_token: csrfToken };
+        }
 
         async function apiFetch(url, options = {}) {
             const res = await fetch(url, {
+                credentials: 'same-origin',
                 headers: { 'X-CSRF-TOKEN': csrfToken, ...(options.headers || {}) },
                 ...options
             });
             if (!res.ok) {
-                throw new Error(`API request failed: ${res.status} ${res.statusText}`);
+                throw new Error(`API request failed (${res.status} ${res.statusText}): ${url}`);
             }
             return res.json();
         }
@@ -993,12 +1014,12 @@ require_once "includes/header.php";
             return apiFetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(withCsrf(payload))
             });
         }
 
         function buildListQueryParams() {
-            const url = new URL(API_URL, window.location.href);
+            const url = new URL(API_URL);
             url.searchParams.set('status', currentFilter);
             url.searchParams.set('search', searchInput.value);
             url.searchParams.set('from_date', filterFrom.value);
@@ -1016,6 +1037,11 @@ require_once "includes/header.php";
             }
             return data.data || [];
         }
+
+        // Use jsDelivr for OCR language data (allowed by CSP; default host tessdata.projectnaptha.com is blocked on live)
+        const TESSERACT_OCR_OPTIONS = {
+            langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@4.0.0'
+        };
 
         function loadTesseract() {
             if (window.Tesseract) {
@@ -1122,7 +1148,7 @@ require_once "includes/header.php";
         // ══════════════════════════════════════════
         async function fetchPrepayments(page = 1) {
             currentPage = page;
-            const url = new URL(API_URL, window.location.href);
+            const url = new URL(API_URL);
             url.searchParams.set('page', page);
             url.searchParams.set('limit', limit);
             url.searchParams.set('status', currentFilter);
@@ -2178,7 +2204,7 @@ require_once "includes/header.php";
                 const Tesseract = await loadTesseract();
                 let allRows = [];
                 for (const imageSrc of images) {
-                    const ocrResult = await Tesseract.recognize(imageSrc, 'eng');
+                    const ocrResult = await Tesseract.recognize(imageSrc, 'eng', TESSERACT_OCR_OPTIONS);
                     const text = ocrResult?.data?.text || '';
                     const rows = parsePendingOrdersFromText(text);
                     allRows = allRows.concat(rows);
@@ -2310,8 +2336,7 @@ require_once "includes/header.php";
             if (recordId) { payload._method = 'PUT'; payload.id = recordId; payload.action = 'update'; }
 
             try {
-                const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken }, body: JSON.stringify(payload) });
-                const data = await res.json();
+                const data = await apiPost(payload);
                 if (data.isOk) {
                     showToast(data.message || 'Record saved!', 'success');
                     (bsRecord || getBootstrapModal('recordModal'))?.hide();
@@ -2343,8 +2368,7 @@ require_once "includes/header.php";
             const amount = parseFloat(document.getElementById('quickPayAmount').value) || 0;
             if (amount <= 0) return;
             try {
-                const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken }, body: JSON.stringify({ _method: 'PUT', action: 'quick_pay', id, amount }) });
-                const data = await res.json();
+                const data = await apiPost({ _method: 'PUT', action: 'quick_pay', id, amount });
                 if (data.isOk) { showToast(data.message, 'success'); (bsQuickPay || getBootstrapModal('quickPayModal'))?.hide(); fetchPrepayments(currentPage); }
                 else showToast(data.message, 'danger');
             } catch (e) { showToast('Failed to log payment.', 'danger'); }
@@ -2352,20 +2376,12 @@ require_once "includes/header.php";
 
         window.toggleArrivalStatus = async (id, arrived) => {
             try {
-                const res = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken
-                    },
-                    body: JSON.stringify({
-                        _method: 'PUT',
-                        action: 'arrival_status',
-                        id,
-                        is_arrived: arrived ? 1 : 0
-                    })
+                const data = await apiPost({
+                    _method: 'PUT',
+                    action: 'arrival_status',
+                    id,
+                    is_arrived: arrived ? 1 : 0
                 });
-                const data = await res.json();
                 if (data.isOk) {
                     showToast(data.message || `Order marked ${arrived ? 'arrived' : 'not arrived'}.`, 'success');
                     fetchPrepayments(currentPage);
@@ -2546,8 +2562,7 @@ require_once "includes/header.php";
                 `Permanently delete prepayment for "${item.customer_name}"? This cannot be undone.`,
                 async () => {
                     try {
-                        const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken }, body: JSON.stringify({ _method: 'DELETE', id }) });
-                        const data = await res.json();
+                        const data = await apiPost({ _method: 'DELETE', id });
                         if (data.isOk) { showToast(data.message || 'Deleted.', 'success'); fetchPrepayments(prepayments.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage); }
                         else showToast(data.message, 'danger');
                     } catch (e) { showToast('Failed to delete.', 'danger'); }
@@ -2601,8 +2616,7 @@ require_once "includes/header.php";
                         ? { _method: 'DELETE', ids }
                         : { _method: 'PUT', action, ids };
                     try {
-                        const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken }, body: JSON.stringify(payload) });
-                        const data = await res.json();
+                        const data = await apiPost(payload);
                         if (data.isOk) { showToast(data.message, 'success'); vpClearSelection(); fetchPrepayments(currentPage); }
                         else showToast(data.message, 'danger');
                     } catch (e) { showToast('Bulk operation failed.', 'danger'); }
@@ -2690,15 +2704,12 @@ require_once "includes/header.php";
                     for (const item of arr) {
                         if (!item.customer_name || !item.amount_due) continue;
                         try {
-                            const res = await fetch(API_URL, {
-                                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken }, body: JSON.stringify({
-                                    customer_name: item.customer_name, details: item.details || '',
-                                    amount_due: parseFloat(item.amount_due), amount_paid: parseFloat(item.amount_paid || 0),
-                                    total_items: parseInt(item.total_items || 0), delivered_items: parseInt(item.delivered_items || 0),
-                                    screenshot: item.screenshot || ''
-                                })
+                            const data = await apiPost({
+                                customer_name: item.customer_name, details: item.details || '',
+                                amount_due: parseFloat(item.amount_due), amount_paid: parseFloat(item.amount_paid || 0),
+                                total_items: parseInt(item.total_items || 0), delivered_items: parseInt(item.delivered_items || 0),
+                                screenshot: item.screenshot || ''
                             });
-                            const data = await res.json();
                             if (data.isOk) n++;
                         } catch (e2) { }
                     }

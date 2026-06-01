@@ -42,9 +42,9 @@ try {
         $method = strtoupper($input['_method']);
     }
 
-    // CSRF Validation for state-changing methods
+    // CSRF Validation for state-changing methods (pass $input — php://input already consumed above)
     if ($method !== 'GET') {
-        if (!Security::validateRequest()) {
+        if (!Security::validateRequest(is_array($input) ? $input : null)) {
             echo json_encode(["isOk" => false, "message" => "CSRF token validation failed."]);
             exit;
         }

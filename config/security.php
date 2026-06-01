@@ -37,27 +37,31 @@ class Security {
 
     /**
      * Validate CSRF token from request headers or POST data.
+     * Pass $parsedJson when the caller already read php://input (it can only be read once).
+     * @param array|null $parsedJson
      * @return bool
      */
-    public static function validateRequest() {
+    public static function validateRequest($parsedJson = null) {
         $token = '';
-        
-        // Check headers (common for AJAX)
-        if (isset($_SERVER['HTTP_X_CSRF_TOKEN'])) {
+
+        if (!empty($_SERVER['HTTP_X_CSRF_TOKEN'])) {
             $token = $_SERVER['HTTP_X_CSRF_TOKEN'];
-        } 
-        // Check POST data
-        elseif (isset($_POST['csrf_token'])) {
+        } elseif (!empty($_SERVER['REDIRECT_HTTP_X_CSRF_TOKEN'])) {
+            $token = $_SERVER['REDIRECT_HTTP_X_CSRF_TOKEN'];
+        } elseif (isset($_POST['csrf_token'])) {
             $token = $_POST['csrf_token'];
-        }
-        // Check JSON body
-        else {
-            $input = json_decode(file_get_contents('php://input'), true);
-            if (isset($input['csrf_token'])) {
-                $token = $input['csrf_token'];
+        } elseif (is_array($parsedJson) && isset($parsedJson['csrf_token'])) {
+            $token = $parsedJson['csrf_token'];
+        } elseif ($parsedJson === null) {
+            $raw = file_get_contents('php://input');
+            if ($raw !== false && $raw !== '') {
+                $input = json_decode($raw, true);
+                if (is_array($input) && isset($input['csrf_token'])) {
+                    $token = $input['csrf_token'];
+                }
             }
         }
-        
+
         return self::validateCSRFToken($token);
     }
 }
