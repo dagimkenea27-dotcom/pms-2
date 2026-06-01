@@ -29,6 +29,11 @@
 # ===============================
 Options -Indexes
 
+# WASM MIME type (required for Tesseract OCR worker on some Apache hosts)
+<IfModule mod_mime.c>
+    AddType application/wasm .wasm
+</IfModule>
+
 # ===============================
 # ADDITIONAL SECURITY HEADERS
 # ===============================

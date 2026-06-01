@@ -11,6 +11,12 @@ if (!empty($_SERVER['HTTP_HOST'])) {
     $prepayApiUrl = $prepayScheme . '://' . $_SERVER['HTTP_HOST'] . $prepayApiUrl;
 }
 $prepayCsrfToken = Security::getCSRFToken();
+
+$ocrAssetBase = rtrim(BASE_URL, '/') . '/assets/vendor/tesseract/';
+if (!empty($_SERVER['HTTP_HOST'])) {
+    $ocrScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $ocrAssetBase = $ocrScheme . '://' . $_SERVER['HTTP_HOST'] . $ocrAssetBase;
+}
 ?>
 
 <style>
@@ -1038,11 +1044,13 @@ $prepayCsrfToken = Security::getCSRFToken();
             return data.data || [];
         }
 
-        // OCR: pin paths to avoid CSP/CDN surprises on live servers
+        // OCR assets are self-hosted (see assets/vendor/tesseract/) to avoid CSP/CDN/WASM issues on live
+        const OCR_ASSET_BASE = <?php echo json_encode($ocrAssetBase); ?>;
         const TESSERACT_OCR_OPTIONS = {
-            langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@4.0.0',
-            workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@2.1.5/dist/worker.min.js',
-            corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@2.2.0/tesseract-core.wasm.js'
+            langPath: OCR_ASSET_BASE + 'tessdata',
+            workerPath: OCR_ASSET_BASE + 'worker.min.js',
+            corePath: OCR_ASSET_BASE + 'tesseract-core.wasm.js',
+            gzip: false
         };
 
         function loadTesseract() {
@@ -1052,7 +1060,7 @@ $prepayCsrfToken = Security::getCSRFToken();
             if (!tesseractLoadPromise) {
                 tesseractLoadPromise = new Promise((resolve, reject) => {
                     const script = document.createElement('script');
-                    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@2.1.5/dist/tesseract.min.js';
+                    script.src = OCR_ASSET_BASE + 'tesseract.min.js';
                     script.async = true;
                     script.onload = () => resolve(window.Tesseract);
                     script.onerror = () => reject(new Error('Failed to load OCR engine'));
@@ -1066,16 +1074,16 @@ $prepayCsrfToken = Security::getCSRFToken();
         async function getOcrWorker() {
             if (ocrWorkerPromise) return ocrWorkerPromise;
             ocrWorkerPromise = (async () => {
-                const Tesseract = await loadTesseract();
-                const worker = await Tesseract.createWorker({
-                    langPath: TESSERACT_OCR_OPTIONS.langPath,
-                    workerPath: TESSERACT_OCR_OPTIONS.workerPath,
-                    corePath: TESSERACT_OCR_OPTIONS.corePath
-                });
-                await worker.load();
-                await worker.loadLanguage('eng');
-                await worker.initialize('eng');
-                return worker;
+                try {
+                    const Tesseract = await loadTesseract();
+                    const worker = Tesseract.createWorker(TESSERACT_OCR_OPTIONS);
+                    await worker.loadLanguage('eng');
+                    await worker.initialize('eng');
+                    return worker;
+                } catch (err) {
+                    ocrWorkerPromise = null;
+                    throw err;
+                }
             })();
             return ocrWorkerPromise;
         }
