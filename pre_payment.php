@@ -1047,10 +1047,9 @@ if (!empty($_SERVER['HTTP_HOST'])) {
         // OCR assets are self-hosted (see assets/vendor/tesseract/) to avoid CSP/CDN/WASM issues on live
         const OCR_ASSET_BASE = <?php echo json_encode($ocrAssetBase); ?>;
         const TESSERACT_OCR_OPTIONS = {
-            langPath: OCR_ASSET_BASE + 'tessdata',
+            langPath: OCR_ASSET_BASE + 'tessdata/4.0.0',
             workerPath: OCR_ASSET_BASE + 'worker.min.js',
-            corePath: OCR_ASSET_BASE + 'tesseract-core.wasm.js',
-            gzip: false
+            corePath: OCR_ASSET_BASE + 'tesseract-core.wasm.js'
         };
 
         function loadTesseract() {
@@ -1076,9 +1075,11 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             ocrWorkerPromise = (async () => {
                 try {
                     const Tesseract = await loadTesseract();
-                    const worker = Tesseract.createWorker(TESSERACT_OCR_OPTIONS);
-                    await worker.loadLanguage('eng');
-                    await worker.initialize('eng');
+                    const worker = await Tesseract.createWorker('eng', 1, {
+                        workerPath: TESSERACT_OCR_OPTIONS.workerPath,
+                        corePath: TESSERACT_OCR_OPTIONS.corePath,
+                        langPath: TESSERACT_OCR_OPTIONS.langPath
+                    });
                     return worker;
                 } catch (err) {
                     ocrWorkerPromise = null;
@@ -2232,8 +2233,8 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 const worker = await getOcrWorker();
                 let allRows = [];
                 for (const imageSrc of images) {
-                    const ocrResult = await worker.recognize(imageSrc);
-                    const text = ocrResult?.data?.text || '';
+                    const { data } = await worker.recognize(imageSrc);
+                    const text = data?.text || '';
                     const rows = parsePendingOrdersFromText(text);
                     allRows = allRows.concat(rows);
                 }
