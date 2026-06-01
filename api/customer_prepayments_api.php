@@ -242,9 +242,16 @@ try {
 
     switch ($method) {
         case 'GET':
+            $exportAll = !empty($_GET['export_all']);
             $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
             $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 30;
-            $offset = ($page - 1) * $limit;
+            if ($exportAll) {
+                $page = 1;
+                $limit = 10000;
+                $offset = 0;
+            } else {
+                $offset = ($page - 1) * $limit;
+            }
 
             $status = $_GET['status'] ?? 'all'; // 'all', 'paid', 'partial', 'unpaid'
             $search = $_GET['search'] ?? '';
@@ -519,10 +526,25 @@ try {
 
             $totalRecords = (int) ($stats['total_count'] ?? 0);
             $totalPages = (int) max(1, ceil($totalRecords / max(1, $limit)));
+
+            // Transform stats to match frontend expectations
+            $transformedStats = [
+                'expected' => (float) ($stats['total_expected'] ?? 0),
+                'collected' => (float) ($stats['total_collected'] ?? 0),
+                'required' => (float) (($stats['total_pending_cost'] ?? 0) * 0.3),
+                'arrived_cost' => (float) ($stats['total_arrived_cost'] ?? 0),
+                'pending_cost' => (float) ($stats['total_pending_cost'] ?? 0),
+                'arrived_count' => (int) ($stats['arrived_count'] ?? 0),
+                'pending_count' => (int) ($stats['pending_count'] ?? 0),
+                'paid_count' => (int) ($stats['paid_count'] ?? 0),
+                'partial_count' => (int) ($stats['partial_count'] ?? 0),
+                'unpaid_count' => (int) ($stats['unpaid_count'] ?? 0)
+            ];
+
             echo json_encode([
                 "isOk" => true,
                 "data" => $results,
-                "stats" => $stats,
+                "stats" => $transformedStats,
                 "pagination" => [
                     "page" => $page,
                     "limit" => $limit,
@@ -967,6 +989,33 @@ try {
             break;
 
         case 'DELETE':
+            if (!empty($input['purge_all']) && ($input['confirm'] ?? '') === 'DELETE_ALL_PREPAYMENTS') {
+                $db->beginTransaction();
+                try {
+                    ensurePrepaymentItemsTable($db);
+                    ensurePrepaymentReceiptsTable($db);
+                    $countStmt = $db->query("SELECT COUNT(*) FROM customer_prepayments");
+                    $deletedCount = (int) $countStmt->fetchColumn();
+                    $db->exec("DELETE FROM prepayment_receipts");
+                    $db->exec("DELETE FROM prepayment_items");
+                    $db->exec("DELETE FROM customer_prepayments");
+                    $auditQuery = "INSERT INTO audit_logs (user_id, action, table_name, record_id, details, ip_address) 
+                                   VALUES (:user_id, 'DELETE', 'customer_prepayments', 0, :details, :ip_address)";
+                    $auditStmt = $db->prepare($auditQuery);
+                    $auditStmt->execute([
+                        ':user_id' => $currentUser['id'],
+                        ':details' => json_encode(['purge_all' => true, 'deleted_count' => $deletedCount]),
+                        ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
+                    ]);
+                    $db->commit();
+                    echo json_encode(["isOk" => true, "message" => "Successfully deleted all $deletedCount customer record(s)."]);
+                } catch (Exception $e) {
+                    $db->rollBack();
+                    throw $e;
+                }
+                break;
+            }
+
             if (!$input || (!isset($input['id']) && empty($input['ids'])))
                 throw new Exception("Missing prepayment ID(s) for deletion.");
 

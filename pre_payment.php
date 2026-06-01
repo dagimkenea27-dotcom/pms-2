@@ -172,15 +172,6 @@ require_once "includes/header.php";
         background: #f6c23e;
     }
 
-    /* Chart legend */
-    .cp-legend-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: 6px;
-    }
-
     /* Receipt uploader drop area */
     .cp-drop-area {
         border: 2px dashed #d1d3e2;
@@ -283,10 +274,6 @@ require_once "includes/header.php";
             <p class="text-muted small mb-0 mt-1">Manage customer prepayments, quick-pay, and delivery status.</p>
         </div>
             <div class="d-flex gap-2 mt-2 mt-sm-0">
-            <button class="btn btn-sm btn-outline-secondary" onclick="toggleSimplifiedMode()" id="simplifiedModeBtn"
-                title="Toggle compact view">
-                <i class="fas fa-compress me-1"></i> Compact View
-            </button>
             <button class="btn btn-sm btn-outline-success" onclick="exportToCSV()" title="Export to CSV">
                 <i class="fas fa-file-csv me-1"></i> Export CSV
             </button>
@@ -434,8 +421,6 @@ require_once "includes/header.php";
                             </button>
                         </div>
                         <div class="col-md-auto ms-auto d-flex gap-2">
-                            <button class="btn btn-sm btn-outline-secondary" onclick="loadSampleData()"><i
-                                    class="fas fa-database me-1"></i>Demo</button>
                             <button class="btn btn-sm btn-outline-danger" onclick="clearAllDataConfirm()"><i
                                     class="fas fa-trash me-1"></i>Clear All</button>
                             <button class="btn btn-sm btn-outline-success" onclick="exportJSON()"><i
@@ -458,25 +443,20 @@ require_once "includes/header.php";
                 <button class="cp-tab" id="filterBtn-unpaid" onclick="setStatusFilter('unpaid')">Unpaid</button>
             </div>
 
-            <!-- Bulk Actions Toolbar -->
-            <div id="bulkActionsToolbar"
-                class="alert alert-dark d-flex align-items-center justify-content-between py-2 px-3 mb-3 rounded-3"
-                role="alert">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-primary rounded-pill" id="selected-count">0</span>
-                    <span class="small fw-bold">records selected</span>
-                </div>
-                <div class="d-flex gap-2 flex-wrap">
-                    <button class="btn btn-sm btn-success" onclick="vpBulkAction('bulk_paid')">
-                        <i class="fas fa-shield-halved me-1"></i> Prepay 30%
+            <!-- Bulk actions (shown when rows are selected) -->
+            <div id="bulkActionsToolbar" class="alert alert-light border shadow-sm mb-3 align-items-center justify-content-between flex-wrap gap-2 py-2 px-3" role="toolbar" aria-label="Bulk actions">
+                <span class="small text-muted"><strong id="selected-count">0</strong> selected</span>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-sm btn-success" onclick="vpBulkAction('bulk_paid')">
+                        <i class="fas fa-percent me-1"></i> Mark 30% Paid
                     </button>
-                    <button class="btn btn-sm btn-primary" onclick="vpBulkAction('bulk_clear')">
-                        <i class="fas fa-check-square me-1"></i> Clear 100%
+                    <button type="button" class="btn btn-sm btn-primary" onclick="vpBulkAction('bulk_clear')">
+                        <i class="fas fa-check-double me-1"></i> Mark Fully Paid
                     </button>
-                    <button class="btn btn-sm btn-danger" onclick="vpBulkAction('bulk_delete')">
-                        <i class="fas fa-trash me-1"></i> Delete
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="vpBulkAction('bulk_delete')">
+                        <i class="fas fa-trash me-1"></i> Delete Selected
                     </button>
-                    <button class="btn btn-sm btn-outline-light" onclick="vpClearSelection()">Clear</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="vpClearSelection()">Cancel</button>
                 </div>
             </div>
 
@@ -543,11 +523,6 @@ require_once "includes/header.php";
                 </div>
             </div>
         </div>
-
-        </div>
-    </div><!-- /main row -->
-
-    <!-- Status chart removed -->
     </div><!-- /main row -->
 </div><!-- /container-fluid -->
 
@@ -747,6 +722,38 @@ require_once "includes/header.php";
                             </div>
                             <div class="text-muted mt-2" style="font-size:.82rem;">Stores image proofs. Helps managers
                                 verify receipts immediately.</div>
+                        </div>
+                    </div>
+
+                    <div class="card border-light shadow-sm rounded-3 mb-3">
+                        <div class="card-body p-3">
+                            <div class="fw-bold small text-uppercase text-secondary mb-2">
+                                <i class="fas fa-magnifying-glass me-1"></i> Extract Pending Orders from Screenshot
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-3">
+                                <label
+                                    class="flex-grow-1 d-flex flex-column align-items-center justify-content-center rounded-3 border border-secondary py-4 text-center mb-0"
+                                    style="cursor:pointer;">
+                                    <i class="fas fa-image-polaroid text-primary mb-2"></i>
+                                    <span class="small fw-bold text-primary">Upload Screenshot for Extraction</span>
+                                                            <input type="file" id="extractScreenshotInput" accept="image/*" multiple class="d-none"
+                                        onchange="handleExtractScreenshotUpload(event)">
+                                </label>
+                                <div id="modalExtractPreviewContainer" class="d-flex flex-wrap gap-2 align-items-center">
+                                    <div id="modalExtractPlaceholder"
+                                        class="rounded-3 border bg-white overflow-hidden d-flex align-items-center justify-content-center"
+                                        style="width:72px; height:72px;">
+                                        <i class="fas fa-file-image"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 align-items-center mt-3">
+                                <button type="button" class="btn btn-sm btn-info" id="scanReceiptOrdersBtn" onclick="scanReceiptOrders()">
+                                    <i class="fas fa-magnifying-glass"></i> Extract Pending Orders
+                                </button>
+                                <small class="text-muted">Upload screenshot(s) here only for order extraction.</small>
+                            </div>
+                            <div class="text-muted mt-2" style="font-size:.82rem;">This upload is separate from proof images and is used only for OCR extraction.</div>
                         </div>
                     </div>
 
@@ -967,7 +974,65 @@ require_once "includes/header.php";
 <script>
     (function () {
         const API_URL = '<?php echo BASE_URL; ?>api/customer_prepayments_api.php';
+        const PREPAY_RATE = 0.3;
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        let tesseractLoadPromise = null;
+
+        async function apiFetch(url, options = {}) {
+            const res = await fetch(url, {
+                headers: { 'X-CSRF-TOKEN': csrfToken, ...(options.headers || {}) },
+                ...options
+            });
+            if (!res.ok) {
+                throw new Error(`API request failed: ${res.status} ${res.statusText}`);
+            }
+            return res.json();
+        }
+
+        async function apiPost(payload) {
+            return apiFetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        }
+
+        function buildListQueryParams() {
+            const url = new URL(API_URL, window.location.href);
+            url.searchParams.set('status', currentFilter);
+            url.searchParams.set('search', searchInput.value);
+            url.searchParams.set('from_date', filterFrom.value);
+            url.searchParams.set('to_date', filterTo.value);
+            return url;
+        }
+
+        async function fetchAllFilteredRecords() {
+            const url = buildListQueryParams();
+            url.searchParams.set('export_all', '1');
+            url.searchParams.set('limit', '10000');
+            const data = await apiFetch(url);
+            if (!data.isOk) {
+                throw new Error(data.message || 'Failed to load records');
+            }
+            return data.data || [];
+        }
+
+        function loadTesseract() {
+            if (window.Tesseract) {
+                return Promise.resolve(window.Tesseract);
+            }
+            if (!tesseractLoadPromise) {
+                tesseractLoadPromise = new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@2.1.5/dist/tesseract.min.js';
+                    script.async = true;
+                    script.onload = () => resolve(window.Tesseract);
+                    script.onerror = () => reject(new Error('Failed to load OCR engine'));
+                    document.head.appendChild(script);
+                });
+            }
+            return tesseractLoadPromise;
+        }
 
         /* ── Bootstrap modal instances ── */
         let bsRecord, bsQuickPay, bsConfirm, bsShare, bsHistory;
@@ -985,9 +1050,12 @@ require_once "includes/header.php";
         document.getElementById('recordModal').addEventListener('hidden.bs.modal', () => {
             editingId = null;
             tempReceiptBase64List = [];
+            extractScreenshotBase64List = [];
             existingReceiptImages = [];
-            const fileInput = document.getElementById('screenshotInput');
-            if (fileInput) fileInput.value = '';
+            const proofInput = document.getElementById('screenshotInput');
+            const extractInput = document.getElementById('extractScreenshotInput');
+            if (proofInput) proofInput.value = '';
+            if (extractInput) extractInput.value = '';
         });
 
         /* ── State ── */
@@ -996,9 +1064,8 @@ require_once "includes/header.php";
         let totalPages = 1;
         let limit = 20;
         let currentFilter = 'all';
-        let chartInstance = null;
-        let isSimplifiedMode = false;
         let tempReceiptBase64List = [];
+        let extractScreenshotBase64List = [];
         let existingReceiptImages = [];
         let editingId = null;
         let onConfirmCallback = null;
@@ -1025,6 +1092,29 @@ require_once "includes/header.php";
             } else {
                 console.error('Bootstrap is not defined. Ensure bootstrap.bundle.min.js loads before pre_payment inline script.');
             }
+
+            tbody.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-cp-action]');
+                if (!btn) return;
+                const id = btn.dataset.id;
+                const action = btn.dataset.cpAction;
+                if (action === 'quickpay') {
+                    const item = prepayments.find(p => String(p.id) === String(id));
+                    if (item) {
+                        openQuickPayModal(id, item.customer_name, parseFloat(btn.dataset.diff) || 0);
+                    }
+                } else if (action === 'share') {
+                    openShareCardModal(id);
+                } else if (action === 'arrival') {
+                    toggleArrivalStatus(id, btn.dataset.arrived === '1');
+                } else if (action === 'edit') {
+                    openRecordModal(id);
+                } else if (action === 'history') {
+                    openHistoryModal(id);
+                } else if (action === 'delete') {
+                    deleteRecordConfirm(id);
+                }
+            });
         });
 
         // ══════════════════════════════════════════
@@ -1045,11 +1135,7 @@ require_once "includes/header.php";
         </td></tr>`;
 
             try {
-                const res = await fetch(url, { headers: { 'X-CSRF-TOKEN': csrfToken } });
-                if (!res.ok) {
-                    throw new Error(`API request failed: ${res.status} ${res.statusText}`);
-                }
-                const data = await res.json();
+                const data = await apiFetch(url);
                 if (data.isOk) {
                     prepayments = data.data || [];
                     totalPages = data.pagination.total_pages;
@@ -1061,6 +1147,9 @@ require_once "includes/header.php";
                 }
             } catch (e) {
                 console.error('fetchPrepayments error', e, url.toString());
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger small">
+                    <i class="fas fa-exclamation-circle me-1"></i> Failed to load records. ${escapeHTML(e.message)}
+                </td></tr>`;
                 showToast(`Failed to connect to backend API. ${e.message}`, 'danger');
             }
         }
@@ -1115,7 +1204,7 @@ require_once "includes/header.php";
         }
 
         function getRecordPrepaymentTarget(item) {
-            return getRecordPendingCost(item) * 0.3;
+            return getRecordPendingCost(item) * PREPAY_RATE;
         }
 
         function getRecordPrepaymentStatus(item) {
@@ -1211,27 +1300,21 @@ require_once "includes/header.php";
                     ? `<span class="badge bg-success bg-opacity-10 text-success rounded-pill" style="font-size:.65rem;"><i class="fas fa-truck-moving me-1"></i>Arrived</span>`
                     : `<span class="badge bg-danger bg-opacity-10 text-danger rounded-pill" style="font-size:.65rem;"><i class="fas fa-truck-clock me-1"></i>Not Arrived</span>`;
                 const arrivalAction = arrived
-                    ? `<button class="cp-action-btn text-warning" onclick="toggleArrivalStatus('${item.id}', false)" title="Mark not arrived"><i class="fas fa-truck-clock"></i></button>`
-                    : `<button class="cp-action-btn text-success" onclick="toggleArrivalStatus('${item.id}', true)" title="Mark arrived"><i class="fas fa-truck-moving"></i></button>`;
+                    ? `<button type="button" class="cp-action-btn text-warning" data-cp-action="arrival" data-id="${item.id}" data-arrived="0" title="Mark not arrived"><i class="fas fa-truck-clock"></i></button>`
+                    : `<button type="button" class="cp-action-btn text-success" data-cp-action="arrival" data-id="${item.id}" data-arrived="1" title="Mark arrived"><i class="fas fa-truck-moving"></i></button>`;
 
                 const hasReceipts = Array.isArray(item.receipts) ? item.receipts.length > 0 : false;
                 const hasReceiptFallback = hasReceipts || item.screenshot;
-                const slipBtn = hasReceiptFallback
-                    ? `<button class="cp-action-btn text-success" onclick="openShareCardModal('${item.id}')" title="View receipt / Slip"><i class="fas fa-image-portrait"></i></button>`
-                    : `<button class="cp-action-btn text-secondary" onclick="openShareCardModal('${item.id}')" title="Manager Slip"><i class="fas fa-camera"></i></button>`;
+                const slipBtnClass = hasReceiptFallback ? 'text-success' : 'text-secondary';
+                const slipBtnTitle = hasReceiptFallback ? 'View receipt / Slip' : 'Manager Slip';
+                const slipBtnIcon = hasReceiptFallback ? 'image-portrait' : 'camera';
+                const slipBtn = `<button type="button" class="cp-action-btn ${slipBtnClass}" data-cp-action="share" data-id="${item.id}" title="${slipBtnTitle}"><i class="fas fa-${slipBtnIcon}"></i></button>`;
 
-                /* quick-pay button */
                 const qpBtn = status !== 'paid'
-                    ? `<button class="cp-action-btn text-primary" onclick="openQuickPayModal('${item.id}','${escapeJS(item.customer_name)}',${Math.max(diff, 0)})" title="Quick Add Payment"><i class="fas fa-cash-register"></i></button>`
-                    : '';
-
-                /* simplified border class */
-                const borderCls = isSimplifiedMode
-                    ? `border-start border-4 border-${status === 'paid' ? 'success' : status === 'partial' ? 'warning' : 'danger'}`
+                    ? `<button type="button" class="cp-action-btn text-primary" data-cp-action="quickpay" data-id="${item.id}" data-diff="${Math.max(diff, 0)}" title="Quick Add Payment"><i class="fas fa-cash-register"></i></button>`
                     : '';
 
                 const tr = document.createElement('tr');
-                tr.className = borderCls;
                 tr.innerHTML = `
                 <td class="ps-3">
                     <input class="form-check-input row-checkbox" type="checkbox" value="${item.id}">
@@ -1260,13 +1343,13 @@ require_once "includes/header.php";
                     ${slipBtn}
                     ${qpBtn}
                     ${arrivalAction}
-                    <button class="cp-action-btn text-secondary" onclick="openRecordModal('${item.id}')" title="Edit">
+                    <button type="button" class="cp-action-btn text-secondary" data-cp-action="edit" data-id="${item.id}" title="Edit">
                         <i class="fas fa-pen-to-square"></i>
                     </button>
-                    <button class="cp-action-btn text-secondary" onclick="openHistoryModal('${item.id}')" title="History">
+                    <button type="button" class="cp-action-btn text-secondary" data-cp-action="history" data-id="${item.id}" title="History">
                         <i class="fas fa-history"></i>
                     </button>
-                    <button class="cp-action-btn text-danger" onclick="deleteRecordConfirm('${item.id}')" title="Delete">
+                    <button type="button" class="cp-action-btn text-danger" data-cp-action="delete" data-id="${item.id}" title="Delete">
                         <i class="fas fa-trash-can"></i>
                     </button>
                 </td>`;
@@ -1274,22 +1357,16 @@ require_once "includes/header.php";
             });
         }
 
-        window.toggleSimplifiedMode = () => {
-            isSimplifiedMode = !isSimplifiedMode;
-            const btn = document.getElementById('simplifiedModeBtn');
-            btn.classList.toggle('btn-outline-secondary', !isSimplifiedMode);
-            btn.classList.toggle('btn-secondary', isSimplifiedMode);
-            renderTable();
-            if (isSimplifiedMode) showToast('Simplified view active.', 'secondary');
-        };
-
         // ══════════════════════════════════════════
-        // 3. STATS, CHART & PAGINATION
+        // 3. STATS & PAGINATION
         // ══════════════════════════════════════════
         function renderStatsAndAnalytics(stats, pagination) {
             if (!stats) return;
-            const fmt = v => `ETB ${parseFloat(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
+            const currentPageNum = pagination.current_page || pagination.page || 1;
+            const fmt = v => {
+                const num = parseFloat(v) || 0;
+                return `ETB ${(!isFinite(num) ? '0.00' : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}`;
+            };
             document.getElementById('statExpected').innerText = fmt(stats.expected);
             document.getElementById('statPrepaymentRequired').innerText = fmt(stats.required);
             document.getElementById('statCollected').innerText = fmt(stats.collected);
@@ -1314,19 +1391,11 @@ require_once "includes/header.php";
             document.getElementById('countPaid').innerText = stats.paid_count;
             document.getElementById('countPartial').innerText = stats.partial_count;
             document.getElementById('countUnpaid').innerText = stats.unpaid_count;
-            const clPaid = document.getElementById('chartLabelPaid'); if (clPaid) clPaid.innerText = stats.paid_count;
-            const clPartial = document.getElementById('chartLabelPartial'); if (clPartial) clPartial.innerText = stats.partial_count;
-            const clUnpaid = document.getElementById('chartLabelUnpaid'); if (clUnpaid) clUnpaid.innerText = stats.unpaid_count;
-
-            if (chartInstance) {
-                chartInstance.data.datasets[0].data = [stats.paid_count, stats.partial_count, stats.unpaid_count];
-                chartInstance.update();
-            }
 
             /* pagination */
             const tot = pagination.total_records;
-            const start = (pagination.current_page - 1) * limit + 1;
-            const end = Math.min(pagination.current_page * limit, tot);
+            const start = (currentPageNum - 1) * limit + 1;
+            const end = Math.min(currentPageNum * limit, tot);
             document.getElementById('paginationInfo').innerText = tot > 0 ? `Showing ${start} to ${end} of ${tot} entries` : 'Showing 0 to 0 of 0 entries';
 
             const controls = document.getElementById('paginationControls');
@@ -1345,16 +1414,14 @@ require_once "includes/header.php";
                 return li;
             };
 
-            controls.appendChild(makeLi('&laquo;', pagination.current_page - 1, pagination.current_page <= 1, false));
-            const sp = Math.max(1, pagination.current_page - 2);
-            const ep = Math.min(pagination.total_pages, pagination.current_page + 2);
+            controls.appendChild(makeLi('&laquo;', currentPageNum - 1, currentPageNum <= 1, false));
+            const sp = Math.max(1, currentPageNum - 2);
+            const ep = Math.min(pagination.total_pages, currentPageNum + 2);
             for (let p = sp; p <= ep; p++) {
-                controls.appendChild(makeLi(p, p, false, p === pagination.current_page));
+                controls.appendChild(makeLi(p, p, false, p === currentPageNum));
             }
-            controls.appendChild(makeLi('&raquo;', pagination.current_page + 1, pagination.current_page >= pagination.total_pages, false));
+            controls.appendChild(makeLi('&raquo;', currentPageNum + 1, currentPageNum >= pagination.total_pages, false));
         }
-
-        // Chart removed — no initChart function
 
         // ══════════════════════════════════════════
         // 4. DRAFT AUTO-SAVE
@@ -1370,10 +1437,17 @@ require_once "includes/header.php";
                 paid: document.getElementById('amountPaid').value,
                 totalQty: document.getElementById('totalItems').value,
                 arrivedQty: document.getElementById('deliveredItems').value,
-                receipts: [...existingReceiptImages, ...tempReceiptBase64List]
+                receipts: [...existingReceiptImages, ...tempReceiptBase64List].slice(0, 2)
             };
             const hasContent = Object.values(draft).some(v => v);
-            if (hasContent) localStorage.setItem('prepay_form_draft', JSON.stringify(draft));
+            if (hasContent) {
+                try {
+                    localStorage.setItem('prepay_form_draft', JSON.stringify(draft));
+                } catch (e) {
+                    const slim = { ...draft, receipts: [] };
+                    localStorage.setItem('prepay_form_draft', JSON.stringify(slim));
+                }
+            }
             else localStorage.removeItem('prepay_form_draft');
         }
 
@@ -1721,7 +1795,7 @@ require_once "includes/header.php";
             const row = document.createElement('div');
             row.className = 'item-row d-flex gap-2 mb-2 align-items-center';
             row.innerHTML = `
-            <input name="item_name[]" class="form-control form-control-sm" placeholder="Item name" value="${escapeJS(name)}">
+            <input name="item_name[]" class="form-control form-control-sm" placeholder="Item name" value="${escapeAttr(name)}">
             <input name="item_qty[]" type="number" min="0" class="form-control form-control-sm item-qty" style="width:90px" value="${qty}">
             <input name="item_price[]" type="number" step="0.01" min="0" class="form-control form-control-sm item-price" style="width:110px" value="${price}">
             <input name="item_prepayment[]" type="number" step="0.01" class="form-control form-control-sm item-prepay" style="width:120px" value="" readonly title="30% prepayment">
@@ -1772,7 +1846,7 @@ require_once "includes/header.php";
             const refresh = () => {
                 const q = parseInt(qtyInput.value) || 0;
                 const p = parseFloat(priceInput.value) || 0;
-                const prepay = +(q * p * 0.30).toFixed(2);
+                const prepay = +(q * p * PREPAY_RATE).toFixed(2);
                 if (prepayInput) prepayInput.value = prepay;
                 calculateItemsSummary();
             };
@@ -1832,7 +1906,7 @@ require_once "includes/header.php";
                     const q = parseInt(qtys[i].value) || 0;
                     const p = parseFloat((prices[i] && prices[i].value) || 0) || 0;
                     const rowCost = +(q * p).toFixed(2);
-                    const pre = +(rowCost * 0.30).toFixed(2);
+                    const pre = +(rowCost * PREPAY_RATE).toFixed(2);
 
                     // write 30%-prepay column for this row
                     if (prepays[i]) prepays[i].value = pre;
@@ -1893,7 +1967,7 @@ require_once "includes/header.php";
                         const prepayTgt = document.getElementById('prepayTargetDisplay');
                         if (arrivedEl) arrivedEl.innerText = fv(costArrived);
                         if (pendingEl) pendingEl.innerText = fv(costPending);
-                        if (prepayTgt) prepayTgt.innerText = fv(costPending * 0.30);
+                        if (prepayTgt) prepayTgt.innerText = fv(costPending * PREPAY_RATE);
                     } else {
                         breakCard.classList.add('d-none');
                     }
@@ -1927,7 +2001,7 @@ require_once "includes/header.php";
         }
 
         function getModalPrepaymentTarget() {
-            return getModalPendingCost() * 0.3;
+            return getModalPendingCost() * PREPAY_RATE;
         }
 
         window.validatePaymentsInModal = () => {
@@ -2017,6 +2091,126 @@ require_once "includes/header.php";
             }
         };
 
+        window.handleExtractScreenshotUpload = async (event) => {
+            const files = Array.from(event.target.files || []);
+            if (files.length === 0) {
+                showToast('No image selected for extraction.', 'danger');
+                return;
+            }
+
+            const readers = files.map(file => new Promise((resolve, reject) => {
+                if (!file.type.startsWith('image/')) {
+                    reject(new Error('Only image files accepted.'));
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = () => reject(new Error('Failed to read file.'));
+                reader.readAsDataURL(file);
+            }));
+
+            try {
+                const images = await Promise.all(readers);
+                images.forEach(image => {
+                    if (image) extractScreenshotBase64List.push(image);
+                });
+                renderExtractPreviews();
+                showToast('Extraction screenshot(s) attached.', 'success');
+            } catch (e) {
+                showToast(e.message || 'Unable to attach extraction screenshot.', 'danger');
+            }
+        };
+
+        function parsePendingOrdersFromText(text) {
+            const lines = (text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            const rows = [];
+            for (const line of lines) {
+                const statusMatch = line.match(/\b(pending|confirmed|canceled|cancelled|paid)\b/i);
+                if (!statusMatch) continue;
+                const status = statusMatch[1].toLowerCase();
+                if (status !== 'pending') continue;
+
+                const idMatch = line.match(/\b(\d{4,})\b/);
+                const amountMatch = line.match(/([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|[0-9]+(?:\.[0-9]{2})?)\s*ETB/i)
+                    || line.match(/ETB\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|[0-9]+(?:\.[0-9]{2})?)/i);
+
+                if (!idMatch || !amountMatch) continue;
+
+                const orderId = idMatch[1];
+                const amountText = amountMatch[1] || amountMatch[2] || '';
+                const amountValue = parseFloat((amountText || '').replace(/,/g, ''));
+                if (Number.isNaN(amountValue)) continue;
+
+                rows.push({ orderId, amount: amountValue });
+            }
+            return rows;
+        }
+
+        function addExtractedOrderRows(rows) {
+            if (!Array.isArray(rows) || rows.length === 0) return 0;
+            const existingNames = Array.from(document.querySelectorAll('input[name="item_name[]"]')).map(el => el.value.trim());
+            let added = 0;
+            rows.forEach(({ orderId, amount }) => {
+                const label = `${orderId}`;
+                if (existingNames.includes(label)) return;
+                addBlankItemRow({ name: label, qty: 1, price: amount.toFixed(2) });
+                added += 1;
+            });
+            if (added > 0) {
+                calculateItemsSummary();
+                saveFormDraft();
+            }
+            return added;
+        }
+
+        window.scanReceiptOrders = async () => {
+            const scanButton = document.getElementById('scanReceiptOrdersBtn');
+            const images = [...extractScreenshotBase64List].filter(Boolean);
+            if (images.length === 0) {
+                showToast('Upload a screenshot in the extraction section first to extract pending orders.', 'warning');
+                return;
+            }
+            scanButton.disabled = true;
+            const originalText = scanButton.innerHTML;
+            scanButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Extracting...';
+
+            try {
+                const Tesseract = await loadTesseract();
+                let allRows = [];
+                for (const imageSrc of images) {
+                    const ocrResult = await Tesseract.recognize(imageSrc, 'eng');
+                    const text = ocrResult?.data?.text || '';
+                    const rows = parsePendingOrdersFromText(text);
+                    allRows = allRows.concat(rows);
+                }
+                if (allRows.length === 0) {
+                    showToast('No pending order rows found in the screenshot.', 'warning');
+                    return;
+                }
+                const uniqueRows = [];
+                const seen = new Set();
+                allRows.forEach(r => {
+                    const key = `${r.orderId}-${r.amount}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        uniqueRows.push(r);
+                    }
+                });
+                const added = addExtractedOrderRows(uniqueRows);
+                if (added > 0) {
+                    showToast(`Added ${added} pending order${added > 1 ? 's' : ''} from receipt.`, 'success');
+                } else {
+                    showToast('Pending orders were found, but they already exist in the list.', 'info');
+                }
+            } catch (err) {
+                console.error('OCR extract error', err);
+                showToast('Failed to extract pending orders from screenshot.', 'danger');
+            } finally {
+                scanButton.disabled = false;
+                scanButton.innerHTML = originalText;
+            }
+        };
+
         function renderReceiptPreviews() {
             const container = document.getElementById('modalReceiptPreviewContainer');
             if (!container) return;
@@ -2029,11 +2223,34 @@ require_once "includes/header.php";
                 if (!src) return '';
                 return `
                     <div class="position-relative rounded-3 overflow-hidden border" style="width:72px; height:72px;">
-                        <img src="${escapeJS(src)}" class="w-100 h-100" style="object-fit:cover;" alt="Receipt ${index + 1}">
+                        <img src="${escapeAttr(src)}" class="w-100 h-100" style="object-fit:cover;" alt="Receipt ${index + 1}">
                         ${index >= existingReceiptImages.length ? `<button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" style="z-index:2;" onclick="removeTempReceipt(${index - existingReceiptImages.length})"><i class="fas fa-times" style="font-size:.7rem;"></i></button>` : ''}
                     </div>`;
             }).join('');
         }
+
+        function renderExtractPreviews() {
+            const container = document.getElementById('modalExtractPreviewContainer');
+            if (!container) return;
+            if (extractScreenshotBase64List.length === 0) {
+                container.innerHTML = `<div id="modalExtractPlaceholder" class="rounded-3 border bg-white overflow-hidden d-flex align-items-center justify-content-center" style="width:72px; height:72px;"><i class="fas fa-file-image"></i></div>`;
+                return;
+            }
+            container.innerHTML = extractScreenshotBase64List.map((src, index) => {
+                if (!src) return '';
+                return `
+                    <div class="position-relative rounded-3 overflow-hidden border" style="width:72px; height:72px;">
+                        <img src="${escapeAttr(src)}" class="w-100 h-100" style="object-fit:cover;" alt="Extraction Screenshot ${index + 1}">
+                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" style="z-index:2;" onclick="removeExtractReceipt(${index})"><i class="fas fa-times" style="font-size:.7rem;"></i></button>
+                    </div>`;
+            }).join('');
+        }
+
+        window.removeExtractReceipt = (index) => {
+            if (index < 0 || index >= extractScreenshotBase64List.length) return;
+            extractScreenshotBase64List.splice(index, 1);
+            renderExtractPreviews();
+        };
 
         window.removeTempReceipt = (index) => {
             if (index < 0 || index >= tempReceiptBase64List.length) return;
@@ -2236,7 +2453,7 @@ require_once "includes/header.php";
             if (receipts.length > 0) {
                 list.innerHTML = receipts.map((imgSrc, index) => `
                     <div class="rounded-3 overflow-hidden border" style="width:120px; height:100px;">
-                        <img src="${escapeJS(imgSrc)}" class="w-100 h-100" style="object-fit:cover;" alt="Receipt ${index + 1}">
+                        <img src="${escapeAttr(imgSrc)}" class="w-100 h-100" style="object-fit:cover;" alt="Receipt ${index + 1}">
                     </div>
                 `).join('');
                 count.innerText = `${receipts.length} receipt${receipts.length > 1 ? 's' : ''} attached.`;
@@ -2276,8 +2493,10 @@ require_once "includes/header.php";
                         } else if (item.action === 'UPDATE_STATUS') {
                             dotCls = 'status';
                             const d = item.details_decoded || {};
-                            actionText = `Status → <span class="badge bg-light text-dark border" style="font-size:.65rem;">${d.new_status || '—'}</span>`;
-                            if (d.old_status) detailsHtml = `<div class="text-muted" style="font-size:.72rem;">From <strong>${d.old_status}</strong> to <strong>${d.new_status}</strong></div>`;
+                            actionText = `Status → <span class="badge bg-light text-dark border" style="font-size:.65rem;">${escapeHTML(d.new_status || '—')}</span>`;
+                            if (d.old_status) {
+                                detailsHtml = `<div class="text-muted" style="font-size:.72rem;">From <strong>${escapeHTML(d.old_status)}</strong> to <strong>${escapeHTML(d.new_status || '')}</strong></div>`;
+                            }
                         } else if (item.action === 'UPDATE_DATA') {
                             dotCls = 'update'; actionText = 'Data Updated';
                         } else if (item.action === 'DELETE') {
@@ -2342,8 +2561,8 @@ require_once "includes/header.php";
         function updateBulkUI() {
             const checked = document.querySelectorAll('.row-checkbox:checked');
             const count = checked.length;
-            selectedCountLbl.innerText = count;
-            count > 0 ? bulkBar.classList.add('show') : bulkBar.classList.remove('show');
+            if (selectedCountLbl) selectedCountLbl.innerText = count;
+            if (bulkBar) count > 0 ? bulkBar.classList.add('show') : bulkBar.classList.remove('show');
             if (!count && selectAllCb) selectAllCb.checked = false;
         }
 
@@ -2394,72 +2613,69 @@ require_once "includes/header.php";
         // ══════════════════════════════════════════
         // 12. DEMO / BACKUP / RESTORE
         // ══════════════════════════════════════════
-        window.loadSampleData = () => {
-            showConfirmModal('Setup Demo Data', 'Insert 3 sample customer prepayment records into the database?', async () => {
-                const DEMO = [
-                    { customer_name: 'Skyline Ventures', details: 'Bulk Machinery Shipment', amount_due: 5000, amount_paid: 1550, total_items: 80, delivered_items: 78 },
-                    { customer_name: 'Pinnacle Devs', details: 'Hardware Supplies Batch 2', amount_due: 10000, amount_paid: 1500, total_items: 120, delivered_items: 40 },
-                    { customer_name: 'Velocity Media', details: 'Custom Tech Equipment', amount_due: 3000, amount_paid: 0, total_items: 15, delivered_items: 0 }
-                ];
-                let n = 0;
-                for (const d of DEMO) {
-                    try {
-                        const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken }, body: JSON.stringify(d) });
-                        const data = await res.json();
-                        if (data.isOk) n++;
-                    } catch (e) { }
-                }
-                showToast(`Demo loaded: ${n} records inserted.`, 'success');
-                fetchPrepayments(1);
-            });
-        };
-
         window.clearAllDataConfirm = () => {
-            showConfirmModal('Clear ALL Records', 'Delete every customer prepayment record from the database permanently?', async () => {
-                try {
-                    const res = await fetch(`${API_URL}?limit=1000`, { headers: { 'X-CSRF-TOKEN': csrfToken } });
-                    const data = await res.json();
-                    if (data.isOk && data.data && data.data.length > 0) {
-                        const ids = data.data.map(p => p.id);
-                        const r2 = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken }, body: JSON.stringify({ _method: 'DELETE', ids }) });
-                        const d2 = await r2.json();
-                        if (d2.isOk) { showToast('All records cleared.', 'success'); fetchPrepayments(1); }
-                    } else { showToast('No records to clear.', 'secondary'); }
-                } catch (e) { showToast('Failed to clear.', 'danger'); }
-            });
+            showConfirmModal(
+                'Clear ALL Records',
+                'Permanently delete every customer prepayment record? This cannot be undone.',
+                async () => {
+                    try {
+                        const data = await apiPost({ _method: 'DELETE', purge_all: true, confirm: 'DELETE_ALL_PREPAYMENTS' });
+                        if (data.isOk) {
+                            showToast(data.message || 'All records cleared.', 'success');
+                            fetchPrepayments(1);
+                        } else {
+                            showToast(data.message || 'Failed to clear.', 'danger');
+                        }
+                    } catch (e) {
+                        showToast('Failed to clear.', 'danger');
+                    }
+                }
+            );
         };
 
-        window.exportToCSV = () => {
-            if (!prepayments.length) { showToast('No records to export.', 'secondary'); return; }
-            let csv = 'Customer,Details,Total Cost,Amount Paid,Prepayment%,Total Ordered,Arrived,Delivery%\n';
-            prepayments.forEach(item => {
-                const total = parseFloat(item.amount_due) || 0;
-                const paid = parseFloat(item.amount_paid) || 0;
-                const pct = total > 0 ? ((paid / total) * 100).toFixed(1) : 0;
-                const tq = parseInt(item.total_items) || 0;
-                const aq = parseInt(item.delivered_items) || 0;
-                const dpct = tq > 0 ? ((aq / tq) * 100).toFixed(1) : 0;
-                csv += `"${item.customer_name.replace(/"/g, '""')}","${(item.details || '').replace(/"/g, '""')}",${total},${paid},${pct}%,${tq},${aq},${dpct}%\n`;
-            });
-            const a = document.createElement('a');
-            a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-            a.download = 'Prepayment_Ledger.csv';
-            a.click();
-            showToast('CSV exported!', 'success');
+        window.exportToCSV = async () => {
+            try {
+                const rows = await fetchAllFilteredRecords();
+                if (!rows.length) {
+                    showToast('No records to export.', 'secondary');
+                    return;
+                }
+                let csv = 'Customer,Details,Total Cost,Amount Paid,30% Target,Status,Total Ordered,Arrived,Delivery%\n';
+                rows.forEach(item => {
+                    const total = parseFloat(item.amount_due) || 0;
+                    const paid = parseFloat(item.amount_paid) || 0;
+                    const target = getRecordPrepaymentTarget(item);
+                    const status = getRecordPrepaymentStatus(item);
+                    const tq = parseInt(item.total_items) || 0;
+                    const aq = parseInt(item.delivered_items) || 0;
+                    const dpct = tq > 0 ? ((aq / tq) * 100).toFixed(1) : 0;
+                    csv += `"${(item.customer_name || '').replace(/"/g, '""')}","${(item.details || '').replace(/"/g, '""')}",${total},${paid},${target.toFixed(2)},${status},${tq},${aq},${dpct}%\n`;
+                });
+                const a = document.createElement('a');
+                a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+                a.download = 'Prepayment_Ledger.csv';
+                a.click();
+                showToast(`CSV exported (${rows.length} records).`, 'success');
+            } catch (e) {
+                showToast('Export failed.', 'danger');
+            }
         };
 
         window.exportJSON = async () => {
             try {
-                const res = await fetch(`${API_URL}?limit=1000`, { headers: { 'X-CSRF-TOKEN': csrfToken } });
-                const data = await res.json();
-                if (data.isOk && data.data && data.data.length > 0) {
-                    const a = document.createElement('a');
-                    a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data.data, null, 2));
-                    a.download = 'Prepayments_Backup.json';
-                    a.click();
-                    showToast('JSON backup saved!', 'success');
-                } else { showToast('No records to backup.', 'secondary'); }
-            } catch (e) { showToast('Backup failed.', 'danger'); }
+                const rows = await fetchAllFilteredRecords();
+                if (!rows.length) {
+                    showToast('No records to backup.', 'secondary');
+                    return;
+                }
+                const a = document.createElement('a');
+                a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(rows, null, 2));
+                a.download = 'Prepayments_Backup.json';
+                a.click();
+                showToast(`JSON backup saved (${rows.length} records).`, 'success');
+            } catch (e) {
+                showToast('Backup failed.', 'danger');
+            }
         };
 
         window.importJSON = (event) => {
@@ -2499,21 +2715,30 @@ require_once "includes/header.php";
         // ══════════════════════════════════════════
         function showToast(msg, type = 'primary') {
             const container = document.getElementById('toastContainer');
-            const id = 'toast_' + Date.now();
             const icons = { success: 'check-circle', danger: 'exclamation-circle', warning: 'exclamation-triangle', info: 'info-circle', secondary: 'bell', primary: 'info-circle' };
-            const icon = icons[type] || 'info-circle';
+            const iconName = icons[type] || 'info-circle';
             const el = document.createElement('div');
-            el.id = id;
             el.className = `toast align-items-center text-bg-${type} border-0 show`;
             el.role = 'alert';
             el.setAttribute('aria-live', 'assertive');
-            el.innerHTML = `
-            <div class="d-flex">
-                <div class="toast-body d-flex align-items-center gap-2" style="font-size:.82rem;">
-                    <i class="fas fa-${icon}"></i> ${msg}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>`;
+            const row = document.createElement('div');
+            row.className = 'd-flex';
+            const body = document.createElement('div');
+            body.className = 'toast-body d-flex align-items-center gap-2';
+            body.style.fontSize = '.82rem';
+            const icon = document.createElement('i');
+            icon.className = `fas fa-${iconName}`;
+            const text = document.createElement('span');
+            text.textContent = msg || '';
+            body.appendChild(icon);
+            body.appendChild(text);
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'btn-close btn-close-white me-2 m-auto';
+            closeBtn.setAttribute('data-bs-dismiss', 'toast');
+            row.appendChild(body);
+            row.appendChild(closeBtn);
+            el.appendChild(row);
             container.appendChild(el);
             setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 400); }, 3500);
         }
@@ -2521,7 +2746,10 @@ require_once "includes/header.php";
         // ── Helpers ────────────────────────────────
         function escapeHTML(str) {
             if (!str) return '';
-            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+        function escapeAttr(str) {
+            return escapeHTML(str);
         }
         function escapeJS(str) { return (str || '').replace(/'/g, "\\'"); }
 
