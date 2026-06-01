@@ -600,6 +600,35 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                         style="font-size:.78rem;"></div>
 
                     <div class="card border-light shadow-sm rounded-3 mb-3">
+                        <div class="card-body p-3 py-2">
+                            <div class="fw-bold small text-secondary text-uppercase mb-2">
+                                <i class="fas fa-magnifying-glass me-1"></i> Extract Pending Orders from Screenshot
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <label
+                                    class="flex-grow-1 d-flex flex-column align-items-center justify-content-center rounded-3 border border-secondary py-3 text-center mb-0"
+                                    style="cursor:pointer; min-width:160px; max-width:220px;">
+                                    <i class="fas fa-image-polaroid text-primary mb-1 fs-5"></i>
+                                    <span class="small fw-bold text-primary">Upload screenshot</span>
+                                    <input type="file" id="extractScreenshotInput" accept="image/*" multiple class="d-none"
+                                        onchange="handleExtractScreenshotUpload(event)">
+                                </label>
+                                <div id="modalExtractPreviewContainer" class="d-flex flex-wrap gap-2 align-items-center">
+                                    <div id="modalExtractPlaceholder"
+                                        class="rounded-3 border bg-white overflow-hidden d-flex align-items-center justify-content-center"
+                                        style="width:56px; height:56px;">
+                                        <i class="fas fa-file-image"></i>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-info" id="scanReceiptOrdersBtn" onclick="scanReceiptOrders()">
+                                    <i class="fas fa-magnifying-glass me-1"></i> Extract
+                                </button>
+                            </div>
+                            <div class="text-muted mt-2" style="font-size:.78rem;">Upload screenshot(s) here only for pending-order OCR extraction.</div>
+                        </div>
+                    </div>
+
+                    <div class="card border-light shadow-sm rounded-3 mb-3">
                         <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <div class="fw-bold small text-primary text-uppercase">
@@ -736,38 +765,6 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                             </div>
                             <div class="text-muted mt-2" style="font-size:.82rem;">Stores image proofs. Helps managers
                                 verify receipts immediately.</div>
-                        </div>
-                    </div>
-
-                    <div class="card border-light shadow-sm rounded-3 mb-3">
-                        <div class="card-body p-3">
-                            <div class="fw-bold small text-uppercase text-secondary mb-2">
-                                <i class="fas fa-magnifying-glass me-1"></i> Extract Pending Orders from Screenshot
-                            </div>
-                            <div class="d-flex flex-wrap align-items-center gap-3">
-                                <label
-                                    class="flex-grow-1 d-flex flex-column align-items-center justify-content-center rounded-3 border border-secondary py-4 text-center mb-0"
-                                    style="cursor:pointer;">
-                                    <i class="fas fa-image-polaroid text-primary mb-2"></i>
-                                    <span class="small fw-bold text-primary">Upload Screenshot for Extraction</span>
-                                                            <input type="file" id="extractScreenshotInput" accept="image/*" multiple class="d-none"
-                                        onchange="handleExtractScreenshotUpload(event)">
-                                </label>
-                                <div id="modalExtractPreviewContainer" class="d-flex flex-wrap gap-2 align-items-center">
-                                    <div id="modalExtractPlaceholder"
-                                        class="rounded-3 border bg-white overflow-hidden d-flex align-items-center justify-content-center"
-                                        style="width:72px; height:72px;">
-                                        <i class="fas fa-file-image"></i>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="d-flex flex-wrap gap-2 align-items-center mt-3">
-                                <button type="button" class="btn btn-sm btn-info" id="scanReceiptOrdersBtn" onclick="scanReceiptOrders()">
-                                    <i class="fas fa-magnifying-glass"></i> Extract Pending Orders
-                                </button>
-                                <small class="text-muted">Upload screenshot(s) here only for order extraction.</small>
-                            </div>
-                            <div class="text-muted mt-2" style="font-size:.82rem;">This upload is separate from proof images and is used only for OCR extraction.</div>
                         </div>
                     </div>
 
