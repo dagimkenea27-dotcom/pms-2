@@ -1093,11 +1093,11 @@ require_once "includes/header.php";
 
                     // First check current page cache (efficiency)
                     const isCachedDuplicate = allRequests.some(r => r.id != editingId && (r.order_id || '').toLowerCase() === val);
-                    
+
                     if (isCachedDuplicate) {
                         input.classList.add('is-invalid');
                         isAnyGlobalDuplicate = true;
-                        setInvalidFeedback(input, 'Order ID already exists (Found on this page)');
+                        setInvalidFeedback(input, 'Order ID already exists (Found on the Database)');
                         continue;
                     }
 

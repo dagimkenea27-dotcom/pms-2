@@ -122,7 +122,7 @@ require_once "../includes/header.php";
 ?>
 
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-plus-circle text-primary"></i> Multi-Item Branch Order</h1>
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-plus-circle text-primary"></i> Multi-Item Meta Order</h1>
     <a href="branch_orders_list.php" class="btn btn-sm btn-secondary shadow-sm">
         <i class="fas fa-list fa-sm"></i> View Orders
     </a>

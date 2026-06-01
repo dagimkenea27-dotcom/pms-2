@@ -309,6 +309,9 @@ $isRouteActive = strpos($_SERVER['REQUEST_URI'], 'routes/') !== false;
                         <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'vendor_payment_requests.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>vendor_payment_requests.php">
                             <i class="fas fa-money-check-alt fa-sm"></i> Vendor Payments
                         </a>
+                        <a class="collapse-item <?php echo strpos($_SERVER['REQUEST_URI'], 'pre_payment.php') !== false ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>pre_payment.php">
+                            <i class="fas fa-receipt fa-sm"></i> Customer Prepayments
+                        </a>
                     </div>
                 </div>
             </li>
