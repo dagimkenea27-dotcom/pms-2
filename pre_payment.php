@@ -271,6 +271,390 @@ if (!empty($_SERVER['HTTP_HOST'])) {
     #emptyState {
         padding: 3rem 1rem;
     }
+
+    :root {
+        --primary: #4e73df;
+        --primary-light: #eef2ff;
+        --success: #1cc88a;
+        --success-light: #d1fae5;
+        --warning: #f6c23e;
+        --warning-light: #fef3c7;
+        --danger: #e74a3b;
+        --danger-light: #fee2e2;
+        --info: #36b9cc;
+        --info-light: #e0f7fa;
+        --gray-50: #f8f9fc;
+        --gray-100: #f1f3f9;
+        --gray-200: #e9ecef;
+        --gray-600: #6c757d;
+        --gray-800: #2c3e50;
+    }
+
+    /* Modern Modal Styling */
+    .modal-content {
+        border: none;
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .modal-header {
+        background: linear-gradient(135deg, #f8f9fc 0%, #ffffff 100%);
+        border-bottom: 1px solid rgba(78, 115, 223, 0.1);
+        padding: 1.25rem 1.5rem;
+    }
+
+    .modal-header .modal-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #4e73df, #224abe);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .modal-body {
+        padding: 1.75rem;
+        background: #393737;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    /* Custom Scrollbar */
+    .modal-body::-webkit-scrollbar {
+        width: 6px;
+    }
+    .modal-body::-webkit-scrollbar-track {
+        background: var(--gray-100);
+        border-radius: 10px;
+    }
+    .modal-body::-webkit-scrollbar-thumb {
+        background: var(--primary);
+        border-radius: 10px;
+    }
+
+    /* Section Cards */
+    .form-section {
+        background: var(--gray-50);
+        border-radius: 20px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid rgba(0,0,0,0.03);
+        transition: all 0.2s ease;
+    }
+    .form-section:hover {
+        border-color: rgba(78,115,223,0.15);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+    }
+
+    .section-title {
+        font-size: 0.75rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--gray-600);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .section-title i {
+        font-size: 0.9rem;
+        color: var(--primary);
+    }
+
+    /* Form Controls */
+    .form-control, .input-group-text {
+        border-radius: 12px;
+        border: 1px solid var(--gray-200);
+        transition: all 0.2s;
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+    .form-control:focus, .input-group-text:focus-within {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(78,115,223,0.1);
+    }
+    .form-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--gray-600);
+        margin-bottom: 0.4rem;
+    }
+
+    /* Item Table Styling */
+    .items-table-wrapper {
+        background: white;
+        border-radius: 16px;
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+    }
+    .items-table {
+        margin-bottom: 0;
+    }
+    .items-table thead th {
+        background: var(--gray-50);
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 0.75rem 0.5rem;
+        border-bottom: 1px solid var(--gray-200);
+        color: var(--gray-600);
+    }
+    .items-table tbody td {
+        padding: 0.6rem 0.5rem;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--gray-100);
+    }
+    .item-row-input {
+        border-radius: 10px !important;
+        padding: 0.4rem 0.6rem !important;
+        font-size: 0.8rem;
+    }
+    .item-arrive-btn, .item-not-arrive-btn {
+        padding: 0.25rem 0.6rem;
+        font-size: 0.7rem;
+        border-radius: 20px;
+        font-weight: 500;
+    }
+
+    /* Status Preview Card */
+    .status-preview-card {
+        background: linear-gradient(135deg, #f8f9fc, #ffffff);
+        border-radius: 20px;
+        padding: 1rem;
+        border-left: 4px solid var(--primary);
+        margin-top: 0.75rem;
+    }
+
+    /* Cost Breakdown Cards */
+    .cost-card {
+        border-radius: 16px;
+        padding: 0.85rem;
+        transition: transform 0.15s;
+    }
+    .cost-card:hover {
+        transform: translateY(-2px);
+    }
+    .cost-arrived { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-left: 3px solid #1cc88a; }
+    .cost-pending { background: linear-gradient(135deg, #fff5f5, #fee2e2); border-left: 3px solid #e74a3b; }
+    .cost-target { background: linear-gradient(135deg, #eff6ff, #dbeafe); border-left: 3px solid #4e73df; }
+
+    /* Upload Area */
+    .upload-area {
+        border: 2px dashed var(--gray-200);
+        border-radius: 20px;
+        padding: 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: var(--gray-50);
+    }
+    .upload-area:hover {
+        border-color: var(--primary);
+        background: var(--primary-light);
+    }
+
+    /* Action Buttons */
+    .btn-icon-sm {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+    }
+    .btn-submit {
+        background: linear-gradient(135deg, #4e73df, #224abe);
+        border: none;
+        padding: 0.6rem 1.8rem;
+        font-weight: 600;
+        border-radius: 40px;
+        box-shadow: 0 4px 10px rgba(78,115,223,0.3);
+        color: #fff;
+    }
+    .btn-submit:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(78,115,223,0.4);
+    }
+
+    /* Toast */
+    .toast-custom {
+        background: white;
+        border-radius: 40px;
+        padding: 0.6rem 1.2rem;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+        border-left: 4px solid var(--primary);
+    }
+
+    /* Prepayment Status Slip */
+    #shareCardModal .modal-dialog {
+        max-width: 640px;
+    }
+    #shareCardModal .modal-content {
+        background: transparent;
+    }
+    #shareCardModal .modal-header {
+        background: bg dark;
+        border-bottom: 0;
+        padding-bottom: 0;
+    }
+    #shareCardModal .modal-title {
+        color: #1d4ed8;
+    }
+    #shareCardModal .btn-close {
+        filter: brightness(0) saturate(100%) invert(18%) sepia(69%) saturate(4422%) hue-rotate(189deg) brightness(97%) contrast(102%);
+    }
+    .share-slip-card {
+        background: #ffffff;
+        border-radius: 28px;
+        border: 1px solid rgba(148,163,184,0.18);
+        box-shadow: 0 22px 70px -35px rgba(15,23,42,0.22);
+        overflow: hidden;
+    }
+    .share-slip-card .card-body {
+        padding: 1.5rem;
+    }
+    .share-slip-header {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+    }
+    .share-slip-badge {
+        width: 44px;
+        height: 44px;
+        border-radius: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(59,130,246,0.12);
+        color: #2563eb;
+        font-size: 1rem;
+    }
+    .share-slip-meta {
+        font-size: 0.88rem;
+        color: #475569;
+    }
+    .share-slip-metric {
+        background: #f8fafc;
+        border-radius: 18px;
+        padding: 1rem 1.15rem;
+        min-height: 100%;
+    }
+    .share-slip-metric .share-slip-label {
+        margin-bottom: 0.45rem;
+    }
+    .share-slip-metric-value {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.1;
+    }
+    .share-slip-metric-note {
+        font-size: 0.78rem;
+        color: #64748b;
+    }
+    .share-slip-status-card {
+        border-radius: 22px;
+        padding: 1rem 1.15rem;
+        border: 1px solid rgba(148,163,184,0.18);
+        background: #f8fafc;
+    }
+    .share-slip-status-card.paid {
+        border-color: rgba(16,185,129,0.22);
+        background: rgba(220,252,231,0.7);
+    }
+    .share-slip-status-card.partial {
+        border-color: rgba(234,179,8,0.22);
+        background: rgba(254,240,138,0.72);
+    }
+    .share-slip-status-card.unpaid {
+        border-color: rgba(239,68,68,0.18);
+        background: rgba(254,226,226,0.75);
+    }
+    .share-slip-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 96px;
+        padding: 0.5rem 0.95rem;
+        border-radius: 999px;
+        font-size: 0.76rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        box-shadow: inset 0 0 0 1px rgba(15,23,42,0.04);
+    }
+    .share-slip-pill-default {
+        background: #e2e8f0;
+        color: #475569;
+    }
+    .share-slip-pill-paid {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    .share-slip-pill-partial {
+        background: #fef9c3;
+        color: #92400e;
+    }
+    .share-slip-pill-unpaid {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    .share-slip-link {
+        color: #2563eb;
+        font-size: 0.92rem;
+        display: inline-block;
+        word-break: break-word;
+    }
+    .share-slip-link:hover {
+        text-decoration: underline;
+    }
+    .share-slip-receipt-list {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.8rem;
+    }
+    .share-slip-receipt-item {
+        width: 100%;
+        min-height: 96px;
+        border-radius: 18px;
+        overflow: hidden;
+        border: 1px solid rgba(148,163,184,0.2);
+        box-shadow: 0 10px 24px -16px rgba(15,23,42,0.18);
+        background: #fff;
+    }
+    .share-slip-receipt-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .share-slip-footer {
+        background: rgba(248,250,252,0.85);
+        border-top: 1px solid rgba(148,163,184,0.18);
+        padding: 1rem 1.25rem;
+        font-size: 0.82rem;
+        color: #475569;
+        text-align: center;
+    }
+    #shareCardModal .modal-footer {
+        background: #f8fafc;
+        border-top: 0;
+        padding-top: 0;
+    }
+    #shareCardModal .modal-footer small {
+        color: #475569;
+    }
+    #shareCardModal .modal-footer .share-slip-footer-note {
+        display: block;
+        margin-top: 0.35rem;
+        color: #64748b;
+    }
 </style>
 
 <!-- ════════════════════════════════════════════
@@ -547,7 +931,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
 
 <!-- ── Modal: Add / Edit Record ──────────────── -->
 <div class="modal fade" id="recordModal" tabindex="-1" aria-labelledby="recordModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" style="max-width: 960px;">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-light">
                 <div>
@@ -558,7 +942,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body small" style="font-size:.92rem;">
                 <form id="recordForm" onsubmit="handleFormSubmit(event)" novalidate>
                     <input type="hidden" id="recordId">
 
@@ -579,7 +963,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                                 <span class="text-danger">*</span></label>
                             <div class="position-relative">
                                 <input type="text" class="form-control form-control-sm" id="customerName" required
-                                    placeholder="e.g. Acme Corp, John Doe" oninput="handleCustomerNameInput()">
+                                    placeholder="Customer Name" oninput="handleCustomerNameInput()">
                                 <span id="duplicate-warning"
                                     class="d-none position-absolute top-50 end-0 translate-middle-y me-3 badge bg-danger"
                                     style="font-size:.65rem;">
@@ -591,7 +975,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                             <label for="dealDetails" class="form-label fw-bold small text-uppercase">Customer ID /
                                 Details</label>
                             <input type="text" class="form-control form-control-sm" id="dealDetails"
-                                placeholder="e.g. Shipment batch A, custom pre-orders"
+                                placeholder="Customer ID / Details"
                                 oninput="handleDealDetailsInput()">
                         </div>
                     </div>
@@ -599,40 +983,48 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                     <div id="customerHistoryPanel" class="alert alert-info d-none py-2 px-3 mb-3"
                         style="font-size:.78rem;"></div>
 
-                    <div class="card border-light shadow-sm rounded-3 mb-3">
-                        <div class="card-body p-3 py-2">
-                            <div class="fw-bold small text-secondary text-uppercase mb-2">
-                                <i class="fas fa-magnifying-glass me-1"></i> Extract Pending Orders from Screenshot
-                            </div>
-                            <div class="d-flex flex-wrap align-items-center gap-2">
-                                <label
-                                    class="flex-grow-1 d-flex flex-column align-items-center justify-content-center rounded-3 border border-secondary py-3 text-center mb-0"
-                                    style="cursor:pointer; min-width:160px; max-width:220px;">
-                                    <i class="fas fa-image-polaroid text-primary mb-1 fs-5"></i>
-                                    <span class="small fw-bold text-primary">Upload screenshot</span>
-                                    <input type="file" id="extractScreenshotInput" accept="image/*" multiple class="d-none"
-                                        onchange="handleExtractScreenshotUpload(event)">
-                                </label>
-                                <div id="modalExtractPreviewContainer" class="d-flex flex-wrap gap-2 align-items-center">
-                                    <div id="modalExtractPlaceholder"
-                                        class="rounded-3 border bg-white overflow-hidden d-flex align-items-center justify-content-center"
-                                        style="width:56px; height:56px;">
-                                        <i class="fas fa-file-image"></i>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-sm btn-info" id="scanReceiptOrdersBtn" onclick="scanReceiptOrders()">
-                                    <i class="fas fa-magnifying-glass me-1"></i> Extract
+                    <div class="accordion mb-3" id="prepayExtrasAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingExtract">
+                                <button class="accordion-button collapsed small py-2" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#collapseExtract" aria-expanded="false" aria-controls="collapseExtract">
+                                    <i class="fas fa-magnifying-glass me-2"></i> Extract Pending Orders from Screenshot (optional)
                                 </button>
+                            </h2>
+                            <div id="collapseExtract" class="accordion-collapse collapse" aria-labelledby="headingExtract"
+                                data-bs-parent="#prepayExtrasAccordion">
+                                <div class="accordion-body p-3">
+                                    <div class="d-flex flex-wrap align-items-center gap-2">
+                                        <label
+                                            class="flex-grow-1 d-flex flex-column flex-sm-row align-items-sm-center align-items-center justify-content-center upload-area mb-0"
+                                            style="cursor:pointer; min-width:160px; max-width:220px;">
+                                            <i class="fas fa-image-polaroid text-primary mb-1 fs-5"></i>
+                                            <span class="small fw-bold text-primary ms-2">Upload screenshot</span>
+                                            <input type="file" id="extractScreenshotInput" accept="image/*" multiple class="d-none"
+                                                onchange="handleExtractScreenshotUpload(event)">
+                                        </label>
+                                        <div id="modalExtractPreviewContainer" class="d-flex flex-wrap gap-2 align-items-center">
+                                            <div id="modalExtractPlaceholder"
+                                                class="rounded-3 border bg-white overflow-hidden d-flex align-items-center justify-content-center"
+                                                style="width:56px; height:56px;">
+                                                <i class="fas fa-file-image"></i>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-info" id="scanReceiptOrdersBtn" onclick="scanReceiptOrders()">
+                                            <i class="fas fa-magnifying-glass me-1"></i> Extract
+                                        </button>
+                                    </div>
+                                    <div class="text-muted mt-2" style="font-size:.78rem;">Upload screenshot(s) here only for pending-order OCR extraction.</div>
+                                </div>
                             </div>
-                            <div class="text-muted mt-2" style="font-size:.78rem;">Upload screenshot(s) here only for pending-order OCR extraction.</div>
                         </div>
                     </div>
 
-                    <div class="card border-light shadow-sm rounded-3 mb-3">
+                    <div class="card border-light shadow-sm rounded-3 mb-3 form-section">
                         <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <div class="fw-bold small text-primary text-uppercase">
-                                    <i class="fas fa-boxes-stacked me-1"></i> Order Items & Delivery Status
+                                <div class="section-title text-primary mb-0">
+                                    <i class="fas fa-boxes-stacked"></i> Order Items & Delivery Status
                                 </div>
                                 <div class="btn-group btn-group-sm" role="group">
                                     <button type="button" onclick="addBlankItemRow()" class="btn btn-outline-primary">
@@ -645,34 +1037,37 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                                 </div>
                             </div>
                             <div class="row g-3 mb-3">
-                                <div class="col-6">
+                                <div class="col-sm-6">
                                     <label for="totalItems" class="form-label fw-bold small">Total Ordered</label>
                                     <input type="number" class="form-control form-control-sm" id="totalItems" min="0"
                                         step="1" placeholder="e.g. 50" oninput="validatePaymentsInModal()">
                                 </div>
-                                <div class="col-6">
+                                <div class="col-sm-6">
                                     <label for="deliveredItems" class="form-label fw-bold small">Items Arrived</label>
                                     <input type="number" class="form-control form-control-sm" id="deliveredItems"
                                         min="0" step="1" placeholder="0" oninput="validatePaymentsInModal()">
                                 </div>
-                                <!-- <div class="col-6">
-                                    <label class="form-label fw-bold small">Order Arrival Status</label>
-                                    <div class="btn-group w-100" role="group" aria-label="Order arrival status">
-                                        <button type="button" id="arrivalYesBtn" class="btn btn-sm btn-outline-success"
-                                            onclick="setOrderArrivalState(true)">Arrived</button>
-                                        <button type="button" id="arrivalNoBtn" class="btn btn-sm btn-outline-danger"
-                                            onclick="setOrderArrivalState(false)">Not Arrived</button>
-                                    </div>
-                                    <input type="hidden" id="orderArrived" value="0">
-                                </div> -->
                             </div>
-                            <!-- Items container: dynamically populated by addBlankItemRow() -->
-                            <div id="itemsContainer" class="mb-2"></div>
+                            <div class="items-table-wrapper table-responsive mb-2">
+                                <table class="table table-sm table-borderless align-middle mb-0 items-table">
+                                    <thead class="text-muted small">
+                                        <tr>
+                                            <th>Item</th>
+                                            <th class="text-end" style="width:80px;">Qty</th>
+                                            <th class="text-end" style="width:120px;">Price</th>
+                                            <th class="text-end" style="width:120px;">30% Prepay</th>
+                                            <th class="text-center" style="width:180px;">Arrival</th>
+                                            <th class="text-center" style="width:50px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="itemsContainer"></tbody>
+                                </table>
+                            </div>
                             <div id="orderIdWarning" class="alert alert-danger d-none py-2 px-3 mb-2"
                                 style="font-size:.78rem;"></div>
 
                             <div id="liveDeliveryStatusBox"
-                                class="d-none mt-2 rounded-3 p-2 bg-primary bg-opacity-10 text-primary small fw-bold d-flex justify-content-between">
+                                class="d-none mt-2 rounded-3 p-2 bg-primary bg-opacity-10 text-primary small fw-bold d-flex justify-content-between status-preview-card">
                                 <span>Delivery status:</span>
                                 <span id="liveDeliveryStatus">0 arrived, 0 left</span>
                             </div>
@@ -711,24 +1106,21 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                                     <i class="fas fa-chart-pie me-1"></i> Cost Breakdown by Arrival Status
                                 </div>
                                 <div class="d-flex gap-3 flex-wrap">
-                                    <div class="flex-fill rounded-3 p-2"
-                                        style="background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.25);">
+                                    <div class="flex-fill cost-card cost-arrived">
                                         <div class="text-success fw-bold" style="font-size:.68rem;">ARRIVED ITEMS COST
                                         </div>
                                         <div class="fw-bold" id="costArrivedDisplay" style="font-size:1rem;">ETB 0.00
                                         </div>
                                         <div class="text-muted" style="font-size:.68rem;">Items marked as arrived</div>
                                     </div>
-                                    <div class="flex-fill rounded-3 p-2"
-                                        style="background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.2);">
+                                    <div class="flex-fill cost-card cost-pending">
                                         <div class="text-danger fw-bold" style="font-size:.68rem;">PENDING ITEMS COST
                                         </div>
                                         <div class="fw-bold" id="costPendingDisplay" style="font-size:1rem;">ETB 0.00
                                         </div>
                                         <div class="text-muted" style="font-size:.68rem;">Items not yet arrived</div>
                                     </div>
-                                    <div class="flex-fill rounded-3 p-2"
-                                        style="background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.2);">
+                                    <div class="flex-fill cost-card cost-target">
                                         <div class="text-primary fw-bold" style="font-size:.68rem;">30% PREPAYMENT
                                             TARGET</div>
                                         <div class="fw-bold" id="prepayTargetDisplay" style="font-size:1rem;">ETB 0.00
@@ -741,30 +1133,37 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                         </div>
                     </div>
 
-                    <div class="card border-light shadow-sm rounded-3 mb-3">
-                        <div class="card-body p-3">
-                            <div class="fw-bold small text-uppercase text-secondary mb-2">
-                                <i class="fas fa-image me-1"></i> Attach Receipt Images (Optional)
-                            </div>
-                            <div class="d-flex flex-wrap align-items-center gap-3">
-                                <label
-                                    class="flex-grow-1 d-flex flex-column align-items-center justify-content-center rounded-3 border border-secondary py-4 text-center mb-0"
-                                    style="cursor:pointer;">
-                                    <i class="fas fa-cloud-arrow-up text-primary mb-2"></i>
-                                    <span class="small fw-bold text-primary">Upload Payment Proof</span>
-                                                            <input type="file" id="screenshotInput" accept="image/*" multiple class="d-none"
-                                        onchange="handleModalScreenshotUpload(event)">
-                                </label>
-                                <div id="modalReceiptPreviewContainer" class="d-flex flex-wrap gap-2 align-items-center">
-                                    <div id="modalScreenshotPlaceholder"
-                                        class="rounded-3 border bg-white overflow-hidden d-flex align-items-center justify-content-center"
-                                        style="width:72px; height:72px;">
-                                        <i class="fas fa-camera"></i>
+                    <div class="accordion mb-3" id="prepayReceiptAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingReceipt">
+                                <button class="accordion-button collapsed small py-2" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#collapseReceipt" aria-expanded="false" aria-controls="collapseReceipt">
+                                    <i class="fas fa-image me-2"></i> Attach Receipt Images (optional)
+                                </button>
+                            </h2>
+                            <div id="collapseReceipt" class="accordion-collapse collapse" aria-labelledby="headingReceipt"
+                                data-bs-parent="#prepayReceiptAccordion">
+                                <div class="accordion-body p-3">
+                                    <div class="d-flex flex-wrap align-items-center gap-3">
+                                        <label
+                                            class="flex-grow-1 d-flex flex-column align-items-center justify-content-center upload-area mb-0"
+                                            style="cursor:pointer;">
+                                            <i class="fas fa-cloud-arrow-up text-primary mb-2"></i>
+                                            <span class="small fw-bold text-primary">Upload Payment Proof</span>
+                                            <input type="file" id="screenshotInput" accept="image/*" multiple class="d-none"
+                                                onchange="handleModalScreenshotUpload(event)">
+                                        </label>
+                                        <div id="modalReceiptPreviewContainer" class="d-flex flex-wrap gap-2 align-items-center">
+                                            <div id="modalScreenshotPlaceholder"
+                                                class="rounded-3 border bg-white overflow-hidden d-flex align-items-center justify-content-center"
+                                                style="width:72px; height:72px;">
+                                                <i class="fas fa-camera"></i>
+                                            </div>
+                                        </div>
                                     </div>
+                                    <div class="text-muted mt-2" style="font-size:.82rem;">Stores image proofs. Helps managers verify receipts immediately.</div>
                                 </div>
                             </div>
-                            <div class="text-muted mt-2" style="font-size:.82rem;">Stores image proofs. Helps managers
-                                verify receipts immediately.</div>
                         </div>
                     </div>
 
@@ -788,7 +1187,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="btnClearForm" onclick="clearRecordForm()">
                     <i class="fas fa-ban me-1"></i> Clear
                 </button>
-                <button type="button" class="btn btn-primary btn-sm" id="btnSubmit" onclick="handleFormSubmit(event)">
+                <button type="button" class="btn btn-primary btn-sm btn-submit" id="btnSubmit" onclick="handleFormSubmit(event)">
                     <i class="fas fa-save me-1"></i> Save Record
                 </button>
             </div>
@@ -797,37 +1196,6 @@ if (!empty($_SERVER['HTTP_HOST'])) {
 </div>
 
 
-<!-- ── Modal: Quick-Pay ────────────────────── -->
-<div class="modal fade" id="quickPayModal" tabindex="-1" aria-labelledby="quickPayModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-light">
-                <h6 class="modal-title fw-bold" id="quickPayModalLabel">
-                    <i class="fas fa-cash-register me-2 text-success"></i>Quick Add Payment
-                </h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted small mb-3" id="quickPayCustomerName"></p>
-                <form id="quickPayForm" onsubmit="handleQuickPaySubmit(event)" novalidate>
-                    <input type="hidden" id="quickPayId">
-                    <label class="form-label fw-bold small">Add Payment Amount (ETB)</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text">ETB</span>
-                        <input type="number" class="form-control" id="quickPayAmount" required min="0.01" step="0.01"
-                            placeholder="0.00">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success btn-sm" onclick="handleQuickPaySubmit(event)">
-                    <i class="fas fa-check me-1"></i> Log Payment
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 
 <!-- ── Modal: Confirm Action ──────────────── -->
@@ -854,92 +1222,91 @@ if (!empty($_SERVER['HTTP_HOST'])) {
 
 <!-- ── Modal: Share Slip ────────────── -->
 <div class="modal fade" id="shareCardModal" tabindex="-1" aria-labelledby="shareCardModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
-        <div class="modal-content border-0 shadow" style="background:#0f172a; color:#f1f5f9;">
-            <div class="modal-header border-0 py-3" style="background:#1e293b;">
-                <h6 class="modal-title fw-bold text-success" id="shareCardModalLabel">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:640px;">
+        <div class="modal-content border-0 shadow share-slip-modal">
+            <div class="modal-header border-0 py-3">
+                <h6 class="modal-title fw-bold text-primary" id="shareCardModalLabel">
                     <i class="fas fa-camera me-2"></i>Prepayment Status Slip
                 </h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-3" id="reportCardCaptureArea">
-                <div class="rounded-3 p-3" style="background:#1e293b; border:1px solid rgba(255,255,255,.08);">
-                    <!-- Header line -->
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-primary"><i class="fas fa-receipt"></i></span>
-                            <small class="fw-bold text-uppercase text-secondary"
-                                style="letter-spacing:.07em; font-size:.6rem;">Prepayment Status Slip</small>
-                        </div>
-                        <small class="text-secondary" id="shareCardDate" style="font-size:.65rem;"></small>
-                    </div>
-                    <!-- Customer -->
-                    <div class="mb-3">
-                        <div class="text-secondary fw-bold"
-                            style="font-size:.6rem; text-transform:uppercase; letter-spacing:.07em;">Customer</div>
-                        <h5 class="fw-bolder mb-0 text-white" id="shareCardCustomerName">—</h5>
-                        <div class="text-primary fst-italic small" id="shareCardDetails">—</div>
-                    </div>
-                    <!-- Cost grid -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <div class="rounded-2 p-2" style="background:#0f172a;">
-                                <div class="text-secondary fw-bold" style="font-size:.6rem; text-transform:uppercase;">
-                                    Total Cost</div>
-                                <div class="fw-bolder text-white" id="shareCardTotalCost">ETB 0.00</div>
+            <div class="modal-body p-3 bg-light" id="reportCardCaptureArea">
+                <div class="share-slip-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="share-slip-badge"><i class="fas fa-file-invoice-dollar"></i></span>
+                                <div>
+                                    <small class="share-slip-header mb-2">Prepayment Status Slip</small>
+                                    <h5 class="fw-bold mb-1 text-dark" id="shareCardCustomerName">—</h5>
+                                    <div class="share-slip-meta" id="shareCardDetails">—</div>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <small class="share-slip-label d-block mb-4">Date</small>
+                                <div class="fw-bold text-dark" id="shareCardDate">—</div>
                             </div>
                         </div>
-                        <div class="col-6">
-                            <div class="rounded-2 p-2" style="background:#0f172a;">
-                                <div class="text-secondary fw-bold" style="font-size:.6rem; text-transform:uppercase;">
-                                    30% Threshold</div>
-                                <div class="fw-bolder text-info" id="shareCardThreshold">ETB 0.00</div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <div class="share-slip-metric">
+                                    <div class="share-slip-label">Amount Due</div>
+                                    <div class="share-slip-metric-value" id="shareCardTotalCost">ETB 0.00</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="share-slip-metric">
+                                    <div class="share-slip-label">Paid</div>
+                                    <div class="share-slip-metric-value text-primary" id="shareCardAmountPaid">ETB 0.00</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="share-slip-metric">
+                                    <div class="share-slip-label">Balance</div>
+                                    <div class="share-slip-metric-value" id="shareCardBalance">ETB 0.00</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="share-slip-metric">
+                                    <div class="share-slip-label">30% Threshold</div>
+                                    <div class="share-slip-metric-value text-primary" id="shareCardThreshold">ETB 0.00</div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <!-- Status pill row -->
-                    <div id="shareCardStatusBox"
-                        class="rounded-2 p-2 mb-3 d-flex justify-content-between align-items-center"
-                        style="background:#0f172a;">
-                        <div>
-                            <div class="text-secondary fw-bold" style="font-size:.6rem; text-transform:uppercase;"
-                                id="shareCardStatusHeader">Amount Paid</div>
-                            <div class="fw-bolder text-white" id="shareCardAmountPaid">ETB 0.00</div>
+                        <div id="shareCardStatusBox" class="share-slip-status-card mb-3">
+                            <div class="d-flex justify-content-between align-items-center gap-3">
+                                <div>
+                                    <div class="share-slip-label mb-1" id="shareCardStatusHeader">Amount Status</div>
+                                    <div class="fw-bold text-dark" id="shareCardStatusDetail">—</div>
+                                </div>
+                                <span id="shareCardStatusPill" class="share-slip-pill share-slip-pill-default">—</span>
+                            </div>
                         </div>
-                        <span id="shareCardStatusPill" class="badge bg-secondary">—</span>
-                    </div>
-                    <!-- Delivery bar -->
-                    <div class="rounded-2 p-2 mb-3" style="background:#0f172a;">
-                        <div class="d-flex justify-content-between mb-1">
-                            <small class="text-secondary fw-bold"
-                                style="font-size:.6rem; text-transform:uppercase;">Delivery Progress</small>
-                            <small id="shareCardDeliveryPercent" class="text-secondary"
-                                style="font-size:.65rem;">0%</small>
+                        <div class="share-slip-section mb-3">
+                            <div class="d-flex justify-content-between mb-2 align-items-center">
+                                <div class="share-slip-label mb-0">Delivery Progress</div>
+                                <small id="shareCardDeliveryPercent" class="text-muted" style="font-size:.78rem;">0%</small>
+                            </div>
+                            <div class="progress mb-2" style="height:8px; background:#e2e8f0; border-radius:999px;">
+                                <div class="progress-bar bg-primary" id="shareCardDeliveryBar" style="width:0%; border-radius:999px;"></div>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <small id="shareCardDeliveryArrived" class="fw-semibold text-dark" style="font-size:.79rem;">Arrived: 0</small>
+                                <small id="shareCardDeliveryLeft" class="fw-semibold text-warning" style="font-size:.79rem;">0 left</small>
+                            </div>
                         </div>
-                        <div class="progress mb-1" style="height:5px; background:#1e293b;">
-                            <div class="progress-bar bg-primary" id="shareCardDeliveryBar" style="width:0%"></div>
+                        <div id="shareCardScreenshotContainer" class="d-none share-slip-section">
+                            <div class="text-secondary fw-bold mb-3" style="font-size:.75rem; text-transform:uppercase;"><i class="fas fa-paperclip me-1"></i>Attached receipt(s)</div>
+                            <div id="shareCardReceiptList" class="share-slip-receipt-list"></div>
+                            <div id="shareCardReceiptCount" class="text-secondary small mt-3"></div>
                         </div>
-                        <div class="d-flex justify-content-between">
-                            <small id="shareCardDeliveryArrived" class="fw-bold text-white"
-                                style="font-size:.65rem;">Arrived: 0</small>
-                            <small id="shareCardDeliveryLeft" class="fw-bold text-warning" style="font-size:.65rem;">0
-                                left</small>
-                        </div>
-                    </div>
-                    <!-- Screenshot proof -->
-                    <div id="shareCardScreenshotContainer" class="d-none">
-                        <div class="text-secondary fw-bold mb-2" style="font-size:.6rem; text-transform:uppercase;"><i
-                                class="fas fa-paperclip me-1"></i>Attached Receipt(s)</div>
-                        <div id="shareCardReceiptList" class="d-flex flex-wrap gap-2"></div>
-                        <div id="shareCardReceiptCount" class="text-secondary small mt-2"></div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer border-0 py-2 text-center d-block" style="background:#1e293b;">
-                <small class="text-success fw-bold">
-                    <i class="fas fa-camera me-1"></i>Take a screenshot now to share this slip.
-                </small>
-                <div class="text-secondary" style="font-size:.65rem;">Win + Shift + S &nbsp;|&nbsp; Cmd + Shift + 4
+            <div class="modal-footer border-0 py-3 text-center d-block" style="background:bg-light;">
+                <div class="share-slip-footer">
+                    <strong>Screenshot this slip to share it quickly.</strong>
+                    <span class="share-slip-footer-note">Windows: Win + Shift + S | Mac: Cmd + Shift + 4</span>
                 </div>
             </div>
         </div>
@@ -1090,7 +1457,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
         }
 
         /* ── Bootstrap modal instances ── */
-        let bsRecord, bsQuickPay, bsConfirm, bsShare, bsHistory;
+        let bsRecord, bsConfirm, bsShare, bsHistory;
 
         function getBootstrapModal(id) {
             const el = document.getElementById(id);
@@ -1140,7 +1507,6 @@ if (!empty($_SERVER['HTTP_HOST'])) {
 
             if (typeof bootstrap !== 'undefined') {
                 bsRecord = getBootstrapModal('recordModal');
-                bsQuickPay = getBootstrapModal('quickPayModal');
                 bsConfirm = getBootstrapModal('confirmModal');
                 bsShare = getBootstrapModal('shareCardModal');
                 bsHistory = getBootstrapModal('historyModal');
@@ -1153,15 +1519,8 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 if (!btn) return;
                 const id = btn.dataset.id;
                 const action = btn.dataset.cpAction;
-                if (action === 'quickpay') {
-                    const item = prepayments.find(p => String(p.id) === String(id));
-                    if (item) {
-                        openQuickPayModal(id, item.customer_name, parseFloat(btn.dataset.diff) || 0);
-                    }
-                } else if (action === 'share') {
+                if (action === 'share') {
                     openShareCardModal(id);
-                } else if (action === 'arrival') {
-                    toggleArrivalStatus(id, btn.dataset.arrived === '1');
                 } else if (action === 'edit') {
                     openRecordModal(id);
                 } else if (action === 'history') {
@@ -1354,9 +1713,6 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 const arrivalBadge = arrived
                     ? `<span class="badge bg-success bg-opacity-10 text-success rounded-pill" style="font-size:.65rem;"><i class="fas fa-truck-moving me-1"></i>Arrived</span>`
                     : `<span class="badge bg-danger bg-opacity-10 text-danger rounded-pill" style="font-size:.65rem;"><i class="fas fa-truck-clock me-1"></i>Not Arrived</span>`;
-                const arrivalAction = arrived
-                    ? `<button type="button" class="cp-action-btn text-warning" data-cp-action="arrival" data-id="${item.id}" data-arrived="0" title="Mark not arrived"><i class="fas fa-truck-clock"></i></button>`
-                    : `<button type="button" class="cp-action-btn text-success" data-cp-action="arrival" data-id="${item.id}" data-arrived="1" title="Mark arrived"><i class="fas fa-truck-moving"></i></button>`;
 
                 const hasReceipts = Array.isArray(item.receipts) ? item.receipts.length > 0 : false;
                 const hasReceiptFallback = hasReceipts || item.screenshot;
@@ -1364,10 +1720,6 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 const slipBtnTitle = hasReceiptFallback ? 'View receipt / Slip' : 'Manager Slip';
                 const slipBtnIcon = hasReceiptFallback ? 'image-portrait' : 'camera';
                 const slipBtn = `<button type="button" class="cp-action-btn ${slipBtnClass}" data-cp-action="share" data-id="${item.id}" title="${slipBtnTitle}"><i class="fas fa-${slipBtnIcon}"></i></button>`;
-
-                const qpBtn = status !== 'paid'
-                    ? `<button type="button" class="cp-action-btn text-primary" data-cp-action="quickpay" data-id="${item.id}" data-diff="${Math.max(diff, 0)}" title="Quick Add Payment"><i class="fas fa-cash-register"></i></button>`
-                    : '';
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -1396,8 +1748,6 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 </td>
                 <td class="text-end pe-3 text-nowrap">
                     ${slipBtn}
-                    ${qpBtn}
-                    ${arrivalAction}
                     <button type="button" class="cp-action-btn text-secondary" data-cp-action="edit" data-id="${item.id}" title="Edit">
                         <i class="fas fa-pen-to-square"></i>
                     </button>
@@ -1884,27 +2234,28 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             const price = (typeof opts.price !== 'undefined') ? opts.price : '';
             const arrived = !!opts.arrived;
 
-            const row = document.createElement('div');
-            row.className = 'item-row d-flex gap-2 mb-2 align-items-center';
+            const row = document.createElement('tr');
             row.innerHTML = `
-            <input name="item_name[]" class="form-control form-control-sm" placeholder="Item name" value="${escapeAttr(name)}">
-            <input name="item_qty[]" type="number" min="0" class="form-control form-control-sm item-qty" style="width:90px" value="${qty}">
-            <input name="item_price[]" type="number" step="0.01" min="0" class="form-control form-control-sm item-price" style="width:110px" value="${price}">
-            <input name="item_prepayment[]" type="number" step="0.01" class="form-control form-control-sm item-prepay" style="width:120px" value="" readonly title="30% prepayment">
-            
-            <!-- Arrive & Not Arrived action switch buttons -->
-            <div class="btn-group btn-group-sm item-delivery-group" role="group" style="width:200px">
-                <button type="button" class="btn btn-sm ${arrived ? 'btn-success' : 'btn-outline-success'} item-arrive-btn" title="Mark Arrived">
-                    Arrived
-                </button>
-                <button type="button" class="btn btn-sm ${!arrived ? 'btn-danger' : 'btn-outline-danger'} item-not-arrive-btn" title="Mark Not Arrived">
-                    Not Arrived
-                </button>
-            </div>
-            <input type="hidden" name="item_delivered[]" class="item-delivered" value="${arrived ? '1' : '0'}">
-            
-            <button type="button" class="btn btn-sm btn-outline-danger ms-auto remove-item-btn"><i class="fas fa-trash-alt"></i></button>
-        `;
+                <td><input name="item_name[]" class="form-control form-control-sm py-1" placeholder="Item name" value="${escapeAttr(name)}"></td>
+                <td class="text-end"><input name="item_qty[]" type="number" min="0" class="form-control form-control-sm py-1 text-end item-qty" style="width:70px;" value="${qty}"></td>
+                <td class="text-end" style="min-width:120px;">
+                    <div class="input-group input-group-sm" style="width:120px;">
+                        <span class="input-group-text py-1">ETB</span>
+                        <input name="item_price[]" type="number" step="0.01" min="0" class="form-control form-control-sm py-1 text-end item-price" style="width:70px;" value="${price}">
+                    </div>
+                </td>
+                <td class="text-end"><input name="item_prepayment[]" type="number" step="0.01" class="form-control form-control-sm py-1 text-end item-prepay" style="width:90px;" value="" readonly title="30% prepayment"></td>
+                <td class="text-center">
+                    <div class="btn-group btn-group-sm item-delivery-group" role="group">
+                        <button type="button" class="btn btn-sm ${arrived ? 'btn-success' : 'btn-outline-success'} item-arrive-btn" title="Mark Arrived">Arrived</button>
+                        <button type="button" class="btn btn-sm ${!arrived ? 'btn-danger' : 'btn-outline-danger'} item-not-arrive-btn" title="Mark Not Arrived">Not Arrived</button>
+                    </div>
+                    <input type="hidden" name="item_delivered[]" class="item-delivered" value="${arrived ? '1' : '0'}">
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" title="Remove"><i class="fas fa-trash-alt"></i></button>
+                </td>
+            `;
             container.appendChild(row);
 
             const qtyInput = row.querySelector('.item-qty');
@@ -2417,50 +2768,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
         };
 
         // ══════════════════════════════════════════
-        // 7. QUICK-PAY
-        // ══════════════════════════════════════════
-        window.openQuickPayModal = (id, customerName, diff) => {
-            document.getElementById('quickPayId').value = id;
-            document.getElementById('quickPayCustomerName').innerText = `Adding payment for: ${customerName}`;
-            document.getElementById('quickPayAmount').value = diff > 0 ? parseFloat(diff.toFixed(2)) : '';
-            bsQuickPay = bsQuickPay || getBootstrapModal('quickPayModal');
-            if (bsQuickPay) bsQuickPay.show();
-            setTimeout(() => document.getElementById('quickPayAmount').focus(), 300);
-        };
-
-        window.handleQuickPaySubmit = async (event) => {
-            if (event && event.preventDefault) event.preventDefault();
-            const id = document.getElementById('quickPayId').value;
-            const amount = parseFloat(document.getElementById('quickPayAmount').value) || 0;
-            if (amount <= 0) return;
-            try {
-                const data = await apiPost({ _method: 'PUT', action: 'quick_pay', id, amount });
-                if (data.isOk) { showToast(data.message, 'success'); (bsQuickPay || getBootstrapModal('quickPayModal'))?.hide(); fetchPrepayments(currentPage); }
-                else showToast(data.message, 'danger');
-            } catch (e) { showToast('Failed to log payment.', 'danger'); }
-        };
-
-        window.toggleArrivalStatus = async (id, arrived) => {
-            try {
-                const data = await apiPost({
-                    _method: 'PUT',
-                    action: 'arrival_status',
-                    id,
-                    is_arrived: arrived ? 1 : 0
-                });
-                if (data.isOk) {
-                    showToast(data.message || `Order marked ${arrived ? 'arrived' : 'not arrived'}.`, 'success');
-                    fetchPrepayments(currentPage);
-                } else {
-                    showToast(data.message || 'Failed to update arrival status.', 'danger');
-                }
-            } catch (e) {
-                showToast('Unable to update arrival state.', 'danger');
-            }
-        };
-
-        // ══════════════════════════════════════════
-        // 8. SHARE SLIP
+        // 7. SHARE SLIP
         // ══════════════════════════════════════════
         window.openShareCardModal = (id) => {
             const item = prepayments.find(p => p.id == id);
@@ -2478,6 +2786,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             detailsEl.innerHTML = '';
             if (detailsText) {
                 const link = document.createElement('a');
+                link.className = 'share-slip-link';
                 if (/^https?:\/\//i.test(detailsText)) {
                     link.href = detailsText;
                 } else {
@@ -2488,8 +2797,6 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 link.textContent = detailsText;
                 link.target = '_blank';
                 link.rel = 'noopener noreferrer';
-                link.style.color = '#7dd3fc';
-                link.style.textDecoration = 'underline';
                 detailsEl.appendChild(link);
             } else {
                 detailsEl.innerText = 'No details provided';
@@ -2498,22 +2805,34 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             document.getElementById('shareCardTotalCost').innerText = fmt(total);
             document.getElementById('shareCardThreshold').innerText = fmt(threshold);
             document.getElementById('shareCardAmountPaid').innerText = fmt(paid);
+            const balanceAmount = total - paid;
+            document.getElementById('shareCardBalance').innerText = fmt(balanceAmount >= 0 ? balanceAmount : 0);
 
             const pilEl = document.getElementById('shareCardStatusPill');
             const boxEl = document.getElementById('shareCardStatusBox');
             const hdrEl = document.getElementById('shareCardStatusHeader');
+            const detailEl = document.getElementById('shareCardStatusDetail');
+            boxEl.className = 'share-slip-status-card';
             if (status === 'paid') {
-                pilEl.className = 'badge bg-success'; pilEl.innerText = 'PAID PREPAY';
-                hdrEl.innerText = 'Prepayment Cleared (30%+)';
-                boxEl.style.borderColor = 'rgba(28,200,138,.3)';
+                pilEl.className = 'share-slip-pill share-slip-pill-paid';
+                pilEl.innerText = 'PAID PREPAY';
+                hdrEl.innerText = 'Prepayment cleared';
+                detailEl.innerText = 'This order has reached the required advance payment.';
+                boxEl.classList.add('paid');
             } else if (status === 'partial') {
-                pilEl.className = 'badge bg-warning text-dark'; pilEl.innerText = 'PARTIAL';
-                hdrEl.innerText = 'Amount Paid (Partial)';
-                boxEl.style.borderColor = 'rgba(246,194,62,.3)';
+                pilEl.className = 'share-slip-pill share-slip-pill-partial';
+                pilEl.innerText = 'PARTIAL';
+                hdrEl.innerText = 'Partial payment';
+                detailEl.innerText = 'A portion has been paid; the remaining balance is still due.';
+                boxEl.classList.add('partial');
             } else {
-                pilEl.className = 'badge bg-danger'; pilEl.innerText = 'UNPAID';
-                hdrEl.innerText = threshold <= 0 ? 'Amount Paid (No Arrival Target)' : 'Amount Paid (Outstanding)';
-                boxEl.style.borderColor = 'rgba(231,74,59,.3)';
+                pilEl.className = 'share-slip-pill share-slip-pill-unpaid';
+                pilEl.innerText = 'UNPAID';
+                hdrEl.innerText = threshold <= 0 ? 'Awaiting first payment' : 'Outstanding balance';
+                detailEl.innerText = threshold <= 0
+                    ? 'No prepayment target has been reached yet.'
+                    : 'There is still an outstanding amount to be paid.';
+                boxEl.classList.add('unpaid');
             }
 
             const totalQty = parseInt(item.total_items) || 0;
@@ -2534,8 +2853,8 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             }
             if (receipts.length > 0) {
                 list.innerHTML = receipts.map((imgSrc, index) => `
-                    <div class="rounded-3 overflow-hidden border" style="width:120px; height:100px;">
-                        <img src="${escapeAttr(imgSrc)}" class="w-100 h-100" style="object-fit:cover;" alt="Receipt ${index + 1}">
+                    <div class="share-slip-receipt-item">
+                        <img src="${escapeAttr(imgSrc)}" alt="Receipt ${index + 1}">
                     </div>
                 `).join('');
                 count.innerText = `${receipts.length} receipt${receipts.length > 1 ? 's' : ''} attached.`;
