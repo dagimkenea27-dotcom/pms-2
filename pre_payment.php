@@ -785,6 +785,9 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             </div>
             <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="btnClearForm" onclick="clearRecordForm()">
+                    <i class="fas fa-ban me-1"></i> Clear
+                </button>
                 <button type="button" class="btn btn-primary btn-sm" id="btnSubmit" onclick="handleFormSubmit(event)">
                     <i class="fas fa-save me-1"></i> Save Record
                 </button>
@@ -1531,6 +1534,40 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             showToast('Draft discarded.', 'secondary');
         };
 
+        window.clearRecordForm = () => {
+            const recordForm = document.getElementById('recordForm');
+            if (!recordForm) return;
+
+            recordForm.reset();
+            document.getElementById('recordId').value = '';
+            duplicateOrderIds = [];
+
+            const duplicateWarning = document.getElementById('duplicate-warning');
+            if (duplicateWarning) duplicateWarning.classList.add('d-none');
+            const orderIdWarning = document.getElementById('orderIdWarning');
+            if (orderIdWarning) orderIdWarning.classList.add('d-none');
+            const customerHistoryPanel = document.getElementById('customerHistoryPanel');
+            if (customerHistoryPanel) customerHistoryPanel.classList.add('d-none');
+            const liveDeliveryStatusBox = document.getElementById('liveDeliveryStatusBox');
+            if (liveDeliveryStatusBox) liveDeliveryStatusBox.classList.add('d-none');
+
+            existingReceiptImages = [];
+            tempReceiptBase64List = [];
+            extractScreenshotBase64List = [];
+            renderReceiptPreviews();
+            renderExtractPreviews();
+
+            const itemsContainer = document.getElementById('itemsContainer');
+            if (itemsContainer) itemsContainer.innerHTML = '';
+            addBlankItemRow();
+
+            setOrderArrivalState(false);
+            localStorage.removeItem('prepay_form_draft');
+            const draftAlert = document.getElementById('prepay-draft-alert');
+            if (draftAlert) draftAlert.classList.add('d-none');
+            validatePaymentsInModal();
+        };
+
         document.getElementById('recordForm').addEventListener('input', saveFormDraft);
         document.getElementById('recordForm').addEventListener('change', saveFormDraft);
 
@@ -1820,6 +1857,9 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                     addBlankItemRow();
                 }
             }
+
+            const clearBtn = document.getElementById('btnClearForm');
+            if (clearBtn) clearBtn.classList.toggle('d-none', !!id);
 
             validatePaymentsInModal();
             renderReceiptPreviews();
