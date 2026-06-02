@@ -1845,6 +1845,19 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             if (editingId) return;
             const modal = document.getElementById('recordModal');
             if (!modal.classList.contains('show')) return;
+
+            const itemNames = Array.from(document.querySelectorAll('input[name="item_name[]"]'));
+            const itemQtys = Array.from(document.querySelectorAll('input[name="item_qty[]"]'));
+            const itemPrices = Array.from(document.querySelectorAll('input[name="item_price[]"]'));
+            const itemDelivered = Array.from(document.querySelectorAll('input[name="item_delivered[]"]'));
+            const items = itemNames.map((input, index) => {
+                const name = input.value.trim();
+                const qty = parseInt(itemQtys[index]?.value, 10) || 0;
+                const price = parseFloat(itemPrices[index]?.value) || 0;
+                const arrived = itemDelivered[index]?.value === '1';
+                return { name, qty, price, arrived };
+            }).filter(item => item.name || item.qty || item.price || item.arrived);
+
             const draft = {
                 name: document.getElementById('customerName').value,
                 details: document.getElementById('dealDetails').value,
@@ -1852,9 +1865,23 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 paid: document.getElementById('amountPaid').value,
                 totalQty: document.getElementById('totalItems').value,
                 arrivedQty: document.getElementById('deliveredItems').value,
+                orderArrived: getOrderArrivalState() ? '1' : '0',
+                items: items,
                 receipts: [...existingReceiptImages, ...tempReceiptBase64List].slice(0, 2)
             };
-            const hasContent = Object.values(draft).some(v => v);
+
+            const hasContent = !!(
+                draft.name ||
+                draft.details ||
+                draft.due ||
+                draft.paid ||
+                draft.totalQty ||
+                draft.arrivedQty ||
+                draft.orderArrived === '1' ||
+                draft.items.length > 0 ||
+                draft.receipts.length > 0
+            );
+
             if (hasContent) {
                 try {
                     localStorage.setItem('prepay_form_draft', JSON.stringify(draft));
@@ -1862,29 +1889,53 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                     const slim = { ...draft, receipts: [] };
                     localStorage.setItem('prepay_form_draft', JSON.stringify(slim));
                 }
+            } else {
+                localStorage.removeItem('prepay_form_draft');
             }
-            else localStorage.removeItem('prepay_form_draft');
         }
 
         window.loadFormDraft = () => {
             try {
                 const draft = JSON.parse(localStorage.getItem('prepay_form_draft') || 'null');
                 if (!draft) return;
+
                 document.getElementById('customerName').value = draft.name || '';
                 document.getElementById('dealDetails').value = draft.details || '';
                 document.getElementById('amountDue').value = draft.due || '';
                 document.getElementById('amountPaid').value = draft.paid || '';
                 document.getElementById('totalItems').value = draft.totalQty || '';
                 document.getElementById('deliveredItems').value = draft.arrivedQty || '';
+
+                const container = document.getElementById('itemsContainer');
+                if (container) {
+                    container.innerHTML = '';
+                    if (Array.isArray(draft.items) && draft.items.length > 0) {
+                        draft.items.forEach(item => {
+                            addBlankItemRow({
+                                name: item.name || '',
+                                qty: item.qty || 0,
+                                price: item.price || '',
+                                arrived: !!item.arrived
+                            });
+                        });
+                    } else {
+                        addBlankItemRow();
+                    }
+                }
+
                 if (Array.isArray(draft.receipts) && draft.receipts.length > 0) {
                     tempReceiptBase64List = draft.receipts.filter(Boolean);
-                    renderReceiptPreviews();
+                } else {
+                    tempReceiptBase64List = [];
                 }
+                renderReceiptPreviews();
+
+                setOrderArrivalState(draft.orderArrived === '1');
                 validatePaymentsInModal();
                 const el = document.getElementById('prepay-draft-alert');
                 if (el) el.classList.add('d-none');
                 showToast('Draft restored!', 'success');
-            } catch (e) { }
+            } catch (e) { console.error('Failed to restore draft', e); }
         };
 
         window.discardFormDraft = () => {
@@ -2291,6 +2342,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                     notArriveBtn.classList.add('btn-danger');
                 }
                 calculateItemsSummary();
+                saveFormDraft();
             };
 
             arriveBtn.addEventListener('click', () => updateBtnStates(true));
@@ -2307,7 +2359,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             if (qtyInput) qtyInput.addEventListener('input', refresh);
             if (priceInput) priceInput.addEventListener('input', refresh);
             if (nameInput) nameInput.addEventListener('input', () => { saveFormDraft(); checkOrderIdsLive(); });
-            if (btn) btn.addEventListener('click', () => { row.remove(); calculateItemsSummary(); checkOrderIdsLive(); });
+            if (btn) btn.addEventListener('click', () => { row.remove(); calculateItemsSummary(); checkOrderIdsLive(); saveFormDraft(); });
 
             // compute immediately
             setTimeout(() => { refresh(); checkOrderIdsLive(); }, 0);
@@ -2323,6 +2375,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 addBlankItemRow({ name, qty: 1, price: (Math.random() * 200).toFixed(2) });
             }
             calculateItemsSummary();
+            saveFormDraft();
         };
 
         window.setOrderArrivalState = (arrived) => {
@@ -2568,6 +2621,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                     if (image) extractScreenshotBase64List.push(image);
                 });
                 renderExtractPreviews();
+                saveFormDraft();
                 showToast('Extraction screenshot(s) attached.', 'success');
             } catch (e) {
                 showToast(e.message || 'Unable to attach extraction screenshot.', 'danger');
