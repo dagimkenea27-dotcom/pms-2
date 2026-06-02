@@ -988,7 +988,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                             <h2 class="accordion-header" id="headingExtract">
                                 <button class="accordion-button collapsed small py-2" type="button" data-bs-toggle="collapse"
                                     data-bs-target="#collapseExtract" aria-expanded="false" aria-controls="collapseExtract">
-                                    <i class="fas fa-magnifying-glass me-2"></i> Extract Pending Orders from Screenshot (optional)
+                                    <i class="fas fa-magnifying-glass me-2"></i> Extract Orders from Screenshot (optional)
                                 </button>
                             </h2>
                             <div id="collapseExtract" class="accordion-collapse collapse" aria-labelledby="headingExtract"
@@ -1010,11 +1010,21 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                                                 <i class="fas fa-file-image"></i>
                                             </div>
                                         </div>
-                                        <button type="button" class="btn btn-sm btn-info" id="scanReceiptOrdersBtn" onclick="scanReceiptOrders()">
-                                            <i class="fas fa-magnifying-glass me-1"></i> Extract
-                                        </button>
+                                        <div class="d-flex flex-column flex-sm-row gap-2 align-items-center">
+                                            <div class="form-check form-check-inline mb-0">
+                                                <input class="form-check-input" type="checkbox" id="extractPendingCb" checked>
+                                                <label class="form-check-label small" for="extractPendingCb">Pending</label>
+                                            </div>
+                                            <div class="form-check form-check-inline mb-0">
+                                                <input class="form-check-input" type="checkbox" id="extractConfirmedCb">
+                                                <label class="form-check-label small" for="extractConfirmedCb">Confirmed</label>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-info" id="scanReceiptOrdersBtn" onclick="scanReceiptOrders()">
+                                                <i class="fas fa-magnifying-glass me-1"></i> Extract
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="text-muted mt-2" style="font-size:.78rem;">Upload screenshot(s) here only for pending-order OCR extraction.</div>
+                                    <div class="text-muted mt-2" style="font-size:.78rem;">Upload screenshot(s) here for OCR extraction. Choose whether to extract <strong>Pending</strong>, <strong>Confirmed</strong>, or both.</div>
                                 </div>
                             </div>
                         </div>
@@ -2236,7 +2246,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
 
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td><input name="item_name[]" class="form-control form-control-sm py-1" placeholder="Item name" value="${escapeAttr(name)}"></td>
+                <td><input name="item_name[]" class="form-control form-control-sm py-1" placeholder="Order ID" value="${escapeAttr(name)}"></td>
                 <td class="text-end"><input name="item_qty[]" type="number" min="0" class="form-control form-control-sm py-1 text-end item-qty" style="width:70px;" value="${qty}"></td>
                 <td class="text-end" style="min-width:120px;">
                     <div class="input-group input-group-sm" style="width:120px;">
@@ -2564,14 +2574,15 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             }
         };
 
-        function parsePendingOrdersFromText(text) {
+        function parseOrdersFromText(text, modes = ['pending']) {
             const lines = (text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
             const rows = [];
+            const desired = Array.isArray(modes) ? modes.map(m => m.toLowerCase()) : [String(modes).toLowerCase()];
             for (const line of lines) {
                 const statusMatch = line.match(/\b(pending|confirmed|canceled|cancelled|paid)\b/i);
                 if (!statusMatch) continue;
                 const status = statusMatch[1].toLowerCase();
-                if (status !== 'pending') continue;
+                if (!desired.includes(status)) continue;
 
                 const idMatch = line.match(/\b(\d{4,})\b/);
                 const amountMatch = line.match(/([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|[0-9]+(?:\.[0-9]{2})?)\s*ETB/i)
@@ -2584,9 +2595,14 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 const amountValue = parseFloat((amountText || '').replace(/,/g, ''));
                 if (Number.isNaN(amountValue)) continue;
 
-                rows.push({ orderId, amount: amountValue });
+                rows.push({ orderId, amount: amountValue, status });
             }
             return rows;
+        }
+
+        // Backwards-compatible helper
+        function parsePendingOrdersFromText(text) {
+            return parseOrdersFromText(text, ['pending']);
         }
 
         function addExtractedOrderRows(rows) {
@@ -2610,9 +2626,17 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             const scanButton = document.getElementById('scanReceiptOrdersBtn');
             const images = [...extractScreenshotBase64List].filter(Boolean);
             if (images.length === 0) {
-                showToast('Upload a screenshot in the extraction section first to extract pending orders.', 'warning');
+                showToast('Upload a screenshot in the extraction section first to extract orders.', 'warning');
                 return;
             }
+            // determine user selection
+            const wantPending = document.getElementById('extractPendingCb')?.checked;
+            const wantConfirmed = document.getElementById('extractConfirmedCb')?.checked;
+            const modes = [];
+            if (wantPending) modes.push('pending');
+            if (wantConfirmed) modes.push('confirmed');
+            if (modes.length === 0) modes.push('pending'); // default
+
             scanButton.disabled = true;
             const originalText = scanButton.innerHTML;
             scanButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Extracting...';
@@ -2623,11 +2647,11 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 for (const imageSrc of images) {
                     const { data } = await worker.recognize(imageSrc);
                     const text = data?.text || '';
-                    const rows = parsePendingOrdersFromText(text);
+                    const rows = parseOrdersFromText(text, modes);
                     allRows = allRows.concat(rows);
                 }
                 if (allRows.length === 0) {
-                    showToast('No pending order rows found in the screenshot.', 'warning');
+                    showToast('No matching order rows found in the screenshot.', 'warning');
                     return;
                 }
                 const uniqueRows = [];
@@ -2641,13 +2665,14 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 });
                 const added = addExtractedOrderRows(uniqueRows);
                 if (added > 0) {
-                    showToast(`Added ${added} pending order${added > 1 ? 's' : ''} from receipt.`, 'success');
+                    const types = modes.length === 2 ? 'pending & confirmed' : modes[0];
+                    showToast(`Added ${added} ${types} order${added > 1 ? 's' : ''} from receipt.`, 'success');
                 } else {
-                    showToast('Pending orders were found, but they already exist in the list.', 'info');
+                    showToast('Orders were found, but they already exist in the list.', 'info');
                 }
             } catch (err) {
                 console.error('OCR extract error', err);
-                showToast('Failed to extract pending orders from screenshot.', 'danger');
+                showToast('Failed to extract orders from screenshot.', 'danger');
             } finally {
                 scanButton.disabled = false;
                 scanButton.innerHTML = originalText;
