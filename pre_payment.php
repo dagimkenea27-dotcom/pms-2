@@ -2305,7 +2305,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                         <input name="item_price[]" type="number" step="0.01" min="0" class="form-control form-control-sm py-1 text-end item-price" style="width:70px;" value="${price}">
                     </div>
                 </td>
-                <td class="text-end"><input name="item_prepayment[]" type="number" step="0.01" class="form-control form-control-sm py-1 text-end item-prepay" style="width:90px;" value="" readonly title="30% prepayment"></td>
+                <td class="text-end"><input name="item_prepayment[]" type="number" step="0.01" class="form-control py-1 text-end item-prepay" style="width:110px;" value="" readonly title="30% prepayment"></td>
                 <td class="text-center">
                     <div class="btn-group btn-group-sm item-delivery-group" role="group">
                         <button type="button" class="btn btn-sm ${arrived ? 'btn-success' : 'btn-outline-success'} item-arrive-btn" title="Mark Arrived">Arrived</button>
@@ -2406,6 +2406,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 let totalDelivered = 0;
                 let totalCost = 0;   // full cost of ALL items (qty × price)
                 let costArrived = 0;   // cost of rows marked Arrived
+                let prepayArrived = 0; // prepayment amount for arrived rows
                 let costPending = 0;   // cost of rows NOT yet arrived
 
                 for (let i = 0; i < qtys.length; i++) {
@@ -2424,6 +2425,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                     if (isArrived) {
                         totalDelivered += q;
                         costArrived += rowCost;
+                        prepayArrived += pre; // subtract prepayment for arrived items
                     } else {
                         costPending += rowCost;
                     }
@@ -2471,7 +2473,9 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                         const arrivedEl = document.getElementById('costArrivedDisplay');
                         const pendingEl = document.getElementById('costPendingDisplay');
                         const prepayTgt = document.getElementById('prepayTargetDisplay');
-                        if (arrivedEl) arrivedEl.innerText = fv(costArrived);
+                        // Net arrived cost after subtracting prepayment already paid
+                        const netArrived = costArrived - prepayArrived;
+                        if (arrivedEl) arrivedEl.innerText = fv(netArrived);
                         if (pendingEl) pendingEl.innerText = fv(costPending);
                         if (prepayTgt) prepayTgt.innerText = fv(costPending * PREPAY_RATE);
                     } else {
