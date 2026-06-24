@@ -1063,11 +1063,12 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                                     <thead class="text-muted small">
                                         <tr>
                                             <th>Item</th>
-                                            <th class="text-end" style="width:80px;">Qty</th>
-                                            <th class="text-end" style="width:120px;">Price</th>
-                                            <th class="text-end" style="width:120px;">30% Prepay</th>
-                                            <th class="text-center" style="width:180px;">Arrival</th>
-                                            <th class="text-center" style="width:50px;"></th>
+                                            <th class="text-end" style="width:70px;">Qty</th>
+                                            <th class="text-end" style="width:110px;">Price</th>
+                                            <th class="text-end" style="width:110px;">30% Prepay</th>
+                                            <th class="text-center" style="width:150px;">Arrival</th>
+                                            <th class="text-center" style="width:150px;">Order Status</th>
+                                            <th class="text-center" style="width:40px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="itemsContainer"></tbody>
@@ -1724,11 +1725,42 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                     ? `<span class="badge bg-success bg-opacity-10 text-success rounded-pill" style="font-size:.65rem;"><i class="fas fa-truck-moving me-1"></i>Arrived</span>`
                     : `<span class="badge bg-danger bg-opacity-10 text-danger rounded-pill" style="font-size:.65rem;"><i class="fas fa-truck-clock me-1"></i>Not Arrived</span>`;
 
-                const hasReceipts = Array.isArray(item.receipts) ? item.receipts.length > 0 : false;
-                const hasReceiptFallback = hasReceipts || item.screenshot;
-                const slipBtnClass = hasReceiptFallback ? 'text-success' : 'text-secondary';
-                const slipBtnTitle = hasReceiptFallback ? 'View receipt / Slip' : 'Manager Slip';
-                const slipBtnIcon = hasReceiptFallback ? 'image-portrait' : 'camera';
+                // Order status badges (Ordered vs Pending) for not-arrived items
+                let orderStatusHtml = '';
+                if (Array.isArray(item.items) && item.items.length > 0) {
+                    let orderedCount = 0;
+                    let pendingCount = 0;
+                    item.items.forEach(it => {
+                        const isItemArrived = parseInt(it.delivered_qty) > 0;
+                        if (!isItemArrived) {
+                            if (parseInt(it.is_ordered) > 0) {
+                                orderedCount++;
+                            } else {
+                                pendingCount++;
+                            }
+                        }
+                    });
+                    if (orderedCount > 0 || pendingCount > 0) {
+                        const parts = [];
+                        if (orderedCount > 0) {
+                            parts.push(`<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25" style="font-size:.6rem;"><i class="fas fa-cart-shopping me-1"></i>Ordered: ${orderedCount}</span>`);
+                        }
+                        if (pendingCount > 0) {
+                            parts.push(`<span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25" style="font-size:.6rem;"><i class="fas fa-hourglass-half me-1"></i>Pending: ${pendingCount}</span>`);
+                        }
+                        orderStatusHtml = `<div class="mt-1 d-flex flex-wrap gap-1">${parts.join('')}</div>`;
+                    }
+                }
+
+                const hasReceipts = item.has_receipts || !!item.has_screenshot || (Array.isArray(item.receipts) && item.receipts.length > 0);
+                let receiptsBadge = '';
+                if (hasReceipts) {
+                    receiptsBadge = `<span class="badge bg-secondary bg-opacity-10 text-secondary ms-2" title="Has receipt image(s)"><i class="fas fa-image"></i></span>`;
+                }
+
+                const slipBtnClass = hasReceipts ? 'text-success' : 'text-secondary';
+                const slipBtnTitle = hasReceipts ? 'View receipt / Slip' : 'Manager Slip';
+                const slipBtnIcon = hasReceipts ? 'image-portrait' : 'camera';
                 const slipBtn = `<button type="button" class="cp-action-btn ${slipBtnClass}" data-cp-action="share" data-id="${item.id}" title="${slipBtnTitle}"><i class="fas fa-${slipBtnIcon}"></i></button>`;
 
                 const tr = document.createElement('tr');
@@ -1737,7 +1769,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                     <input class="form-check-input row-checkbox" type="checkbox" value="${item.id}">
                 </td>
                 <td>
-                    <div class="fw-bold small">${escapeHTML(item.customer_name)}</div>
+                    <div class="fw-bold small">${escapeHTML(item.customer_name)} ${receiptsBadge}</div>
                     <div class="text-muted" style="font-size:.72rem; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                         ${escapeHTML(item.details || 'No details specified')}
                     </div>
@@ -1750,7 +1782,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                     <div class="fw-bold small">${fmt(paid)}</div>
                     <div>${subLabel}</div>
                 </td>
-                <td>${delHtml}<div class="mt-2">${arrivalBadge}</div></td>
+                <td>${delHtml}<div class="mt-2">${arrivalBadge}</div>${orderStatusHtml}</td>
                 <td class="text-center">
                     <span class="${badgeCls} badge rounded-pill" style="font-size:.65rem;">
                         <span class="cp-dot ${dotCls}"></span>${label}
@@ -1850,13 +1882,15 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             const itemQtys = Array.from(document.querySelectorAll('input[name="item_qty[]"]'));
             const itemPrices = Array.from(document.querySelectorAll('input[name="item_price[]"]'));
             const itemDelivered = Array.from(document.querySelectorAll('input[name="item_delivered[]"]'));
+            const itemOrdered = Array.from(document.querySelectorAll('input[name="item_ordered[]"]'));
             const items = itemNames.map((input, index) => {
                 const name = input.value.trim();
                 const qty = parseInt(itemQtys[index]?.value, 10) || 0;
                 const price = parseFloat(itemPrices[index]?.value) || 0;
                 const arrived = itemDelivered[index]?.value === '1';
-                return { name, qty, price, arrived };
-            }).filter(item => item.name || item.qty || item.price || item.arrived);
+                const ordered = itemOrdered[index]?.value === '1';
+                return { name, qty, price, arrived, ordered };
+            }).filter(item => item.name || item.qty || item.price || item.arrived || item.ordered);
 
             const draft = {
                 name: document.getElementById('customerName').value,
@@ -1915,7 +1949,8 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                                 name: item.name || '',
                                 qty: item.qty || 0,
                                 price: item.price || '',
-                                arrived: !!item.arrived
+                                arrived: !!item.arrived,
+                                ordered: !!item.ordered
                             });
                         });
                     } else {
@@ -2183,7 +2218,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
         // ══════════════════════════════════════════
         // 6. RECORD MODAL (Add / Edit)
         // ══════════════════════════════════════════
-        window.openRecordModal = (id = null) => {
+        window.openRecordModal = async (id = null) => {
             editingId = id || null;
 
             const recordForm = document.getElementById('recordForm');
@@ -2224,7 +2259,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             if (id) {
                 const item = prepayments.find(p => p.id == id);
                 if (item) {
-                    title.innerHTML = `<i class="fas fa-pen-to-square me-2 text-primary"></i>Edit Customer Prepayment`;
+                    title.innerHTML = `<i class="fas fa-pen-to-square me-2 text-primary"></i>Edit Customer Prepayment <i class="fas fa-spinner fa-spin ms-2" id="modalLoadingSpinner"></i>`;
                     recordIdInput.value = item.id;
                     document.getElementById('customerName').value = item.customer_name;
                     document.getElementById('dealDetails').value = item.details || '';
@@ -2233,6 +2268,21 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                     document.getElementById('amountDue').value = item.amount_due;
                     document.getElementById('amountPaid').value = item.amount_paid;
                     setOrderArrivalState(item.is_arrived == 1 || item.is_arrived === true || item.is_arrived === '1');
+                    
+                    // Lazy load receipts
+                    try {
+                        const res = await apiFetch(`${API_URL}?fetch_receipts_for_id=${id}`);
+                        if (res.isOk) {
+                            item.receipts = res.receipts || [];
+                            item.screenshot = res.screenshot || '';
+                        }
+                    } catch (e) {
+                        console.error("Failed to load receipts", e);
+                    }
+                    
+                    const spinner = document.getElementById('modalLoadingSpinner');
+                    if (spinner) spinner.remove();
+
                     existingReceiptImages = Array.isArray(item.receipts) ? item.receipts.map(r => r.image_data || '') : [];
                     if (existingReceiptImages.length === 0 && item.screenshot) {
                         existingReceiptImages = [item.screenshot];
@@ -2246,7 +2296,8 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                                 name: it.product_name || '',
                                 qty: it.qty || 0,
                                 price: it.unit_price || 0,
-                                arrived: parseInt(it.delivered_qty) > 0
+                                arrived: parseInt(it.delivered_qty) > 0,
+                                ordered: parseInt(it.is_ordered) > 0
                             });
                         });
                     } else {
@@ -2294,6 +2345,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             const qty = (typeof opts.qty !== 'undefined') ? opts.qty : 1;
             const price = (typeof opts.price !== 'undefined') ? opts.price : '';
             const arrived = !!opts.arrived;
+            const ordered = (typeof opts.ordered !== 'undefined') ? !!opts.ordered : false;
 
             const row = document.createElement('tr');
             row.innerHTML = `
@@ -2314,6 +2366,13 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                     <input type="hidden" name="item_delivered[]" class="item-delivered" value="${arrived ? '1' : '0'}">
                 </td>
                 <td class="text-center">
+                    <div class="btn-group btn-group-sm item-order-status-group" role="group">
+                        <button type="button" class="btn btn-sm ${ordered ? 'btn-primary' : 'btn-outline-primary'} item-ordered-btn" title="Mark Ordered">Ordered</button>
+                        <button type="button" class="btn btn-sm ${!ordered ? 'btn-warning' : 'btn-outline-warning'} item-pending-btn" title="Mark Pending">Pending</button>
+                    </div>
+                    <input type="hidden" name="item_ordered[]" class="item-ordered" value="${ordered ? '1' : '0'}">
+                </td>
+                <td class="text-center">
                     <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" title="Remove"><i class="fas fa-trash-alt"></i></button>
                 </td>
             `;
@@ -2327,6 +2386,25 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             const arriveBtn = row.querySelector('.item-arrive-btn');
             const notArriveBtn = row.querySelector('.item-not-arrive-btn');
             const deliveredInput = row.querySelector('.item-delivered');
+            const orderedBtn = row.querySelector('.item-ordered-btn');
+            const pendingBtn = row.querySelector('.item-pending-btn');
+            const orderedInput = row.querySelector('.item-ordered');
+
+            const updateOrderBtnStates = (isOrdered) => {
+                orderedInput.value = isOrdered ? '1' : '0';
+                if (isOrdered) {
+                    orderedBtn.classList.remove('btn-outline-primary');
+                    orderedBtn.classList.add('btn-primary');
+                    pendingBtn.classList.remove('btn-warning');
+                    pendingBtn.classList.add('btn-outline-warning');
+                } else {
+                    orderedBtn.classList.remove('btn-primary');
+                    orderedBtn.classList.add('btn-outline-primary');
+                    pendingBtn.classList.remove('btn-outline-warning');
+                    pendingBtn.classList.add('btn-warning');
+                }
+                saveFormDraft();
+            };
 
             const updateBtnStates = (isArrived) => {
                 deliveredInput.value = isArrived ? '1' : '0';
@@ -2335,6 +2413,8 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                     arriveBtn.classList.add('btn-success');
                     notArriveBtn.classList.remove('btn-danger');
                     notArriveBtn.classList.add('btn-outline-danger');
+                    // Automatically mark as ordered if arrived
+                    updateOrderBtnStates(true);
                 } else {
                     arriveBtn.classList.remove('btn-success');
                     arriveBtn.classList.add('btn-outline-success');
@@ -2347,6 +2427,8 @@ if (!empty($_SERVER['HTTP_HOST'])) {
 
             arriveBtn.addEventListener('click', () => updateBtnStates(true));
             notArriveBtn.addEventListener('click', () => updateBtnStates(false));
+            orderedBtn.addEventListener('click', () => updateOrderBtnStates(true));
+            pendingBtn.addEventListener('click', () => updateOrderBtnStates(false));
 
             const refresh = () => {
                 const q = parseInt(qtyInput.value) || 0;
@@ -2667,10 +2749,11 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             if (!Array.isArray(rows) || rows.length === 0) return 0;
             const existingNames = Array.from(document.querySelectorAll('input[name="item_name[]"]')).map(el => el.value.trim());
             let added = 0;
-            rows.forEach(({ orderId, amount }) => {
+            rows.forEach(({ orderId, amount, status }) => {
                 const label = `${orderId}`;
                 if (existingNames.includes(label)) return;
-                addBlankItemRow({ name: label, qty: 1, price: amount.toFixed(2) });
+                const isOrdered = status === 'confirmed';
+                addBlankItemRow({ name: label, qty: 1, price: amount.toFixed(2), ordered: isOrdered });
                 added += 1;
             });
             if (added > 0) {
@@ -2810,6 +2893,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 const qtys = Array.from(document.querySelectorAll('input[name="item_qty[]"]'));
                 const prices = Array.from(document.querySelectorAll('input[name="item_price[]"]'));
                 const deliveredInputList = Array.from(document.querySelectorAll('.item-delivered'));
+                const orderedInputList = Array.from(document.querySelectorAll('.item-ordered'));
                 for (let i = 0; i < names.length; i++) {
                     const nm = names[i].value.trim();
                     if (!nm) continue;
@@ -2817,7 +2901,8 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                     const p = parseFloat((prices[i] && prices[i].value) || 0) || 0;
                     const isArrived = deliveredInputList[i] && deliveredInputList[i].value === '1';
                     const deliveredQty = isArrived ? q : 0;
-                    items.push({ name: nm, qty: q, price: p, delivered: deliveredQty });
+                    const isOrdered = orderedInputList[i] && orderedInputList[i].value === '1';
+                    items.push({ name: nm, qty: q, price: p, delivered: deliveredQty, ordered: isOrdered ? 1 : 0 });
                 }
             } catch (e) { /* ignore */ }
 
@@ -2853,9 +2938,19 @@ if (!empty($_SERVER['HTTP_HOST'])) {
         // ══════════════════════════════════════════
         // 7. SHARE SLIP
         // ══════════════════════════════════════════
-        window.openShareCardModal = (id) => {
+        window.openShareCardModal = async (id) => {
             const item = prepayments.find(p => p.id == id);
             if (!item) return;
+            
+            try {
+                const res = await apiFetch(`${API_URL}?fetch_receipts_for_id=${id}`);
+                if (res.isOk) {
+                    item.receipts = res.receipts || [];
+                    item.screenshot = res.screenshot || '';
+                }
+            } catch (e) {
+                console.error("Failed to fetch receipts for share slip", e);
+            }
 
             const total = parseFloat(item.amount_due) || 0;
             const paid = parseFloat(item.amount_paid) || 0;

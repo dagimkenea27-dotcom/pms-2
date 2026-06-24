@@ -52,10 +52,22 @@ try {
 
     function ensureArrivalColumn($db)
     {
+        static $checked = false;
+        if ($checked) return;
+        $checked = true;
+
         $check = $db->prepare("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'customer_prepayments' AND column_name = 'is_arrived'");
         $check->execute();
         if ((int) $check->fetchColumn() === 0) {
             $db->exec("ALTER TABLE customer_prepayments ADD COLUMN is_arrived TINYINT(1) NOT NULL DEFAULT 0");
+        }
+        
+        // Add index on customer_name if not exists
+        try {
+            $db->exec("CREATE INDEX idx_cp_customer_name ON customer_prepayments(customer_name)");
+            $db->exec("CREATE INDEX idx_cp_is_arrived ON customer_prepayments(is_arrived)");
+        } catch (Exception $e) {
+            // Index might already exist
         }
     }
 
@@ -79,9 +91,13 @@ try {
 
     function prepaymentItemsTableExists($db)
     {
+        static $exists = null;
+        if ($exists !== null) return $exists;
+
         $check = $db->prepare("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'prepayment_items'");
         $check->execute();
-        return (int) $check->fetchColumn() > 0;
+        $exists = (int) $check->fetchColumn() > 0;
+        return $exists;
     }
 
     function getArrivalPrepaymentTargetFromDb($db, $record)
@@ -112,6 +128,10 @@ try {
 
     function ensurePrepaymentItemsTable($db)
     {
+        static $checked = false;
+        if ($checked) return;
+        $checked = true;
+
         $createItems = "CREATE TABLE IF NOT EXISTS prepayment_items (
             id INT AUTO_INCREMENT PRIMARY KEY,
             prepayment_id INT NOT NULL,
@@ -122,20 +142,45 @@ try {
             prepayment_amount DECIMAL(12,2) DEFAULT 0,
             amount_paid DECIMAL(12,2) DEFAULT 0,
             delivered_qty INT DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            is_ordered TINYINT(1) NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_pi_prepayment_id (prepayment_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         $db->exec($createItems);
+
+        $check = $db->prepare("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'prepayment_items' AND column_name = 'is_ordered'");
+        $check->execute();
+        if ((int) $check->fetchColumn() === 0) {
+            $db->exec("ALTER TABLE prepayment_items ADD COLUMN is_ordered TINYINT(1) NOT NULL DEFAULT 0");
+        }
+        
+        try {
+            $db->exec("CREATE INDEX idx_pi_prepayment_id ON prepayment_items(prepayment_id)");
+        } catch (Exception $e) {
+            // Index might already exist
+        }
     }
 
     function ensurePrepaymentReceiptsTable($db)
     {
+        static $checked = false;
+        if ($checked) return;
+        $checked = true;
+
         $createReceipts = "CREATE TABLE IF NOT EXISTS prepayment_receipts (
             id INT AUTO_INCREMENT PRIMARY KEY,
             prepayment_id INT NOT NULL,
             image_data LONGTEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_pr_prepayment_id (prepayment_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         $db->exec($createReceipts);
+        
+        try {
+            $db->exec("CREATE INDEX idx_pr_prepayment_id ON prepayment_receipts(prepayment_id)");
+        } catch (Exception $e) {
+            // Index might already exist
+        }
     }
 
     function fetchReceiptsForPrepaymentIds($db, $ids)
@@ -242,6 +287,21 @@ try {
 
     switch ($method) {
         case 'GET':
+            if (!empty($_GET['fetch_receipts_for_id'])) {
+                $fetchId = (int)$_GET['fetch_receipts_for_id'];
+                $stmt = $db->prepare("SELECT screenshot FROM customer_prepayments WHERE id = :id");
+                $stmt->execute([':id' => $fetchId]);
+                $screenshot = $stmt->fetchColumn();
+                $receipts = fetchReceiptsForPrepaymentIds($db, [$fetchId])[$fetchId] ?? [];
+                
+                echo json_encode([
+                    "isOk" => true,
+                    "screenshot" => $screenshot ?: '',
+                    "receipts" => $receipts
+                ]);
+                exit;
+            }
+
             $exportAll = !empty($_GET['export_all']);
             $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
             $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 30;
@@ -464,7 +524,9 @@ try {
             $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
 
             // 5. Get Paginated Ledger Records
-            $query = "SELECT cp.*, u.username as requested_by_name 
+            $query = "SELECT cp.id, cp.customer_name, cp.details, cp.amount_due, cp.amount_paid, cp.total_items, cp.delivered_items, cp.is_arrived, cp.created_at, cp.requested_by, 
+                      (CASE WHEN cp.screenshot IS NOT NULL AND cp.screenshot != '' THEN 1 ELSE 0 END) as has_screenshot,
+                      u.username as requested_by_name 
                       FROM customer_prepayments cp 
                       LEFT JOIN users u ON cp.requested_by = u.id 
                       $whereSql
@@ -509,16 +571,27 @@ try {
                 }
 
                 try {
-                    $receiptsMap = fetchReceiptsForPrepaymentIds($db, $ids);
+                    ensurePrepaymentReceiptsTable($db);
+                    // Light query to just check if receipts exist
+                    $receiptCountsQuery = "SELECT prepayment_id, COUNT(*) as cnt FROM prepayment_receipts WHERE prepayment_id IN ($in) GROUP BY prepayment_id";
+                    $rcStmt = $db->prepare($receiptCountsQuery);
+                    foreach ($ids as $k => $v) {
+                        $rcStmt->bindValue($k + 1, $v, PDO::PARAM_INT);
+                    }
+                    $rcStmt->execute();
+                    $counts = $rcStmt->fetchAll(PDO::FETCH_ASSOC);
+                    $countsMap = [];
+                    foreach ($counts as $c) {
+                        $countsMap[$c['prepayment_id']] = (int)$c['cnt'];
+                    }
                     foreach ($results as &$r) {
                         $rid = (int) $r['id'];
-                        $r['receipts'] = $receiptsMap[$rid] ?? [];
-                        if (empty($r['screenshot']) && !empty($r['receipts'])) {
-                            $r['screenshot'] = $r['receipts'][0]['image_data'];
-                        }
+                        $r['has_receipts'] = ($countsMap[$rid] ?? 0) > 0;
+                        $r['receipts'] = []; // Keep it as empty array to not break UI code that expects array
                     }
                 } catch (Exception $e) {
                     foreach ($results as &$r) {
+                        $r['has_receipts'] = false;
                         $r['receipts'] = [];
                     }
                 }
@@ -625,7 +698,7 @@ try {
             if (!empty($input['items']) && is_array($input['items'])) {
                 ensurePrepaymentItemsTable($db);
 
-                $insItem = $db->prepare("INSERT INTO prepayment_items (prepayment_id, product_sku, product_name, unit_price, qty, prepayment_amount, amount_paid, delivered_qty) VALUES (:prepayment_id, :sku, :name, :unit_price, :qty, :prepayment_amount, :amount_paid, :delivered_qty)");
+                $insItem = $db->prepare("INSERT INTO prepayment_items (prepayment_id, product_sku, product_name, unit_price, qty, prepayment_amount, amount_paid, delivered_qty, is_ordered) VALUES (:prepayment_id, :sku, :name, :unit_price, :qty, :prepayment_amount, :amount_paid, :delivered_qty, :is_ordered)");
                 foreach ($input['items'] as $it) {
                     $sku = $it['sku'] ?? null;
                     $pname = $it['name'] ?? ($it['product_name'] ?? null);
@@ -634,6 +707,7 @@ try {
                     $prepay = floatval($it['prepay'] ?? ($qty * $price * 0.3));
                     $paid = floatval($it['paid'] ?? 0);
                     $del = intval($it['delivered'] ?? 0);
+                    $ordered = intval($it['ordered'] ?? 0);
                     $insItem->execute([
                         ':prepayment_id' => $newId,
                         ':sku' => $sku,
@@ -642,7 +716,8 @@ try {
                         ':qty' => $qty,
                         ':prepayment_amount' => $prepay,
                         ':amount_paid' => $paid,
-                        ':delivered_qty' => $del
+                        ':delivered_qty' => $del,
+                        ':is_ordered' => $ordered
                     ]);
                 }
             }
@@ -758,7 +833,7 @@ try {
                     $delStmt = $db->prepare("DELETE FROM prepayment_items WHERE prepayment_id = :pid");
                     $delStmt->execute([':pid' => $id]);
 
-                    $insItem = $db->prepare("INSERT INTO prepayment_items (prepayment_id, product_sku, product_name, unit_price, qty, prepayment_amount, amount_paid, delivered_qty) VALUES (:prepayment_id, :sku, :name, :unit_price, :qty, :prepayment_amount, :amount_paid, :delivered_qty)");
+                    $insItem = $db->prepare("INSERT INTO prepayment_items (prepayment_id, product_sku, product_name, unit_price, qty, prepayment_amount, amount_paid, delivered_qty, is_ordered) VALUES (:prepayment_id, :sku, :name, :unit_price, :qty, :prepayment_amount, :amount_paid, :delivered_qty, :is_ordered)");
                     foreach ($input['items'] as $it) {
                         $sku = $it['sku'] ?? null;
                         $pname = $it['name'] ?? ($it['product_name'] ?? null);
@@ -767,6 +842,7 @@ try {
                         $prepay = floatval($it['prepay'] ?? ($qty * $price * 0.3));
                         $paid = floatval($it['paid'] ?? 0);
                         $del = intval($it['delivered'] ?? 0);
+                        $ordered = intval($it['ordered'] ?? 0);
                         $insItem->execute([
                             ':prepayment_id' => $id,
                             ':sku' => $sku,
@@ -775,7 +851,8 @@ try {
                             ':qty' => $qty,
                             ':prepayment_amount' => $prepay,
                             ':amount_paid' => $paid,
-                            ':delivered_qty' => $del
+                            ':delivered_qty' => $del,
+                            ':is_ordered' => $ordered
                         ]);
                     }
                 }
@@ -894,7 +971,7 @@ try {
                 $upd->execute([':is_arrived' => $isArrived, ':delivered_items' => $newDelivered, ':id' => $id]);
 
                 try {
-                    $itemUpd = $db->prepare('UPDATE prepayment_items SET delivered_qty = :delivered_qty WHERE prepayment_id = :id');
+                    $itemUpd = $db->prepare('UPDATE prepayment_items SET delivered_qty = :delivered_qty, is_ordered = CASE WHEN :delivered_qty = 1 THEN 1 ELSE is_ordered END WHERE prepayment_id = :id');
                     $itemUpd->execute([':delivered_qty' => $isArrived ? 1 : 0, ':id' => $id]);
                 } catch (Exception $e) {
                     // Item-level arrival details are optional for older installs.
