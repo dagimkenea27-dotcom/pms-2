@@ -883,6 +883,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                                 <th>Paid / 30% Due</th>
                                 <th>Delivery</th>
                                 <th class="text-center">Status</th>
+                                <th>Balance</th>
                                 <th class="text-end pe-3">Actions</th>
                             </tr>
                         </thead>
@@ -1094,17 +1095,23 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                                 <input type="number" class="form-control" id="amountDue" required min="1" step="0.01"
                                     placeholder="0.00" oninput="validatePaymentsInModal()">
                             </div>
-                            <div class="text-muted" style="font-size:.72rem;">Auto-calculated from item rows (qty ×
+                            <div class="text-muted" style="font-size:.72rem;" id="amountDueCalc">Auto-calculated from item rows (qty ×
                                 price)</div>
                         </div>
                         <div class="col-sm-6">
-                            <label for="amountPaid" class="form-label fw-bold small text-uppercase">Amount Actually Paid
-                                (ETB)</label>
+                            <label for="amountPaid" class="form-label fw-bold small text-uppercase d-flex justify-content-between align-items-center">Amount Actually Paid
+                                (ETB)
+                                <span id="prepayTargetBadge" class="badge rounded-pill d-none"
+                                    style="font-size:.65rem; background:linear-gradient(135deg,#3b82f6,#6366f1); color:#fff; font-weight:600; letter-spacing:.3px; padding:3px 8px;">
+                                    <i class="fas fa-bullseye me-1"></i>30% Target: <span id="prepayTargetBadgeVal">ETB 0.00</span>
+                                </span>
+                            </label>
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text">ETB</span>
                                 <input type="number" class="form-control" id="amountPaid" min="0" step="0.01"
                                     placeholder="0.00" oninput="validatePaymentsInModal()">
                             </div>
+                            <div class="mt-1" style="font-size:.72rem;" id="amountPaidCalc"></div>
                         </div>
                     </div>
 
@@ -1131,12 +1138,16 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                                         </div>
                                         <div class="text-muted" style="font-size:.68rem;">Items not yet arrived</div>
                                     </div>
-                                    <div class="flex-fill cost-card cost-target">
+                                    <div class="flex-fill cost-card cost-target" id="prepayTargetCard">
                                         <div class="text-primary fw-bold" style="font-size:.68rem;">30% PREPAYMENT
                                             TARGET</div>
                                         <div class="fw-bold" id="prepayTargetDisplay" style="font-size:1rem;">ETB 0.00
                                         </div>
-                                        <div class="text-muted" style="font-size:.68rem;">Based on total product cost
+                                        <div style="font-size:.68rem;" id="prepayTargetCalc" class="text-muted">Pending items × 30%
+                                        </div>
+                                        <div id="prepayOverpaidBadge" class="d-none mt-1 rounded-2 px-2 py-1"
+                                            style="background:#dcfce7; border:1px solid #86efac; color:#15803d; font-size:.65rem; font-weight:700;">
+                                            <i class="fas fa-arrow-up me-1"></i>Paid More Than Target!
                                         </div>
                                     </div>
                                 </div>
@@ -1179,7 +1190,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                     </div>
 
                     <div id="liveStatusPreview"
-                        class="d-flex align-items-center gap-3 p-3 rounded-3 border bg-white mb-3">
+                        class="d-flex align-items-center gap-3 p-3 rounded-3 border bg-white mb-2">
                         <div id="liveStatusIcon"
                             class="d-flex align-items-center justify-content-center rounded-circle bg-secondary text-white"
                             style="width:44px; height:44px;">
@@ -1189,6 +1200,15 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                             <div class="text-uppercase fw-bold small text-muted">Prepayment Status</div>
                             <div id="liveStatusText" class="fw-bold small">Enter numbers to calculate…</div>
                         </div>
+                    </div>
+
+                    <!-- Remaining Balance After Fulfillment -->
+                    <div id="liveBalanceRow" class="d-none rounded-3 border px-3 py-2 mb-3 d-flex justify-content-between align-items-center"
+                        style="background:#f8fafc; font-size:.82rem;">
+                        <span class="fw-semibold text-muted text-uppercase" style="font-size:.7rem; letter-spacing:.5px;">
+                            <i class="fas fa-scale-balanced me-1"></i>Remaining Balance After Fulfillment
+                        </span>
+                        <span id="liveBalanceVal" class="fw-bold" style="font-size:.95rem;">ETB 0.00</span>
                     </div>
 
                 </form>
@@ -1273,7 +1293,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                             </div>
                             <div class="col-6">
                                 <div class="share-slip-metric">
-                                    <div class="share-slip-label">Balance</div>
+                                    <div class="share-slip-label" id="shareCardBalanceLabel">Balance</div>
                                     <div class="share-slip-metric-value" id="shareCardBalance">ETB 0.00</div>
                                 </div>
                             </div>
@@ -1787,6 +1807,21 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                     <span class="${badgeCls} badge rounded-pill" style="font-size:.65rem;">
                         <span class="cp-dot ${dotCls}"></span>${label}
                     </span>
+                </td>
+                <td style="min-width:110px;">
+                    ${(() => {
+                        const balance = total - paid;
+                        if (balance < 0) {
+                            return `<div class="fw-bold small" style="color:#16a34a;">${fmt(Math.abs(balance))}</div>
+                                    <div style="font-size:.65rem; color:#15803d; font-weight:600;"><i class="fas fa-arrow-up me-1"></i>Credit</div>`;
+                        } else if (balance === 0) {
+                            return `<div class="fw-bold small" style="color:#16a34a;">${fmt(0)}</div>
+                                    <div style="font-size:.65rem; color:#15803d; font-weight:600;"><i class="fas fa-check me-1"></i>Settled</div>`;
+                        } else {
+                            return `<div class="fw-bold small" style="color:#dc2626;">${fmt(balance)}</div>
+                                    <div style="font-size:.65rem; color:#b91c1c;"><i class="fas fa-arrow-down me-1"></i>Owed</div>`;
+                        }
+                    })()}
                 </td>
                 <td class="text-end pe-3 text-nowrap">
                     ${slipBtn}
@@ -2525,8 +2560,12 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 if (amountDueEl && qtys.length > 0) {
                     amountDueEl.value = totalCost.toFixed(2);
                     amountDueEl.readOnly = true;
+                    const adCalc = document.getElementById('amountDueCalc');
+                    if (adCalc) adCalc.innerText = `Calculation: Sum of items = ETB ${totalCost.toFixed(2)}`;
                 } else if (amountDueEl) {
                     amountDueEl.readOnly = false;
+                    const adCalc = document.getElementById('amountDueCalc');
+                    if (adCalc) adCalc.innerText = `Auto-calculated from item rows (qty × price)`;
                 }
                 if (deliveredItemsEl) {
                     deliveredItemsEl.value = totalDelivered;
@@ -2559,7 +2598,12 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                         const netArrived = costArrived - prepayArrived;
                         if (arrivedEl) arrivedEl.innerText = fv(netArrived);
                         if (pendingEl) pendingEl.innerText = fv(costPending);
-                        if (prepayTgt) prepayTgt.innerText = fv(costPending * PREPAY_RATE);
+                        if (prepayTgt) {
+                            const target = costPending * PREPAY_RATE;
+                            prepayTgt.innerText = fv(target);
+                            const tgtCalc = document.getElementById('prepayTargetCalc');
+                            if (tgtCalc) tgtCalc.innerHTML = `<span style="color:#6366f1;"><strong>${fv(costPending)}</strong> × 30%</span>`;
+                        }
                     } else {
                         breakCard.classList.add('d-none');
                     }
@@ -2624,10 +2668,64 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 txt.innerText = 'Enter numbers to calculate…'; txt.className = 'fw-bold small text-secondary';
             } else {
                 const req = getModalPrepaymentTarget();
+                const pendingCost = getModalPendingCost();
+
+                // ── Update the 30% target badge above the paid field ──
+                const targetBadge = document.getElementById('prepayTargetBadge');
+                const targetBadgeVal = document.getElementById('prepayTargetBadgeVal');
+                if (targetBadge && targetBadgeVal) {
+                    if (req > 0) {
+                        targetBadgeVal.innerText = fv(req);
+                        targetBadge.classList.remove('d-none');
+                    } else {
+                        targetBadge.classList.add('d-none');
+                    }
+                }
+
+                // ── Update the hint below the paid field ──
+                const paidCalcEl = document.getElementById('amountPaidCalc');
+                const overpaidBadge = document.getElementById('prepayOverpaidBadge');
+                if (paidCalcEl) {
+                    if (req > 0 && paid > due) {
+                        // Overpaid beyond total cost
+                        paidCalcEl.innerHTML = `<span class="text-primary fw-semibold"><i class="fas fa-hand-holding-dollar me-1"></i>Credit: Customer has paid <strong>${fv(paid - due)}</strong> beyond the total cost.</span>`;
+                    } else if (req > 0 && paid > req) {
+                        // Paid more than 30% target but within total
+                        paidCalcEl.innerHTML = `<span class="text-success fw-semibold"><i class="fas fa-arrow-up-right-dots me-1"></i>Exceeds 30% target by <strong>${fv(paid - req)}</strong> — extra credit applied.</span>`;
+                    } else if (req > 0 && paid === req) {
+                        paidCalcEl.innerHTML = `<span class="text-success fw-semibold"><i class="fas fa-check-circle me-1"></i>Exactly meets the 30% prepayment target.</span>`;
+                    } else if (req > 0 && paid > 0) {
+                        paidCalcEl.innerHTML = `<span class="text-warning fw-semibold"><i class="fas fa-exclamation-triangle me-1"></i>Still needs <strong>${fv(req - paid)}</strong> to meet 30% target (${fv(req)}).</span>`;
+                    } else if (req > 0) {
+                        paidCalcEl.innerHTML = `<span class="text-muted">30% target: ${fv(pendingCost)} × 30% = <strong>${fv(req)}</strong></span>`;
+                    } else {
+                        paidCalcEl.innerHTML = `<span class="text-muted">No prepayment required (all items arrived).</span>`;
+                    }
+                }
+
+                // ── Update the overpaid badge on the cost breakdown card ──
+                if (overpaidBadge) {
+                    if (req > 0 && paid > req) {
+                        overpaidBadge.classList.remove('d-none');
+                        const excess = paid - req;
+                        overpaidBadge.innerHTML = `<i class="fas fa-arrow-up me-1"></i>Paid ${fv(excess)} more than target!`;
+                    } else {
+                        overpaidBadge.classList.add('d-none');
+                    }
+                }
+
                 if (req <= 0) {
                     box.style.background = '#fee2e2'; box.style.borderColor = '#fecaca';
                     icon.innerHTML = `<i class="fas fa-truck-clock text-danger fs-5"></i>`;
                     txt.innerText = 'No prepayment target because all items have arrived.'; txt.className = 'fw-bold small text-danger';
+                } else if (paid > due) {
+                    box.style.background = '#dbeafe'; box.style.borderColor = '#bfdbfe';
+                    icon.innerHTML = `<i class="fas fa-hand-holding-dollar text-primary fs-5"></i>`;
+                    txt.innerText = `Overpaid Total: Customer has a credit of ${fv(paid - due)}.`; txt.className = 'fw-bold small text-primary';
+                } else if (paid > req) {
+                    box.style.background = '#d1fae5'; box.style.borderColor = '#a7f3d0';
+                    icon.innerHTML = `<i class="fas fa-circle-check text-success fs-5"></i>`;
+                    txt.innerText = `Cleared & Exceeded: Paid ${fv(paid - req)} more than the 30% target (${fv(req)})!`; txt.className = 'fw-bold small text-success';
                 } else if (paid >= req) {
                     box.style.background = '#d1fae5'; box.style.borderColor = '#a7f3d0';
                     icon.innerHTML = `<i class="fas fa-circle-check text-success fs-5"></i>`;
@@ -2635,7 +2733,7 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 } else if (paid > 0) {
                     box.style.background = '#fef3c7'; box.style.borderColor = '#fde68a';
                     icon.innerHTML = `<i class="fas fa-circle-exclamation text-warning fs-5"></i>`;
-                    txt.innerText = `Partial: needs ${fv(req - paid)} more to clear 30% (${fv(req)})`; txt.className = 'fw-bold small text-warning';
+                    txt.innerText = `Partial: needs ${fv(req - paid)} more to clear 30% target (${fv(req)})`; txt.className = 'fw-bold small text-warning';
                 } else {
                     box.style.background = '#fee2e2'; box.style.borderColor = '#fecaca';
                     icon.innerHTML = `<i class="fas fa-circle-xmark text-danger fs-5"></i>`;
@@ -2649,6 +2747,31 @@ if (!empty($_SERVER['HTTP_HOST'])) {
                 icon.innerHTML = `<i class="fas fa-truck-field-unlocked text-danger fs-5"></i>`;
                 txt.innerText += ' Order not arrived yet.';
                 txt.className = 'fw-bold small text-danger';
+            }
+
+            // ── Live remaining balance row ──
+            const balRow = document.getElementById('liveBalanceRow');
+            const balVal = document.getElementById('liveBalanceVal');
+            if (balRow && balVal && due > 0) {
+                balRow.classList.remove('d-none');
+                const balance = due - paid;
+                if (balance < 0) {
+                    // Customer has overpaid the total — show credit
+                    balVal.innerHTML = `<span style="color:#16a34a;">${fv(Math.abs(balance))} <span style="font-size:.72rem;font-weight:700;">(Credit)</span></span>`;
+                    balRow.style.background = '#f0fdf4';
+                    balRow.style.borderColor = '#86efac';
+                } else if (balance === 0) {
+                    balVal.innerHTML = `<span style="color:#16a34a;">${fv(0)} <span style="font-size:.72rem;font-weight:700;">(Fully Paid)</span></span>`;
+                    balRow.style.background = '#f0fdf4';
+                    balRow.style.borderColor = '#86efac';
+                } else {
+                    // Customer still owes money
+                    balVal.innerHTML = `<span style="color:#dc2626;">${fv(balance)}</span>`;
+                    balRow.style.background = '#fff7f7';
+                    balRow.style.borderColor = '#fecaca';
+                }
+            } else if (balRow) {
+                balRow.classList.add('d-none');
             }
         };
 
@@ -2984,7 +3107,23 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             document.getElementById('shareCardThreshold').innerText = fmt(threshold);
             document.getElementById('shareCardAmountPaid').innerText = fmt(paid);
             const balanceAmount = total - paid;
-            document.getElementById('shareCardBalance').innerText = fmt(balanceAmount >= 0 ? balanceAmount : 0);
+            const balEl = document.getElementById('shareCardBalance');
+            const balLblEl = document.getElementById('shareCardBalanceLabel');
+            if (balanceAmount < 0) {
+                // Negative = customer has a credit (paid more than total)
+                balEl.innerHTML = `${fmt(Math.abs(balanceAmount))} <span style="font-size:.72rem; font-weight:700; color:#15803d;">(Credit)</span>`;
+                balEl.style.color = '#16a34a';
+                if (balLblEl) balLblEl.innerHTML = 'Balance <span style="color:#16a34a;font-size:.68rem;">(Credit)</span>';
+            } else if (balanceAmount === 0) {
+                balEl.innerText = fmt(0);
+                balEl.style.color = '';
+                if (balLblEl) balLblEl.innerText = 'Balance';
+            } else {
+                // Still owes money
+                balEl.innerText = fmt(balanceAmount);
+                balEl.style.color = '#dc2626';
+                if (balLblEl) balLblEl.innerText = 'Balance Owed';
+            }
 
             const pilEl = document.getElementById('shareCardStatusPill');
             const boxEl = document.getElementById('shareCardStatusBox');
@@ -2992,11 +3131,19 @@ if (!empty($_SERVER['HTTP_HOST'])) {
             const detailEl = document.getElementById('shareCardStatusDetail');
             boxEl.className = 'share-slip-status-card';
             if (status === 'paid') {
-                pilEl.className = 'share-slip-pill share-slip-pill-paid';
-                pilEl.innerText = 'PAID PREPAY';
-                hdrEl.innerText = 'Prepayment cleared';
-                detailEl.innerText = 'This order has reached the required advance payment.';
-                boxEl.classList.add('paid');
+                if (paid > total) {
+                    pilEl.className = 'share-slip-pill share-slip-pill-paid';
+                    pilEl.innerText = 'OVERPAID';
+                    hdrEl.innerText = 'Credit balance';
+                    detailEl.innerText = 'This customer has paid more than the total cost.';
+                    boxEl.classList.add('paid');
+                } else {
+                    pilEl.className = 'share-slip-pill share-slip-pill-paid';
+                    pilEl.innerText = 'PAID PREPAY';
+                    hdrEl.innerText = 'Prepayment cleared';
+                    detailEl.innerText = 'This order has reached the required advance payment.';
+                    boxEl.classList.add('paid');
+                }
             } else if (status === 'partial') {
                 pilEl.className = 'share-slip-pill share-slip-pill-partial';
                 pilEl.innerText = 'PARTIAL';
