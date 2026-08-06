@@ -1,6 +1,6 @@
 <?php
 // suppliers/view_supplier.php
-session_start();
+require_once "../config/auth_check.php";
 require_once "../config/database.php";
 require_once "../models/Supplier.php";
 
@@ -28,6 +28,65 @@ $products = $products_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 require_once "../includes/header.php";
 ?>
+
+<style>
+    /* Custom Scrollbar */
+    .table-responsive::-webkit-scrollbar {
+        height: 8px;
+    }
+    .table-responsive::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 10px;
+    }
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+        border: 2px solid #f1f5f9;
+    }
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    @media (max-width: 767.98px) {
+        #supplierProductsTable thead {
+            display: none;
+        }
+        #supplierProductsTable, #supplierProductsTable tbody, #supplierProductsTable tr, #supplierProductsTable td {
+            display: block;
+            width: 100%;
+        }
+        #supplierProductsTable tr {
+            margin-bottom: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px;
+        }
+        #supplierProductsTable td {
+            text-align: right;
+            padding: 6px 10px;
+            position: relative;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        #supplierProductsTable td:last-child {
+            border-bottom: none;
+            text-align: center;
+            background: #f8fafc;
+            margin-top: 5px;
+            border-radius: 0 0 6px 6px;
+        }
+        #supplierProductsTable td::before {
+            content: attr(data-label);
+            position: absolute;
+            left: 10px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #64748b;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+    }
+</style>
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2"><i class="fas fa-truck"></i> Supplier Details</h1>
@@ -105,7 +164,7 @@ require_once "../includes/header.php";
     <div class="card-body">
         <?php if ($products): ?>
             <div class="table-responsive">
-                <table class="table table-striped table-hover">
+                <table class="table table-striped table-hover" id="supplierProductsTable">
                     <thead>
                         <tr>
                             <th>SKU</th>
@@ -118,13 +177,13 @@ require_once "../includes/header.php";
                     <tbody>
                         <?php foreach ($products as $product): ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($product['sku']); ?></td>
-                            <td><?php echo htmlspecialchars($product['name']); ?></td>
-                            <td><?php echo $product['quantity']; ?></td>
-                            <td>$<?php echo number_format($product['price'], 2); ?></td>
+                            <td data-label="SKU"><?php echo htmlspecialchars($product['sku']); ?></td>
+                            <td data-label="Name"><?php echo htmlspecialchars($product['name']); ?></td>
+                            <td data-label="Qty"><?php echo $product['quantity']; ?></td>
+                            <td data-label="Price">$<?php echo number_format($product['price'], 2); ?></td>
                             <td>
                                 <a href="../products/edit_product.php?id=<?php echo $product['id']; ?>" 
-                                   class="btn btn-sm btn-outline-primary">
+                                   class="btn btn-sm btn-outline-primary w-100">
                                     <i class="fas fa-edit"></i> View Product
                                 </a>
                             </td>

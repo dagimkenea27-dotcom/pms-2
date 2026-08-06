@@ -1,0 +1,77 @@
+/* Scoped styles */
+#daily-sales-app {
+    font-family: 'Poppins', sans-serif;
+}
+
+#daily-sales-app .mono-font {
+    font-family: 'Roboto Mono', monospace;
+}
+
+#daily-sales-app .sale-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+#daily-sales-app .sale-card {
+    transition: all 0.2s ease;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#daily-sales-app .animate-slide {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+#daily-sales-app .fade-in {
+    animation: fadeIn 0.3s ease;
+}
+
+#daily-sales-app .presentation-bg {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+#daily-sales-app .glass-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+}
+
+#daily-sales-app input:focus, 
+#daily-sales-app select:focus, 
+#daily-sales-app textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+}
+
+#daily-sales-app .size-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #e0e7ff;
+    color: #4338ca;
+}
+
+#daily-sales-app .product-badge-khaki {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+#daily-sales-app .product-badge-jeans {
+    background: #dbeafe;
+    color: #1e3a8a;
+}
+
+#daily-sales-app .followup-badge {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}

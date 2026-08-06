@@ -1,6 +1,6 @@
 <?php
 // products/quick_stock_update.php
-session_start();
+require_once "../config/auth_check.php";
 require_once "../config/database.php";
 
 if ($_POST) {

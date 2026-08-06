@@ -1,6 +1,6 @@
 <?php
 // suppliers/add_supplier.php
-session_start();
+require_once "../config/auth_check.php";
 require_once "../config/database.php";
 require_once "../models/Supplier.php";
 
@@ -56,25 +56,25 @@ require_once "../includes/header.php";
                             <div class="mb-3">
                                 <label for="name" class="form-label">Supplier Name *</label>
                                 <input type="text" class="form-control" id="name" name="name" 
-                                       value="<?php echo $_POST['name'] ?? ''; ?>" required>
+                                       value="<?php echo htmlspecialchars($_POST['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>
                             </div>
                             
                             <div class="mb-3">
                                 <label for="contact_person" class="form-label">Contact Person</label>
                                 <input type="text" class="form-control" id="contact_person" name="contact_person"
-                                       value="<?php echo $_POST['contact_person'] ?? ''; ?>">
+                                       value="<?php echo htmlspecialchars($_POST['contact_person'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                             </div>
                             
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email</label>
                                 <input type="email" class="form-control" id="email" name="email"
-                                       value="<?php echo $_POST['email'] ?? ''; ?>">
+                                       value="<?php echo htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                             </div>
                             
                             <div class="mb-3">
                                 <label for="phone" class="form-label">Phone</label>
                                 <input type="text" class="form-control" id="phone" name="phone"
-                                       value="<?php echo $_POST['phone'] ?? ''; ?>">
+                                       value="<?php echo htmlspecialchars($_POST['phone'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                             </div>
                         </div>
                         
@@ -82,27 +82,27 @@ require_once "../includes/header.php";
                             <div class="mb-3">
                                 <label for="website" class="form-label">Website</label>
                                 <input type="url" class="form-control" id="website" name="website"
-                                       value="<?php echo $_POST['website'] ?? ''; ?>" 
+                                       value="<?php echo htmlspecialchars($_POST['website'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" 
                                        placeholder="https://">
                             </div>
                             
                             <div class="mb-3">
                                 <label for="payment_terms" class="form-label">Payment Terms</label>
                                 <input type="text" class="form-control" id="payment_terms" name="payment_terms"
-                                       value="<?php echo $_POST['payment_terms'] ?? ''; ?>"
+                                       value="<?php echo htmlspecialchars($_POST['payment_terms'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
                                        placeholder="e.g., Net 30, Net 60">
                             </div>
                             
                             <div class="mb-3">
                                 <label for="address" class="form-label">Address</label>
                                 <textarea class="form-control" id="address" name="address" 
-                                          rows="3"><?php echo $_POST['address'] ?? ''; ?></textarea>
+                                          rows="3"><?php echo htmlspecialchars($_POST['address'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
                             </div>
                             
                             <div class="mb-3">
                                 <label for="notes" class="form-label">Notes</label>
                                 <textarea class="form-control" id="notes" name="notes" 
-                                          rows="2"><?php echo $_POST['notes'] ?? ''; ?></textarea>
+                                          rows="2"><?php echo htmlspecialchars($_POST['notes'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
                             </div>
                         </div>
                     </div>

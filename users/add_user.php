@@ -1,6 +1,6 @@
 <?php
 // users/add_user.php
-session_start();
+require_once "../config/auth_check.php";
 require_once "../config/database.php";
 require_once "../models/User.php";
 require_once "../config/auth.php";
@@ -16,6 +16,10 @@ $message = '';
 $message_type = '';
 
 if ($_POST) {
+    if (!isset($_POST['csrf_token']) || !Auth::validateCSRF($_POST['csrf_token'])) {
+        $message = "Security Error: Invalid Token";
+        $message_type = "danger";
+    } else {
     $user->username = $_POST['username'];
     $user->email = $_POST['email'];
     $user->password = $_POST['password'];
@@ -44,6 +48,7 @@ if ($_POST) {
             $message_type = "danger";
         }
     }
+    }
 }
 
 require_once "../includes/header.php";
@@ -65,18 +70,19 @@ require_once "../includes/header.php";
         <div class="card">
             <div class="card-body">
                 <form method="POST" action="">
+                    <input type="hidden" name="csrf_token" value="<?php echo Auth::generateCSRF(); ?>">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="username" class="form-label">Username *</label>
                                 <input type="text" class="form-control" id="username" name="username" 
-                                       value="<?php echo $_POST['username'] ?? ''; ?>" required>
+                                       value="<?php echo htmlspecialchars($_POST['username'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>
                             </div>
                             
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email *</label>
                                 <input type="email" class="form-control" id="email" name="email" 
-                                       value="<?php echo $_POST['email'] ?? ''; ?>" required>
+                                       value="<?php echo htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>
                             </div>
                             
                             <div class="mb-3">
@@ -89,13 +95,13 @@ require_once "../includes/header.php";
                             <div class="mb-3">
                                 <label for="first_name" class="form-label">First Name</label>
                                 <input type="text" class="form-control" id="first_name" name="first_name" 
-                                       value="<?php echo $_POST['first_name'] ?? ''; ?>">
+                                       value="<?php echo htmlspecialchars($_POST['first_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                             </div>
                             
                             <div class="mb-3">
                                 <label for="last_name" class="form-label">Last Name</label>
                                 <input type="text" class="form-control" id="last_name" name="last_name" 
-                                       value="<?php echo $_POST['last_name'] ?? ''; ?>">
+                                       value="<?php echo htmlspecialchars($_POST['last_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                             </div>
                             
                             <div class="mb-3">

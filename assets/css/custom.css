@@ -1,0 +1,860 @@
+/* Custom CSS for Inventory Management System */
+
+:root {
+    /* Brand Colors */
+    --primary-color: #4e73df;
+    --secondary-color: #858796;
+    --success-color: #1cc88a;
+    --info-color: #36b9cc;
+    --warning-color: #f6c23e;
+    --danger-color: #e74a3b;
+
+    /* Semantic Colors - Light Mode (Default) */
+    --bg-body: #f8f9fc;
+    --bg-card: #ffffff;
+    --bg-nav: #ffffff;
+    --text-main: #5a5c69;
+    --text-muted: #858796;
+    --text-headers: #4e73df;
+    --border-color: #e3e6f0;
+    --card-shadow: 0 .15rem 1.75rem 0 rgba(58, 59, 69, .15);
+
+    /* Layout Variables */
+    --sidebar-width: 14rem;
+    --sidebar-collapsed: 6.5rem;
+    --topbar-height: 4.375rem;
+}
+
+/* Dark Mode Overrides */
+[data-theme="dark"] {
+    --bg-body: #0f172a;
+    /* Deep Blue/Slate */
+    --bg-card: #1e293b;
+    /* Dark Slate */
+    --bg-nav: #1e293b;
+    /* Dark Slate */
+    --text-main: #e2e8f0;
+    /* Light Gray */
+    --text-muted: #94a3b8;
+    /* Muted Slate */
+    --text-headers: #60a5fa;
+    /* Brighter Blue */
+    --border-color: #334155;
+    /* Slate Border */
+    --card-shadow: 0 .15rem 1.75rem 0 rgba(0, 0, 0, .5);
+}
+
+body {
+    font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--bg-body);
+    color: var(--text-main);
+    overflow-x: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ===== Layout ===== */
+#wrapper {
+    display: flex;
+}
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: var(--sidebar-width);
+    background: #073b74 !important;
+    transition: width 0.3s ease, left 0.3s ease;
+    z-index: 1040;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+}
+
+[data-theme="dark"] .sidebar {
+    background: var(--bg-nav) !important;
+}
+
+.sidebar .sidebar-brand {
+    height: auto !important;
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 800;
+    padding: 2.25rem 1rem 1.75rem !important;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: .05rem;
+    color: #fff !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar .sidebar-brand-icon {
+    font-size: 2rem;
+    margin-right: 0 !important;
+    /* Removed to ensure perfect centering when no text is present */
+}
+
+/* Defensive visibility for all sidebar elements to prevent outside CSS (like Tailwind) conflicts */
+.sidebar .nav-item .nav-link,
+.sidebar .nav-item .nav-link span,
+.sidebar .nav-item .nav-link i,
+.sidebar .collapse,
+.sidebar .collapse-inner,
+.sidebar .collapse-item,
+.sidebar .sidebar-heading,
+.sidebar .sidebar-brand-text {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.sidebar .sidebar-heading {
+    text-align: left;
+    padding: 0 1.25rem;
+    font-weight: 800;
+    font-size: .65rem;
+    color: rgba(255, 255, 255, 0.45) !important;
+    text-transform: uppercase;
+    margin-top: 2rem !important;
+    /* Increased space above section names */
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-divider {
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+    margin: 0 !important;
+}
+
+.sidebar .nav-item {
+    position: relative;
+}
+
+.sidebar .nav-item .nav-link {
+    display: flex !important;
+    align-items: center !important;
+    width: 100%;
+    padding: 0.85rem 1.25rem !important;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    transition: all 0.2s ease;
+    z-index: 10;
+    font-size: 0.9rem !important;
+}
+
+.sidebar .nav-item .nav-link i {
+    width: 1.25rem;
+    margin-right: 0.75rem;
+    font-size: 0.85rem !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.sidebar .nav-item.active .nav-link {
+    background-color: rgba(255, 255, 255, 0.12) !important;
+    border-left: none !important;
+    /* Removed to match design precisely */
+    font-weight: 700 !important;
+}
+
+.sidebar .nav-item.active .nav-link i {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+/* Collapsed State Controls */
+.sidebar.toggled {
+    width: var(--sidebar-collapsed) !important;
+}
+
+.sidebar.toggled .nav-item .nav-link {
+    text-align: center;
+    padding: 0.75rem 1rem !important;
+    width: 6.5rem;
+    justify-content: center !important;
+}
+
+.sidebar.toggled .nav-item .nav-link i {
+    margin-right: 0 !important;
+    font-size: 1.2rem !important;
+}
+
+.sidebar.toggled .sidebar-brand-text,
+.sidebar.toggled .nav-item .nav-link span,
+.sidebar.toggled .sidebar-heading {
+    display: none !important;
+}
+
+/* Sub-navigation (Collapse Fixes) */
+.sidebar .collapse.show {
+    visibility: visible !important;
+    display: block !important;
+    height: auto !important;
+}
+
+.sidebar .collapse-inner {
+    background-color: rgba(0, 0, 0, 0.2) !important;
+    margin: 0.25rem 1rem 0.75rem !important;
+    border-radius: 0.5rem !important;
+    padding: 0.5rem 0 !important;
+}
+
+.sidebar .collapse-item {
+    padding: 0.45rem 1rem 0.45rem 2.85rem !important;
+    font-size: 0.75rem !important;
+    /* Reduced for sub-items */
+    display: block !important;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    transition: all 0.2s;
+}
+
+.sidebar .collapse-item:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.sidebar .collapse-item.active {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    font-weight: 700 !important;
+}
+
+/* Arrows */
+.sidebar .nav-link[data-bs-toggle="collapse"]:after {
+    content: '\f107' !important;
+    font-family: 'Font Awesome 6 Free' !important;
+    font-weight: 900 !important;
+    margin-left: auto !important;
+    transition: transform 0.3s !important;
+    color: #ffffff !important;
+}
+
+.sidebar .nav-link[data-bs-toggle="collapse"]:not(.collapsed):after {
+    transform: rotate(180deg) !important;
+}
+
+.sidebar.toggled .nav-link[data-bs-toggle="collapse"]:after {
+    display: none !important;
+}
+
+/* --- End Sidebar Fixes --- */
+
+/* Content Wrapper */
+#content-wrapper {
+    margin-left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
+    transition: margin-left 0.3s ease, width 0.3s ease;
+    background-color: var(--bg-body);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+body.sidebar-toggled #content-wrapper {
+    margin-left: var(--sidebar-collapsed);
+    width: calc(100% - var(--sidebar-collapsed));
+}
+
+#content {
+    padding-top: calc(var(--topbar-height) + 1.5rem);
+    flex: 1 0 auto;
+}
+
+/* Topbar */
+.topbar {
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-width);
+    right: 0;
+    height: var(--topbar-height);
+    background: var(--bg-nav);
+    z-index: 1030;
+    transition: left 0.3s ease;
+    box-shadow: 0 .15rem 1.75rem 0 rgba(58, 59, 69, .15);
+    display: flex;
+    align-items: center;
+    padding: 0 1.5rem;
+}
+
+body.sidebar-toggled .topbar {
+    left: var(--sidebar-collapsed);
+}
+
+.topbar .nav-item .nav-link {
+    height: 4.375rem;
+    display: flex;
+    align-items: center;
+    padding: 0 .75rem;
+    color: var(--text-muted);
+}
+
+.topbar .nav-item .nav-link:hover {
+    color: #858796;
+}
+
+.topbar .dropdown-list {
+    width: 100% !important;
+    max-width: 19rem !important;
+}
+
+.topbar .dropdown-toggle::after {
+    display: none;
+}
+
+.img-profile {
+    height: 2.5rem;
+    width: 2.5rem;
+    border: 2px solid #fff;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.topbar .nav-link {
+    padding: 0.5rem 1rem !important;
+}
+
+.topbar .dropdown-menu {
+    min-width: 16rem;
+    border: none;
+    border-radius: 0.5rem;
+    margin-top: 0.5rem;
+    background-color: var(--bg-nav);
+    color: var(--text-main);
+}
+
+.topbar .dropdown-header {
+    padding: 0.5rem 0.75rem;
+    background-color: var(--bg-body);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-main);
+}
+
+.topbar .dropdown-item {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+    white-space: normal !important;
+}
+
+.topbar .dropdown-item:hover {
+    background-color: var(--bg-body);
+    color: var(--primary-color);
+    padding-left: 1.25rem;
+}
+
+.topbar .dropdown-item i {
+    width: 1.25rem;
+}
+
+.badge-sm {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.5rem;
+    font-weight: 600;
+    border-radius: 0.25rem;
+}
+
+
+
+
+/* Animated dropdown */
+.animated--grow-in {
+    animation-name: growIn;
+    animation-duration: 200ms;
+    animation-timing-function: transform cubic-bezier(0.18, 1.25, 0.4, 1), opacity cubic-bezier(0, 1, 0.4, 1);
+}
+
+@keyframes growIn {
+    0% {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Cards */
+.card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    word-wrap: break-word;
+    background-color: var(--bg-nav);
+    background-clip: border-box;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    margin-bottom: 1.5rem;
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+}
+
+.card-header {
+    padding: 1rem 1.5rem;
+    margin-bottom: 0;
+    background-color: var(--bg-body);
+    border-bottom: 2px solid var(--border-color);
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.border-left-primary {
+    border-left: .25rem solid var(--primary-color) !important;
+}
+
+.border-left-success {
+    border-left: .25rem solid var(--success-color) !important;
+}
+
+.border-left-info {
+    border-left: .25rem solid var(--info-color) !important;
+}
+
+.border-left-warning {
+    border-left: .25rem solid var(--warning-color) !important;
+}
+
+.border-left-danger {
+    border-left: .25rem solid var(--danger-color) !important;
+}
+
+/* Unified Table Styles */
+.table {
+    margin-bottom: 0;
+    color: var(--text-main);
+}
+
+.table th {
+    background-color: #f8f9fc;
+    color: var(--secondary-color);
+    font-weight: 700;
+    border-top: none;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+}
+
+[data-theme="dark"] .table th {
+    background-color: #1e293b;
+    color: #e2e8f0;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.table-bordered {
+    border: 1px solid var(--border-color);
+}
+
+.table-bordered th,
+.table-bordered td {
+    border: 1px solid var(--border-color);
+}
+
+/* Unified Form Styles */
+.form-control,
+.form-select {
+    border-radius: 0.35rem;
+    border: 1px solid #d1d3e2;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    color: #6e707e;
+    transition: box-shadow 0.2s;
+}
+
+.form-control:focus,
+.form-select:focus {
+    color: #495057;
+    background-color: #fff;
+    border-color: #bac8f3;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(78, 115, 223, 0.25);
+}
+
+.form-label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--primary-color);
+}
+
+.text-gray-300 {
+    color: var(--text-muted) !important;
+}
+
+.text-gray-400,
+.text-gray-500,
+.text-gray-600 {
+    color: var(--text-muted) !important;
+}
+
+.text-gray-800,
+.text-gray-900,
+.text-dark {
+    color: var(--text-main) !important;
+}
+
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+/* Dashboard Cards */
+.dashboard-card {
+    border-radius: 10px;
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+}
+
+.dashboard-card .card-body {
+    padding: 1.5rem;
+}
+
+.dashboard-card .icon-circle {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Quick Actions */
+.quick-action-btn {
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-weight: 600;
+    transition: all 0.3s;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    border: none;
+}
+
+.quick-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Recent Activity */
+.activity-item {
+    border-left: 2px solid var(--border-color);
+    padding-left: 1rem;
+    margin-left: 1rem;
+    position: relative;
+}
+
+.activity-item:before {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    left: -7px;
+    top: 5px;
+    background-color: var(--primary-color);
+}
+
+/* Toggle Button */
+#sidebarToggle {
+    background-color: transparent;
+    border: none;
+    color: #d1d3e2;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    border-radius: 0.35rem;
+    cursor: pointer;
+}
+
+#sidebarToggle:hover {
+    color: #858796;
+}
+
+/* Mobile Toggle Button */
+#sidebarToggleTop {
+    background-color: transparent;
+    border: none;
+    color: #d1d3e2;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    border-radius: 0.35rem;
+    cursor: pointer;
+}
+
+#sidebarToggleTop:hover {
+    color: #858796;
+}
+
+@media (max-width: 768px) {
+    #sidebarToggleTop {
+        display: block;
+    }
+}
+
+@media (min-width: 769px) {
+    #sidebarToggleTop {
+        display: none;
+    }
+}
+
+/* Scroll to Top Button */
+.scroll-to-top {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    display: none;
+    width: 2.75rem;
+    height: 2.75rem;
+    text-align: center;
+    color: #fff;
+    background: rgba(90, 92, 105, 0.5);
+    line-height: 46px;
+    border-radius: 100%;
+    transition: background-color 0.3s;
+    cursor: pointer;
+}
+
+.scroll-to-top:hover {
+    background: #5a5c69;
+}
+
+/* Chart Containers */
+.chart-area {
+    position: relative;
+    height: 20rem;
+    width: 100%;
+}
+
+.chart-pie {
+    position: relative;
+    height: 15rem;
+    width: 100%;
+}
+
+/* Footer */
+footer.sticky-footer {
+    padding: 2rem 0;
+    flex-shrink: 0;
+    background-color: var(--bg-nav);
+}
+
+footer.sticky-footer .copyright {
+    line-height: 1;
+    font-size: .8rem;
+    color: #858796;
+}
+
+/* Utilities */
+.shadow {
+    box-shadow: var(--card-shadow) !important;
+}
+
+.h-100 {
+    height: 100% !important;
+}
+
+.py-2 {
+    padding-top: .5rem !important;
+    padding-bottom: .5rem !important;
+}
+
+.align-items-center {
+    align-items: center !important;
+}
+
+.mr-2 {
+    margin-right: .5rem !important;
+}
+
+.no-gutters {
+    margin-right: 0;
+    margin-left: 0;
+}
+
+.no-gutters>.col,
+.no-gutters>[class*="col-"] {
+    padding-right: 0;
+    padding-left: 0;
+}
+
+/* ===== Mobile Sidebar Fixes ===== */
+@media (max-width: 768px) {
+    .sidebar {
+        left: calc(-1 * var(--sidebar-collapsed)) !important; /* Hidden by default */
+        width: var(--sidebar-collapsed) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        z-index: 1040 !important;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Show sidebar when toggled */
+    body.sidebar-toggled .sidebar {
+        left: 0 !important;
+    }
+
+    /* Reset main content for mobile (no permanent margin) */
+    #content-wrapper {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+
+    .topbar {
+        left: 0 !important;
+        z-index: 1030 !important;
+    }
+
+    /* Dark overlay when sidebar is open */
+    body.sidebar-toggled::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1035 !important;
+        backdrop-filter: blur(2px);
+    }
+
+    /* Hide text elements to only show icons */
+    .sidebar .sidebar-brand-text,
+    .sidebar .nav-item .nav-link span,
+    .sidebar .sidebar-heading {
+        display: none !important;
+    }
+
+    /* Ensure brand icon is centered */
+    .sidebar .sidebar-brand {
+        padding: 1.5rem 0 !important;
+    }
+
+    /* Center navigation icons and increase touch target */
+    .sidebar .nav-item .nav-link {
+        text-align: center !important;
+        padding: 1rem !important;
+        justify-content: center !important;
+    }
+
+    .sidebar .nav-item .nav-link i {
+        margin-right: 0 !important;
+        font-size: 1.4rem !important;
+    }
+
+    /* Remove collapse arrow since we only show icons */
+    .sidebar .nav-link[data-bs-toggle="collapse"]:after {
+        display: none !important;
+    }
+
+    /* Make submenus look like tooltips or popouts */
+    .sidebar .collapse-inner {
+        margin: 0 !important;
+        border-radius: 0 !important;
+        background-color: rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    .sidebar .collapse-item {
+        padding: 0.5rem 1rem !important;
+        text-align: center !important;
+    }
+    
+    /* Re-enable the mobile hamburger toggle */
+    #sidebarToggleTop {
+        display: block !important;
+        color: var(--primary-color) !important;
+    }
+}
+
+/* Searchable Dropdown Styles */
+.searchable-select-container {
+    position: relative;
+}
+
+/* Fix dropdown clipping in responsive tables - allowing horizontal scroll while managing overflow */
+.table-responsive {
+    overflow-x: auto;
+    overflow-y: visible;
+}
+
+/* Ensure share buttons look good and are centered */
+.btn-group .dropdown-menu {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0;
+    min-width: 180px;
+    z-index: 1060;
+    /* Higher than table headers */
+}
+
+.btn-group .dropdown-item {
+    font-size: 0.9rem;
+    padding: 0.6rem 1rem;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.btn-group .dropdown-item:hover {
+    background-color: var(--bg-body);
+    padding-left: 1.25rem;
+}
+
+.btn-group .dropdown-item i {
+    font-size: 1rem;
+    width: 1.5rem;
+}
+
+/* Dark mode specific for dropdowns */
+[data-theme="dark"] .btn-group .dropdown-menu {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .btn-group .dropdown-item {
+    color: var(--text-main);
+}
+
+.searchable-select-container .dropdown-menu {
+    display: none;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.searchable-select-container .dropdown-menu.show {
+    display: block;
+}
+
+.searchable-select-container .dropdown-item {
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+}
+
+.searchable-select-container .dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.searchable-select-container .dropdown-item.disabled {
+    color: #6c757d;
+    cursor: not-allowed;
+    background-color: transparent;
+}

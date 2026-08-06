@@ -1,0 +1,199 @@
+/* Barcode Scanner Styles */
+
+/* Scanner Modal */
+#barcodeScannerModal .modal-dialog {
+    max-width: 900px;
+}
+
+#barcodeScannerModal #reader {
+    position: relative;
+    overflow: hidden;
+    min-height: 300px;
+    background: #000;
+    border-radius: 8px;
+}
+
+#barcodeScannerModal #reader video {
+    width: 100% !important;
+    height: auto !important;
+    border-radius: 8px;
+}
+
+/* Scanner Overlay */
+.scanner-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.scanner-line {
+    position: absolute;
+    top: 50%;
+    left: 10%;
+    width: 80%;
+    height: 3px;
+    background: rgba(0, 255, 0, 0.7);
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+    animation: scan-line 2s ease-in-out infinite;
+}
+
+@keyframes scan-line {
+
+    0%,
+    100% {
+        top: 10%;
+    }
+
+    50% {
+        top: 90%;
+    }
+}
+
+/* Status Indicators */
+.scanner-status {
+    padding: 12px;
+    border-radius: 6px;
+    margin: 10px 0;
+    font-weight: 500;
+    border-left: 4px solid transparent;
+    background: #f8f9fa;
+}
+
+.scanner-status.status-success {
+    background-color: #d4edda;
+    color: #155724;
+    border-left-color: #28a745;
+}
+
+.scanner-status.status-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-left-color: #dc3545;
+}
+
+.scanner-status.status-searching {
+    background-color: #cce5ff;
+    color: #004085;
+    border-left-color: #007bff;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Format Badges */
+.badge-format {
+    font-size: 0.7em;
+    padding: 3px 8px;
+    border-radius: 12px;
+}
+
+/* Barcode Display */
+.barcode-display {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    text-align: center;
+    margin: 15px 0;
+}
+
+.barcode-display svg, .qr-code-img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #f0f0f0;
+    padding: 5px;
+    background: white;
+}
+
+/* Scanner Controls */
+#btn_start_camera,
+#btn_stop_camera {
+    transition: all 0.3s ease;
+}
+
+#btn_start_camera:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+/* Preview Image */
+#preview_image {
+    max-width: 100%;
+    border: 2px dashed #dee2e6;
+    padding: 10px;
+    border-radius: 8px;
+    background: #f8f9fa;
+}
+
+/* History Panel */
+.scan-history {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 15px;
+    border-top: 1px solid #dee2e6;
+    padding-top: 10px;
+}
+
+.scan-history-item {
+    padding: 5px 10px;
+    border-bottom: 1px solid #f1f1f1;
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.scan-history-item:hover {
+    background: #f8f9fa;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    #barcodeScannerModal .modal-dialog {
+        margin: 10px;
+    }
+
+    #reader {
+        min-height: 250px !important;
+    }
+
+    .scanner-status {
+        font-size: 14px;
+        padding: 8px;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .scanner-status {
+        background: #2d3748;
+        color: #e2e8f0;
+    }
+
+    .scanner-status.status-success {
+        background-color: #22543d;
+        color: #c6f6d5;
+    }
+
+    .scanner-status.status-error {
+        background-color: #742a2a;
+        color: #fed7d7;
+    }
+
+    .scanner-status.status-searching {
+        background-color: #2a4365;
+        color: #bee3f8;
+    }
+}

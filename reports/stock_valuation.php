@@ -1,16 +1,35 @@
 <?php
 // reports/stock_valuation.php
-session_start();
+require_once "../config/auth_check.php";
 require_once "../config/database.php";
+
+require_once "../config/auth.php"; // Ensure Auth class is loaded
+
+// Ensure user is logged in
+Auth::requireLogin();
+Auth::requireRole('manager');
 
 $database = new Database();
 $db = $database->getConnection();
 
-// Get stock valuation data
+// Pagination setup
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$records_per_page = 10;
+$offset = ($page - 1) * $records_per_page;
+
+// Count total products for pagination
+$count_query = "SELECT COUNT(*) as total FROM products WHERE quantity > 0";
+$count_stmt = $db->prepare($count_query);
+$count_stmt->execute();
+$total_products = $count_stmt->fetch(PDO::FETCH_ASSOC)['total'];
+$total_pages = ceil($total_products / $records_per_page);
+
+// Get stock valuation data with pagination
 $query = "
     SELECT 
         p.id,
         p.sku,
+        p.image,
         p.name,
         p.category,
         p.quantity,
@@ -22,24 +41,33 @@ $query = "
     FROM products p
     LEFT JOIN suppliers s ON p.supplier_id = s.id
     WHERE p.quantity > 0
-    ORDER BY total_cost_value DESC";
+    ORDER BY total_cost_value DESC
+    LIMIT :limit OFFSET :offset";
 
 $stmt = $db->prepare($query);
+$stmt->bindValue(':limit', $records_per_page, PDO::PARAM_INT);
+$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->execute();
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Calculate totals
-$total_cost_value = 0;
-$total_retail_value = 0;
-$total_products = 0;
-$total_quantity = 0;
+// Calculate totals for all products (not just the paginated ones)
+$totals_query = "
+    SELECT 
+        SUM(p.quantity * p.cost_price) as total_cost_value,
+        SUM(p.quantity * p.price) as total_retail_value,
+        COUNT(*) as total_products,
+        SUM(p.quantity) as total_quantity
+    FROM products p
+    WHERE p.quantity > 0";
 
-foreach ($products as $product) {
-    $total_cost_value += $product['total_cost_value'];
-    $total_retail_value += $product['total_retail_value'];
-    $total_products++;
-    $total_quantity += $product['quantity'];
-}
+$totals_stmt = $db->prepare($totals_query);
+$totals_stmt->execute();
+$totals = $totals_stmt->fetch(PDO::FETCH_ASSOC);
+
+$total_cost_value = $totals['total_cost_value'] ?? 0;
+$total_retail_value = $totals['total_retail_value'] ?? 0;
+$total_products_count = $totals['total_products'] ?? 0;
+$total_quantity = $totals['total_quantity'] ?? 0;
 
 require_once "../includes/header.php";
 ?>
@@ -90,7 +118,7 @@ require_once "../includes/header.php";
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h4><?php echo $total_products; ?></h4>
+                        <h4><?php echo $total_products_count; ?></h4>
                         <p>Products in Stock</p>
                     </div>
                     <div class="align-self-center">
@@ -119,10 +147,15 @@ require_once "../includes/header.php";
 
 <!-- Valuation Report -->
 <div class="card">
-    <div class="card-header">
+    <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0">
             <i class="fas fa-table"></i> Detailed Stock Valuation
         </h5>
+        <div class="small text-muted">
+            Showing <?php echo min($offset + 1, $total_products); ?> 
+            to <?php echo min($offset + $records_per_page, $total_products); ?> 
+            of <?php echo $total_products; ?> products
+        </div>
     </div>
     <div class="card-body">
         <?php if ($products): ?>
@@ -130,7 +163,8 @@ require_once "../includes/header.php";
                 <table class="table table-striped table-hover" id="valuationTable">
                     <thead class="table-dark">
                         <tr>
-                            <th>SKU</th>
+                            <th style="width: 50px;">#</th>
+                            <th>Thumbnail</th>
                             <th>Product Name</th>
                             <th>Category</th>
                             <th>Quantity</th>
@@ -142,9 +176,20 @@ require_once "../includes/header.php";
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($products as $product): ?>
+                        <?php foreach ($products as $index => $product): ?>
                         <tr>
-                            <td><strong><?php echo htmlspecialchars($product['sku']); ?></strong></td>
+                            <td><?php echo $offset + $index + 1; ?></td>
+                            <td>
+                                <?php if (!empty($product['image'])): ?>
+                                    <?php 
+                                    $is_url = (strpos($product['image'], 'http') === 0);
+                                    $img_src = $is_url ? $product['image'] : "../" . $product['image'];
+                                    ?>
+                                    <img src="<?php echo htmlspecialchars($img_src); ?>" alt="Product Image" class="img-thumbnail" style="max-height: 50px;" onerror="this.src='../assets/img/noproduct.png'">
+                                <?php else: ?>
+                                    <img src="../assets/img/noproduct.png" alt="No Image" class="img-thumbnail" style="max-height: 50px;">
+                                <?php endif; ?>
+                            </td>
                             <td><?php echo htmlspecialchars($product['name']); ?></td>
                             <td><?php echo htmlspecialchars($product['category']); ?></td>
                             <td><?php echo $product['quantity']; ?></td>
@@ -158,7 +203,7 @@ require_once "../includes/header.php";
                     </tbody>
                     <tfoot class="table-active">
                         <tr>
-                            <td colspan="6"><strong>Totals:</strong></td>
+                            <td colspan="7"><strong>Totals:</strong></td>
                             <td><strong>$<?php echo number_format($total_cost_value, 2); ?></strong></td>
                             <td><strong>$<?php echo number_format($total_retail_value, 2); ?></strong></td>
                             <td></td>
@@ -166,6 +211,55 @@ require_once "../includes/header.php";
                     </tfoot>
                 </table>
             </div>
+            
+            <!-- Pagination -->
+            <?php if ($total_pages > 1): ?>
+            <nav aria-label="Products pagination">
+                <ul class="pagination justify-content-center">
+                    <!-- Previous Button -->
+                    <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="?page=<?php echo $page - 1; ?>" tabindex="-1">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
+                    </li>
+                    
+                    <!-- Page Numbers -->
+                    <?php
+                    $start_page = max(1, $page - 2);
+                    $end_page = min($total_pages, $page + 2);
+                    
+                    // Show first page and ellipsis if needed
+                    if ($start_page > 1) {
+                        echo '<li class="page-item"><a class="page-link" href="?page=1">1</a></li>';
+                        if ($start_page > 2) {
+                            echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                        }
+                    }
+                    
+                    // Page numbers
+                    for ($i = $start_page; $i <= $end_page; $i++) {
+                        $active = ($i == $page) ? 'active' : '';
+                        echo '<li class="page-item ' . $active . '"><a class="page-link" href="?page=' . $i . '">' . $i . '</a></li>';
+                    }
+                    
+                    // Show last page and ellipsis if needed
+                    if ($end_page < $total_pages) {
+                        if ($end_page < $total_pages - 1) {
+                            echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                        }
+                        echo '<li class="page-item"><a class="page-link" href="?page=' . $total_pages . '">' . $total_pages . '</a></li>';
+                    }
+                    ?>
+                    
+                    <!-- Next Button -->
+                    <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="?page=<?php echo $page + 1; ?>">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <?php endif; ?>
             
             <!-- Export Options -->
             <div class="mt-3">
@@ -195,6 +289,8 @@ function exportToCSV() {
         let row = [], cols = rows[i].querySelectorAll("td, th");
         
         for (let j = 0; j < cols.length; j++) {
+            // Skip the thumbnail column (first column) for CSV export
+            if (j === 0) continue;
             row.push(cols[j].innerText);
         }
         

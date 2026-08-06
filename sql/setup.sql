@@ -60,8 +60,25 @@ CREATE TABLE IF NOT EXISTS stock_movements (
     quantity INT,
     reason VARCHAR(255),
     reference VARCHAR(100),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+-- Vendor payment requests table
+CREATE TABLE IF NOT EXISTS vendor_payment_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    shop_name VARCHAR(255) NOT NULL,
+    order_id VARCHAR(100) NOT NULL,
+    order_amount DECIMAL(15,2) NOT NULL,
+    status ENUM('pending', 'approved', 'rejected', 'paid') DEFAULT 'pending',
+    requested_by INT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    pays_commission TINYINT(1) DEFAULT 0,
+    commission_rate DECIMAL(5,2) DEFAULT 0.00,
+    commission_amount DECIMAL(15,2) DEFAULT 0.00,
+    net_amount DECIMAL(15,2) DEFAULT 0.00,
+    FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Insert default admin user (password: admin123)
