@@ -403,6 +403,17 @@ require_once "includes/header.php";
         font-size: 11px;
         color: #475569;
         font-weight: 700;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.2s ease;
+    }
+
+    a.vp-order-code:hover {
+        background: #e2e8f0;
+        color: #2563eb;
+        text-decoration: none;
     }
 
     .vp-amount {
@@ -1355,13 +1366,17 @@ require_once "includes/header.php";
                 }
                 actions += `<button class="vp-action-btn vp-btn-history ms-1" onclick="vpShowHistory(${r.id})" title="View History"><i class="fas fa-history fa-xs"></i></button>`;
 
+                const orderLink = r.order_id 
+                    ? `<a href="https://gojoshop.et/admin/orders/details/${encodeURIComponent(r.order_id)}" target="_blank" rel="noopener noreferrer" class="vp-order-code" title="View order on Gojo Shop">${escHtml(r.order_id)} <i class="fas fa-external-link-alt" style="font-size: 9px; opacity: 0.6;"></i></a>`
+                    : `<span class="vp-order-code text-muted">-</span>`;
+
                 return `<tr class="vp-request-row">
                     <td class="text-center">
                         <input class="form-check-input row-checkbox" type="checkbox" value="${r.id}">
                     </td>
                     <td class="vp-row-num">${(currentPage - 1) * limit + i + 1}</td>
                     <td class="vp-shop-name" data-label="Shop">${escHtml(r.shop_name)}</td>
-                    <td data-label="Order ID"><span class="vp-order-code">${escHtml(r.order_id)}</span></td>
+                    <td data-label="Order ID">${orderLink}</td>
                     <td class="vp-amount text-muted" data-label="Gross Amt" style="font-size:11px;">${gross}</td>
                     <td data-label="Commission">${commHtml}</td>
                     <td class="vp-amount" data-label="Net Payout">${net} <span class="vp-amount-unit">ETB</span></td>
