@@ -1,5 +1,5 @@
 <?php
-header("Content-Type: application/json");
+// Content-Type will be set per-action below
 
 try {
     $dbConfig = dirname(__DIR__) . "/config/database.php";
@@ -52,6 +52,95 @@ try {
 
     switch ($method) {
         case 'GET':
+            $export = $_GET['export'] ?? '';
+
+            // ── CSV Export ────────────────────────────────────────────────────
+            if ($export === 'csv') {
+                $status     = $_GET['status']    ?? 'all';
+                $search     = $_GET['search']    ?? '';
+                $from_date  = $_GET['from_date'] ?? '';
+                $to_date    = $_GET['to_date']   ?? '';
+
+                $whereConditions = [];
+                $params = [];
+
+                if ($status !== 'all') {
+                    $whereConditions[] = "vpr.status = :status";
+                    $params[':status'] = $status;
+                }
+                if (!empty($search)) {
+                    $whereConditions[] = "(vpr.shop_name LIKE :search OR vpr.order_id LIKE :search OR vpr.notes LIKE :search)";
+                    $params[':search'] = "%$search%";
+                }
+                if (!empty($from_date)) {
+                    $whereConditions[] = "vpr.created_at >= :from_date";
+                    $params[':from_date'] = $from_date . ' 00:00:00';
+                }
+                if (!empty($to_date)) {
+                    $whereConditions[] = "vpr.created_at <= :to_date";
+                    $params[':to_date'] = $to_date . ' 23:59:59';
+                }
+
+                $whereSql = count($whereConditions) > 0 ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
+
+                $exportQuery = "SELECT vpr.shop_name, vpr.order_id, vpr.order_amount, vpr.commission_rate,
+                                       vpr.commission_amount, vpr.net_amount, vpr.pays_commission,
+                                       vpr.status, vpr.notes, u.username as requested_by,
+                                       vpr.created_at
+                                FROM vendor_payment_requests vpr
+                                LEFT JOIN users u ON vpr.requested_by = u.id
+                                $whereSql
+                                ORDER BY vpr.created_at DESC";
+
+                $exportStmt = $db->prepare($exportQuery);
+                foreach ($params as $key => $val) {
+                    $exportStmt->bindValue($key, $val);
+                }
+                $exportStmt->execute();
+                $rows = $exportStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                $filename = 'vendor_payment_requests_' . date('Y-m-d') . '.csv';
+                header('Content-Type: text/csv; charset=UTF-8');
+                header('Content-Disposition: attachment; filename="' . $filename . '"');
+                header('Cache-Control: no-cache, no-store, must-revalidate');
+                header('Pragma: no-cache');
+
+                $out = fopen('php://output', 'w');
+                // BOM for Excel UTF-8 recognition
+                fputs($out, "\xEF\xBB\xBF");
+
+                // Header row
+                fputcsv($out, [
+                    '#', 'Shop Name', 'Order ID', 'Gross Amount (ETB)',
+                    'Commission Rate (%)', 'Commission Amount (ETB)',
+                    'Net Payout (ETB)', 'Pays Commission',
+                    'Status', 'Requested By', 'Notes', 'Date'
+                ]);
+
+                foreach ($rows as $i => $r) {
+                    fputcsv($out, [
+                        $i + 1,
+                        $r['shop_name'],
+                        $r['order_id'],
+                        number_format((float)$r['order_amount'], 2, '.', ''),
+                        $r['commission_rate'],
+                        number_format((float)$r['commission_amount'], 2, '.', ''),
+                        number_format((float)$r['net_amount'], 2, '.', ''),
+                        $r['pays_commission'] ? 'Yes' : 'No',
+                        ucfirst($r['status']),
+                        $r['requested_by'] ?? 'N/A',
+                        $r['notes'] ?? '',
+                        date('d M Y H:i', strtotime($r['created_at']))
+                    ]);
+                }
+
+                fclose($out);
+                exit;
+            }
+            // ── End CSV Export ───────────────────────────────────────────────
+
+            header('Content-Type: application/json');
+
             $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
             $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 30;
             $offset = ($page - 1) * $limit;
