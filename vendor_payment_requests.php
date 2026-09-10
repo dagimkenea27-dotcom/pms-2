@@ -403,17 +403,6 @@ require_once "includes/header.php";
         font-size: 11px;
         color: #475569;
         font-weight: 700;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        transition: all 0.2s ease;
-    }
-
-    a.vp-order-code:hover {
-        background: #e2e8f0;
-        color: #2563eb;
-        text-decoration: none;
     }
 
     .vp-amount {
@@ -566,6 +555,32 @@ require_once "includes/header.php";
         background: #f1f5f9;
         color: #475569;
     }
+
+    .vp-btn-export {
+        background: #ecfdf5;
+        color: #065f46;
+        font-weight: 700;
+        border-radius: 10px;
+        padding: 8px 18px;
+        border: 1px solid #a7f3d0;
+        transition: all 0.2s ease;
+        font-size: 13px;
+    }
+
+    .vp-btn-export:hover {
+        background: #d1fae5;
+        color: #064e3b;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(16,185,129,0.15);
+    }
+
+    .vp-btn-export::after {
+        border-top-color: #065f46;
+    }
+
+    #exportDropdown + .dropdown-menu {
+        z-index: 9999;
+    }
 </style>
 
 <div id="vendor-pay-app">
@@ -655,6 +670,19 @@ require_once "includes/header.php";
                         style="left: 10px; top: 50%; transform: translateY(-50%); font-size: 10px; z-index: 5;"></i>
                     <input id="search-input" type="text" class="form-control form-control-sm vp-form-control"
                         placeholder="Search Shop, Order..." style="font-size: 11px; padding-left: 28px;">
+                </div>
+                <div class="dropdown">
+                    <button class="btn vp-btn-export d-flex align-items-center gap-2 dropdown-toggle" id="exportDropdown" data-bs-toggle="dropdown" data-bs-strategy="fixed" aria-expanded="false">
+                        <i class="fas fa-file-csv"></i> Export
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="exportDropdown">
+                        <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); vpExportCSV(false)">
+                            <i class="fas fa-download me-2 text-muted"></i>Export All (CSV)
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); vpExportCSV(true)">
+                            <i class="fas fa-filter me-2 text-success"></i>Export Filtered (CSV)
+                        </a></li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -1366,17 +1394,13 @@ require_once "includes/header.php";
                 }
                 actions += `<button class="vp-action-btn vp-btn-history ms-1" onclick="vpShowHistory(${r.id})" title="View History"><i class="fas fa-history fa-xs"></i></button>`;
 
-                const orderLink = r.order_id 
-                    ? `<a href="https://gojoshop.et/admin/orders/details/${encodeURIComponent(r.order_id)}" target="_blank" rel="noopener noreferrer" class="vp-order-code" title="View order on Gojo Shop">${escHtml(r.order_id)} <i class="fas fa-external-link-alt" style="font-size: 9px; opacity: 0.6;"></i></a>`
-                    : `<span class="vp-order-code text-muted">-</span>`;
-
                 return `<tr class="vp-request-row">
                     <td class="text-center">
                         <input class="form-check-input row-checkbox" type="checkbox" value="${r.id}">
                     </td>
                     <td class="vp-row-num">${(currentPage - 1) * limit + i + 1}</td>
                     <td class="vp-shop-name" data-label="Shop">${escHtml(r.shop_name)}</td>
-                    <td data-label="Order ID">${orderLink}</td>
+                    <td data-label="Order ID"><span class="vp-order-code">${escHtml(r.order_id)}</span></td>
                     <td class="vp-amount text-muted" data-label="Gross Amt" style="font-size:11px;">${gross}</td>
                     <td data-label="Commission">${commHtml}</td>
                     <td class="vp-amount" data-label="Net Payout">${net} <span class="vp-amount-unit">ETB</span></td>
@@ -1676,6 +1700,30 @@ require_once "includes/header.php";
         // Initial fetch
         fetchRequests(1);
 
+        // Fix Export dropdown clipping — force position:fixed so it escapes
+        // any overflow:hidden / stacking context from parent containers
+        const exportDropdownEl = document.getElementById('exportDropdown');
+        if (exportDropdownEl) {
+            exportDropdownEl.addEventListener('show.bs.dropdown', function () {
+                const menu = this.nextElementSibling;
+                const rect = this.getBoundingClientRect();
+                menu.style.position   = 'fixed';
+                menu.style.top        = (rect.bottom + 4) + 'px';
+                menu.style.left       = 'auto';
+                menu.style.right      = (window.innerWidth - rect.right) + 'px';
+                menu.style.zIndex     = '99999';
+                menu.style.margin     = '0';
+            });
+            exportDropdownEl.addEventListener('hide.bs.dropdown', function () {
+                const menu = this.nextElementSibling;
+                menu.style.position = '';
+                menu.style.top      = '';
+                menu.style.right    = '';
+                menu.style.zIndex   = '';
+                menu.style.margin   = '';
+            });
+        }
+
         // --- Bulk Operations Logic ---
         
         function updateBulkUI() {
@@ -1768,6 +1816,34 @@ require_once "includes/header.php";
 
         // Expose fetchRequests globally
         window.fetchRequests = fetchRequests;
+
+        // Export CSV (filtered or all)
+        window.vpExportCSV = function(filtered = false) {
+            const url = new URL(API_URL, window.location.origin);
+            url.searchParams.set('export', 'csv');
+
+            if (filtered) {
+                const status = currentFilter !== 'all' ? currentFilter : '';
+                const search = searchInput.value.trim();
+                const from   = filterFrom.value;
+                const to     = filterTo.value;
+
+                if (status)  url.searchParams.set('status',    status);
+                if (search)  url.searchParams.set('search',    search);
+                if (from)    url.searchParams.set('from_date', from);
+                if (to)      url.searchParams.set('to_date',   to);
+            }
+
+            // Trigger download without navigating
+            const a = document.createElement('a');
+            a.href = url.toString();
+            a.download = '';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            showToast(filtered ? 'Exporting filtered results...' : 'Exporting all records...', 'success');
+        };
 
     })();
 </script>
